@@ -1,0 +1,81 @@
+"""
+Chat API routes — matches API_CONTRACT.md exactly.
+
+POST   /chat/message  -> send a message, get a response (Mentor-Orchestrator)
+GET    /chat/history  -> get conversation history
+DELETE /chat/history   -> delete all conversation history
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.app.agents.mentor import delete_chat_history, get_chat_history, send_message
+from backend.app.core.security import get_current_user_id
+from backend.app.db.postgres import get_db
+
+router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+class ChatMessageRequest(BaseModel):
+    conversation_id: str | None = None
+    message: str
+
+
+@router.post("/message")
+async def post_chat_message(
+    body: ChatMessageRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Send a message to the Mentor. The Mentor may call other agents
+    (Career Architect, Portfolio Manager, Job Scout) depending on intent.
+    """
+    if not body.message or not body.message.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": {"code": "empty_message", "message": "message cannot be empty"}},
+        )
+
+    try:
+        result = await send_message(db, user_id, body.message, body.conversation_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": {"code": "chat_error", "message": str(e)}},
+        )
+
+    return result
+
+
+@router.get("/history")
+async def get_chat_history_route(
+    conversation_id: str | None = Query(None),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get message history for a conversation, or the most recent one if not specified."""
+    try:
+        history = await get_chat_history(db, user_id, conversation_id)
+    except ValueError as e:
+        code = str(e).split(":")[0]
+        message = str(e).split(":", 1)[1].strip() if ":" in str(e) else str(e)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": code, "message": message}},
+        )
+
+    return history
+
+
+@router.delete("/history")
+async def delete_chat_history_route(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete all conversation history for the user."""
+    await delete_chat_history(db, user_id)
+    return {"success": True}

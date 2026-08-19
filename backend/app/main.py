@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.app.api.routes.chat import router as chat_router
 from backend.app.api.routes.opportunities import router as opportunities_router
 from backend.app.api.routes.portfolio import router as portfolio_router
 from backend.app.api.routes.roadmap import router as roadmap_router
@@ -19,7 +20,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Lynks API",
-    description="Career platform backend",
+    description="Career platform backend — roadmap generation, portfolio, job discovery, chat",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -47,9 +48,11 @@ app.include_router(portfolio_router)
 # Opportunities — Job Scout agent
 app.include_router(opportunities_router)
 
+# Chat — Mentor-Orchestrator agent (has access to all other agents)
+app.include_router(chat_router)
+
 # Future routers (uncomment as you build them):
 # from backend.app.api.routes.resume import router as resume_router
-# from backend.app.api.routes.chat import router as chat_router
 
 
 @app.get("/health")
