@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.app.api.routes.opportunities import router as opportunities_router
 from backend.app.api.routes.portfolio import router as portfolio_router
 from backend.app.api.routes.roadmap import router as roadmap_router
 from backend.app.db.postgres import engine
@@ -43,9 +44,11 @@ app.include_router(roadmap_router)
 # Portfolio — Portfolio Manager agent
 app.include_router(portfolio_router)
 
+# Opportunities — Job Scout agent
+app.include_router(opportunities_router)
+
 # Future routers (uncomment as you build them):
 # from backend.app.api.routes.resume import router as resume_router
-# from backend.app.api.routes.opportunities import router as opportunities_router
 # from backend.app.api.routes.chat import router as chat_router
 
 
