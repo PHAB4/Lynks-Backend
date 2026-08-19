@@ -22,6 +22,7 @@ from backend.app.agents.portfolio_manager import (
 )
 from backend.app.core.security import get_current_user_id
 from backend.app.db.postgres import get_db
+from backend.app.services.storage import upload_evidence_file
 
 logger = logging.getLogger(__name__)
 
@@ -68,14 +69,23 @@ async def post_task_evidence(
             },
         )
 
-    # Save evidence record (file_url placeholder — real impl uploads to Supabase Storage)
-    evidence_id = str(__import__("uuid").uuid4())
+    # Upload to Supabase Storage
+    try:
+        file_url = upload_evidence_file(file_bytes, file.filename, file_type)
+    except Exception as e:
+        logger.error("Failed to upload file to Supabase Storage: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": {"code": "storage_error", "message": "Failed to upload file. Please try again."}},
+        )
+
+    # Save evidence record with the real URL
     try:
         evidence = await save_evidence(
             db=db,
             user_id=user_id,
             task_id=task_id,
-            file_url=f"placeholder://evidence/{evidence_id}",
+            file_url=file_url,
             file_type=file_type,
         )
     except ValueError as e:
@@ -86,7 +96,7 @@ async def post_task_evidence(
             detail={"error": {"code": code, "message": message}},
         )
 
-    # Verify with LLM Vision (synchronous — Open Question #6)
+    # Verify with LLM Vision (synchronous — confirmed by team)
     try:
         verification = verify_evidence_with_llm(file_bytes, file_type)
         new_status = "verified" if verification["verified"] else "rejected"
