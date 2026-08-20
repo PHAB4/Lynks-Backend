@@ -14,11 +14,8 @@ psycopg2-binary>=2.9.9
 # Auth
 supabase>=2.0.0
 
-# AI / LLM
+# AI / LLM — OpenAI SDK talking to an OpenAI-compatible gateway
 openai>=1.6.0
-
-# HTTP (for opportunity scraper)
-httpx>=0.25.0
 
 # Utilities
 python-dotenv>=1.0.0
