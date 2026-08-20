@@ -1,1 +1,58 @@
-"""""""Roadmap API routes — matches API_CONTRACT.md exactly.""""""""from __future__ import annotationsfrom fastapi import APIRouter, Depends, HTTPException, statusfrom sqlalchemy import selectfrom sqlalchemy.ext.asyncio import AsyncSessionfrom app.agents.architect import generate_roadmapfrom app.core.security import get_current_user_idfrom app.db.postgres import get_dbfrom app.models.db_models import Roadmap, Task, Userrouter = APIRouter(prefix="/roadmap", tags=["roadmap"])# ── Helpers ──────────────────────────────────────────────────────────────────def _roadmap_to_response(roadmap: Roadmap) -> dict:    """"""Convert a loaded Roadmap ORM object to the API_CONTRACT.md shape."""""""    steps = sorted(roadmap.steps, key=lambda s: s.order)    return {        "roadmap_id": str(roadmap.id),        "steps": [            {                "step_id": str(step.id),                "title": step.title,                "description": step.description,                "order": step.order,                "status": _compute_step_status(step.tasks),                "tasks": [                    {                        "task_id": str(task.id),                        "title": task.title,                        "description": task.description,                        "order": task.order,                        "status": task.status,                    }                    for task in sorted(step.tasks, key=lambda t: t.order)                ],            }            for step in steps        ],    }def _compute_step_status(tasks: list) -> str:    """"""Compute a step's status from its tasks.""""""""    if not tasks:        return "pending"    return "complete" if all(t.status == "complete" for t in tasks) else "pending"
+"""Roadmap API routes."""
+from __future__ import annotations
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.agents.architect import generate_roadmap
+from app.core.security import get_current_user_id
+from app.db.postgres import get_db
+from app.models.db_models import Roadmap, Task, User
+
+router = APIRouter(prefix="/roadmap", tags=["roadmap"])
+
+
+def _roadmap_to_response(roadmap):
+    steps_resp = []
+    for step in sorted(roadmap.steps, key=lambda s: s.order):
+        tasks = sorted(step.tasks, key=lambda t: t.order)
+        step_status = "complete" if tasks and all(t.status == "complete" for t in tasks) else "pending"
+        steps_resp.append({"step_id": step.id, "title": step.title, "description": step.description, "order": step.order, "status": step_status, "tasks": [{"task_id": t.id, "title": t.title, "description": t.description, "order": t.order, "status": t.status} for t in tasks]})
+    return {"roadmap_id": roadmap.id, "steps": steps_resp}
+
+
+async def _get_active_roadmap(db, user_id):
+    result = await db.execute(select(Roadmap).where(Roadmap.user_id == user_id, Roadmap.is_active == True))
+    roadmap = result.scalar_one_or_none()
+    if roadmap:
+        await db.refresh(roadmap, ["steps"])
+        for step in roadmap.steps:
+            await db.refresh(step, ["tasks"])
+    return roadmap
+
+
+@router.post("/generate", status_code=status.HTTP_201_CREATED)
+async def post_roadmap_generate(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    try:
+        return await generate_roadmap(db, user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": str(e).split(":")[0], "message": str(e).split(":", 1)[1].strip() if ":" in str(e) else str(e)}})
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": {"code": str(e).split(":")[0], "message": str(e).split(":", 1)[1].strip() if ":" in str(e) else str(e)}})
+
+
+@router.get("")
+async def get_roadmap(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    roadmap = await _get_active_roadmap(db, user_id)
+    if not roadmap:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": {"code": "no_roadmap_found", "message": "No roadmap found. Generate one first."}})
+    return _roadmap_to_response(roadmap)
+
+
+@router.post("/regenerate", status_code=status.HTTP_201_CREATED)
+async def post_roadmap_regenerate(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
+    try:
+        return await generate_roadmap(db, user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": str(e).split(":")[0], "message": str(e).split(":", 1)[1].strip() if ":" in str(e) else str(e)}})
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": {"code": str(e).split(":")[0], "message": str(e).split(":", 1)[1].strip() if ":" in str(e) else str(e)}})
