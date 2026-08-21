@@ -42,7 +42,6 @@ sb.table("users").update({
     "age": 17,
     "country": "Jamaica",
     "education_level": "High School",
-    "employment_status": "Student",
     "career_path": "Software Development",
     "interests": ["coding", "web development", "AI"],
 }).eq("id", user_id).execute()
