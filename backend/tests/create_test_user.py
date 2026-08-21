@@ -37,7 +37,7 @@ print(f"User ID: {user_id}")
 import supabase
 sb = supabase.create_client(url, service_key)
 sb.table("users").update({
-    "username": "testuser",
+    "username": f"testuser_{int(time.time())}",
     "name": "Test User",
     "age": 17,
     "country": "Jamaica",
