@@ -1,28 +1,55 @@
-# Understanding the Lynks Tech Stack
+# Lynks Tech Stack
 
-See `tech_stack_explained.md` for the full beginner-friendly guide.
+> **Last updated:** August 22, 2026
 
-## Quick Reference
+---
 
-| Component | Purpose |
-|---|---|
-| Python | Backend language |
-| FastAPI | API framework (the "waiter") |
-| LangChain / CrewAI | Agent orchestration library |
-| Llama 3 70B | Main LLM (roadmap generation, chat) |
-| Llama 3 Vision | Image analysis (evidence verification) |
-| HuggingFace BGE | Text-to-vector embeddings |
-| Qdrant / Milvus | Vector database (semantic search) |
-| PostgreSQL (Supabase) | Relational database (users, tasks, roadmaps) |
-| Next.js + Tailwind | Frontend framework |
-| BeautifulSoup | Web scraping (Job Scout) |
-| H200 GPUs (Highrise/Impala) | GPU compute for LLM inference |
-| OpenAI SDK | LLM client (talks to any OpenAI-compatible API) |
+## Backend
 
-## Key Principles
+| Component | Technology |
+|-----------|------------|
+| Language | Python 3.11+ |
+| Web framework | FastAPI |
+| ORM | SQLAlchemy (async) |
+| Database driver | asyncpg |
+| Auth | Supabase Auth (JWT verification) |
+| LLM | Groq (OpenAI-compatible API, Llama 3 8B) |
+| LLM SDK | OpenAI Python SDK |
+| File storage | Supabase Storage |
+| Validation | Pydantic v2 |
 
-1. Frontend never talks to database or AI directly — always through FastAPI
-2. All IDs are UUIDs, all field names are snake_case
-3. Supabase handles auth (signup, login, logout) — backend only verifies JWTs
-4. Agents use OpenAI SDK tool-calling format — provider-agnostic
-5. Evidence files stored in object storage, not on local disk
+## Database
+
+| Component | Technology |
+|-----------|------------|
+| PostgreSQL | Supabase Cloud (AWS us-west-2) |
+| Connection | Pooler mode (port 5432) |
+| Auth | Supabase Auth (auth.users + triggers) |
+| Storage | Supabase Storage (public evidence bucket) |
+| RLS | Row Level Security on all tables |
+
+## Frontend (teammate's responsibility)
+
+| Component | Technology |
+|-----------|------------|
+| Framework | Next.js (React) |
+| Auth SDK | @supabase/supabase-js |
+| UI | TBD by frontend dev |
+
+## AI / LLM
+
+| Component | Details |
+|-----------|--------|
+| Provider | Groq |
+| Model | llama3-8b-8192 |
+| Endpoint | https://api.groq.com/openai/v1 |
+| Response time | 5-15 seconds |
+
+## Key Design Decisions
+
+1. UUID everywhere — every PK is UUID, not auto-increment
+2. snake_case everywhere — fields, tables, endpoints
+3. Async throughout — FastAPI + SQLAlchemy async + asyncpg
+4. Supabase for everything — Auth, Database, Storage
+5. LLM via OpenAI SDK — compatible with any OpenAI-format API
+6. No LangChain/CrewAI — agents are self-contained Python modules
