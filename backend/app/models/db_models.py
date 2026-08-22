@@ -25,7 +25,7 @@ class Base(DeclarativeBase):
     pass
 
 
-# ── User ───────────────────────────────────────────────────────────────────
+# -- User -----------------------------------------------------------------
 
 
 class User(Base):
@@ -54,7 +54,7 @@ class User(Base):
     evidence_items: Mapped[list["Evidence"]] = relationship(back_populates="user")
 
 
-# ── Roadmap ────────────────────────────────────────────────────────────────
+# -- Roadmap --------------------------------------------------------------
 
 
 class Roadmap(Base):
@@ -78,7 +78,7 @@ class Roadmap(Base):
     )
 
 
-# ── Step ───────────────────────────────────────────────────────────────────
+# -- Step -----------------------------------------------------------------
 
 
 class Step(Base):
@@ -100,7 +100,7 @@ class Step(Base):
     )
 
 
-# ── Task ───────────────────────────────────────────────────────────────────
+# -- Task -----------------------------------------------------------------
 
 
 class Task(Base):
@@ -124,7 +124,7 @@ class Task(Base):
     evidence_items: Mapped[list["Evidence"]] = relationship(back_populates="task")
 
 
-# ── Evidence ───────────────────────────────────────────────────────────────
+# -- Evidence -------------------------------------------------------------
 
 
 class Evidence(Base):
@@ -152,7 +152,7 @@ class Evidence(Base):
     user: Mapped["User"] = relationship(back_populates="evidence_items")
 
 
-# ── Resume ─────────────────────────────────────────────────────────────────
+# -- Resume ---------------------------------------------------------------
 
 
 class Resume(Base):
@@ -175,7 +175,7 @@ class Resume(Base):
     user: Mapped["User"] = relationship(back_populates="resumes")
 
 
-# ── Conversation ───────────────────────────────────────────────────────────
+# -- Conversation ---------------------------------------------------------
 
 
 class Conversation(Base):
@@ -193,11 +193,13 @@ class Conversation(Base):
 
     user: Mapped["User"] = relationship(back_populates="conversations")
     messages: Mapped[list["Message"]] = relationship(
-        back_populates="conversation", order_by="Message.created_at"
+        back_populates="conversation",
+        order_by="Message.created_at",
+        passive_deletes=True,
     )
 
 
-# ── Message ────────────────────────────────────────────────────────────────
+# -- Message --------------------------------------------------------------
 
 
 class Message(Base):
