@@ -1,11 +1,20 @@
 """
-Mentor Chatbot -- the conversational orchestrator for Lynks.
+Mentor Chatbot — the conversational orchestrator for Lynks.
 
 Enhanced version with:
 - Roadmap context (knows user's active roadmap, steps, tasks, and progress)
 - Portfolio awareness (knows completed tasks and evidence)
 - Conversation memory (remembers previous conversations)
 - Task completion tracking (can mark tasks complete from chat)
+
+This is BOTH the "mentor" (friendly, Caribbean-aware career guide) AND the
+"orchestrator" (routes user intent to the right agent). A single
+conversational agent that:
+
+  1. Knows the user's full context (profile, roadmap, progress, portfolio)
+  2. Talks in a warm, encouraging, first-principles way
+  3. Has access to all other agents as "tools" it can call
+  4. Saves the full conversation history to the database
 """
 
 from __future__ import annotations
@@ -37,7 +46,7 @@ from app.models.db_models import (
 logger = logging.getLogger(__name__)
 
 
-# -- User context builder ----------------------------------------------------
+# ── User context builder ────────────────────────────────────────────────────
 
 
 async def _load_user_context(db: AsyncSession, user_id: str) -> str:
@@ -53,13 +62,24 @@ async def _load_user_context(db: AsyncSession, user_id: str) -> str:
     sections = []
 
     # Profile
+    interests_str = "Not set"
+    if user.interests:
+        if isinstance(user.interests, str):
+            try:
+                parsed = json.loads(user.interests)
+                interests_str = ", ".join(parsed) if isinstance(parsed, list) else user.interests
+            except (json.JSONDecodeError, TypeError):
+                interests_str = user.interests
+        elif isinstance(user.interests, list):
+            interests_str = ", ".join(str(i) for i in user.interests)
+
     sections.append(f"""## User Profile
 - Name: {user.name or 'Not set'}
 - Age: {user.age or 'Not set'}
 - Country: {user.country or 'Not set'}
 - Education: {user.education_level or 'Not set'}
 - Career path: {user.career_path or 'Not set'}
-- Interests: {', '.join(user.interests) if user.interests else 'Not set'}""")
+- Interests: {interests_str}""")
 
     # Active roadmap
     result = await db.execute(
@@ -81,14 +101,14 @@ async def _load_user_context(db: AsyncSession, user_id: str) -> str:
             completed_tasks += completed_in_step
             total_tasks += total_in_step
 
-            step_status = "DONE" if completed_in_step == total_in_step and total_in_step > 0 else "IN PROGRESS"
+            step_status = "✅ DONE" if completed_in_step == total_in_step and total_in_step > 0 else "🔄 IN PROGRESS"
             roadmap_lines.append(
                 f"\n### Step {step.order}: {step.title} [{step_status}]"
             )
             roadmap_lines.append(f"{step.description}")
 
             for t in step_tasks:
-                task_icon = "[DONE]" if t.status == "complete" else "[TODO]"
+                task_icon = "✅" if t.status == "complete" else "⬜"
                 roadmap_lines.append(f"  - {task_icon} {t.title} (Task ID: {t.id})")
 
         if total_tasks > 0:
@@ -100,14 +120,20 @@ async def _load_user_context(db: AsyncSession, user_id: str) -> str:
         sections.append("\n## Active Roadmap\nNo roadmap generated yet.")
 
     # Portfolio (tasks with evidence)
-    portfolio = await get_user_portfolio(db, user_id)
-    if portfolio:
-        portfolio_lines = ["\n## Portfolio (Completed Tasks with Evidence)"]
-        for item in portfolio:
-            ev_count = len(item.get("evidence", []))
-            portfolio_lines.append(f"- {item['title']} -- {ev_count} evidence file(s)")
-        sections.append("\n".join(portfolio_lines))
-    else:
+    try:
+        portfolio = await get_user_portfolio(db, user_id)
+        if portfolio:
+            portfolio_lines = ["\n## Portfolio (Completed Tasks with Evidence)"]
+            for item in portfolio:
+                if isinstance(item, dict):
+                    ev_count = len(item.get("evidence", []))
+                    title = item.get("title", "Unknown task")
+                    portfolio_lines.append(f"- {title} — {ev_count} evidence file(s)")
+            sections.append("\n".join(portfolio_lines))
+        else:
+            sections.append("\n## Portfolio\nNo evidence uploaded yet.")
+    except Exception as e:
+        logger.warning("Failed to load portfolio for context: %s", e)
         sections.append("\n## Portfolio\nNo evidence uploaded yet.")
 
     # Recent conversation summaries (last 3 conversations)
@@ -137,18 +163,18 @@ async def _load_user_context(db: AsyncSession, user_id: str) -> str:
     return "\n".join(sections)
 
 
-# -- System prompt -----------------------------------------------------------
+# ── System prompt — the Mentor's personality ───────────────────────────────
 
 SYSTEM_PROMPT_BASE = """\
-You are the Lynks Mentor -- a warm, encouraging career guide for young people in the \
+You are the Lynks Mentor — a warm, encouraging career guide for young people in the \
 Caribbean. You help users understand their career path, celebrate their progress, and \
 connect them with the right tools and opportunities.
 
 ## Your personality
 - Speak like a supportive mentor, not a corporate assistant
 - Explain concepts using first principles and concrete analogies, not jargon
-- Be encouraging but honest -- don't oversell or overpromise
-- Be aware of Caribbean context -- regional institutions, culture, and realities
+- Be encouraging but honest — don't oversell or overpromise
+- Be aware of Caribbean context — regional institutions, culture, and realities
 
 ## Your capabilities
 You have access to tools that let you take real actions for the user:
@@ -158,29 +184,29 @@ You have access to tools that let you take real actions for the user:
 - complete_task: Marks a task as complete in the user's roadmap
 
 ## When to use a tool vs. answer directly
-- If the user asks for a roadmap, wants to change their career path, or asks "what should I do" -> call generate_roadmap
-- If the user asks about their progress, portfolio, or verified evidence -> call get_portfolio
-- If the user asks about jobs, competitions, scholarships, or opportunities -> call find_opportunities
-- If the user says they completed something or want to mark a task done -> call complete_task with the task_id
-- If the user asks a general question (explain a concept, general encouragement, small talk) -> answer directly, no tool needed
+- If the user asks for a roadmap, wants to change their career path, or asks \"what should I do\" → call generate_roadmap
+- If the user asks about their progress, portfolio, or verified evidence → call get_portfolio
+- If the user asks about jobs, competitions, scholarships, or opportunities → call find_opportunities
+- If the user says they completed something or want to mark a task done → call complete_task with the task_id
+- If the user asks a general question (explain a concept, general encouragement, small talk) → answer directly, no tool needed
 
 ## How to use the user context
 You have access to the user's full context including their profile, active roadmap with all \
-steps and tasks (marked DONE or TODO), portfolio, and recent conversations. Use this context \
+steps and tasks (marked with ✅ or ⬜), portfolio, and recent conversations. Use this context \
 to give personalized, specific advice. Reference their actual roadmap steps, task progress, \
-and career path in your responses. Don't give generic advice -- tailor it to where they are \
+and career path in your responses. Don't give generic advice — tailor it to where they are \
 in their journey.
 
 ## Rules
 - Only call a tool when the user's intent clearly requires it
-- After a tool returns data, explain it in your own words -- don't just dump raw JSON
+- After a tool returns data, explain it in your own words — don't just dump raw JSON
 - If a tool fails (e.g., profile incomplete), explain the issue simply and tell them what to do next
 - Reference the user's specific roadmap steps and progress when giving advice
-- Celebrate completions enthusiastically -- "You just completed X! That's amazing!"
+- Celebrate completions enthusiastically — \"You just completed X! That's amazing!\"
 """
 
 
-# -- Tool definitions --------------------------------------------------------
+# ── Tool definitions (OpenAI function-calling format) ──────────────────────
 
 TOOLS = [
     {
@@ -200,7 +226,7 @@ TOOLS = [
         "function": {
             "name": "get_portfolio",
             "description": (
-                "Get the user's portfolio -- their completed tasks and verified evidence. "
+                "Get the user's portfolio — their completed tasks and verified evidence. "
                 "Use when the user asks about their progress, portfolio, or uploaded evidence."
             ),
             "parameters": {"type": "object", "properties": {}, "required": []},
@@ -251,7 +277,7 @@ TOOLS = [
 ]
 
 
-# -- Tool execution ----------------------------------------------------------
+# ── Tool execution ──────────────────────────────────────────────────────────
 
 
 async def _execute_tool(
@@ -260,6 +286,7 @@ async def _execute_tool(
     tool_name: str,
     tool_args: dict,
 ) -> dict:
+    """Execute the requested tool and return its result as a dict."""
     try:
         if tool_name == "generate_roadmap":
             return await generate_roadmap(db, user_id)
@@ -269,12 +296,12 @@ async def _execute_tool(
             return {"portfolio": portfolio}
 
         if tool_name == "find_opportunities":
-            category = tool_args.get("category")
+            category = tool_args.get("category") if isinstance(tool_args, dict) else None
             opportunities = await discover_opportunities(db, user_id, category)
             return {"opportunities": opportunities}
 
         if tool_name == "complete_task":
-            task_id = tool_args.get("task_id")
+            task_id = tool_args.get("task_id") if isinstance(tool_args, dict) else None
             if not task_id:
                 return {"error": "task_id is required"}
             task = await db.get(Task, task_id)
@@ -295,9 +322,12 @@ async def _execute_tool(
         return {"error": str(e)}
     except RuntimeError as e:
         return {"error": str(e)}
+    except Exception as e:
+        logger.error("Tool execution error for %s: %s", tool_name, e)
+        return {"error": f"tool_error: {str(e)[:200]}"}
 
 
-# -- Conversation management -------------------------------------------------
+# ── Conversation management ─────────────────────────────────────────────────
 
 
 async def _get_or_create_conversation(
@@ -349,7 +379,7 @@ async def _save_message(
     return message
 
 
-# -- Main chat function ------------------------------------------------------
+# ── Main chat function ──────────────────────────────────────────────────────
 
 
 async def send_message(
@@ -378,7 +408,7 @@ async def send_message(
 
     messages = [{"role": "system", "content": system_prompt}] + history + [{"role": "user", "content": message}]
 
-    # First LLM call -- may request a tool call
+    # First LLM call — may request a tool call
     response = client.chat.completions.create(
         model=settings.LLM_MODEL,
         messages=messages,
@@ -392,6 +422,7 @@ async def send_message(
     tool_calls_made = None
 
     if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+        # The LLM wants to call one or more tools
         tool_calls_made = []
         messages.append(choice.message.model_dump())
 
@@ -415,7 +446,7 @@ async def send_message(
         updated_context = await _load_user_context(db, user_id)
         messages[0] = {"role": "system", "content": SYSTEM_PROMPT_BASE + f"\n\n---\n\n# Current User Context\n\n{updated_context}"}
 
-        # Second LLM call
+        # Second LLM call — generate the natural-language response using tool results
         final_response = client.chat.completions.create(
             model=settings.LLM_MODEL,
             messages=messages,
@@ -443,11 +474,13 @@ async def send_message(
 
 
 async def get_chat_history(db: AsyncSession, user_id: str, conversation_id: str | None) -> dict:
+    """Get the message history for a conversation."""
     if conversation_id:
         conversation = await db.get(Conversation, conversation_id)
         if not conversation or conversation.user_id != user_id:
             raise ValueError("conversation_not_found: no conversation with this ID")
     else:
+        # Get the user's most recent conversation
         result = await db.execute(
             select(Conversation)
             .where(Conversation.user_id == user_id)
@@ -478,6 +511,7 @@ async def get_chat_history(db: AsyncSession, user_id: str, conversation_id: str 
 
 
 async def delete_chat_history(db: AsyncSession, user_id: str) -> None:
+    """Delete all conversations and messages for a user."""
     result = await db.execute(select(Conversation).where(Conversation.user_id == user_id))
     conversations = result.scalars().all()
 
