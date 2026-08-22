@@ -25,22 +25,24 @@ class Base(DeclarativeBase):
     pass
 
 
+# ── User ───────────────────────────────────────────────────────────────────
+
+
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    username: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    name: Mapped[str] = mapped_column(Text, nullable=False)
+    username: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
+    name: Mapped[str | None] = mapped_column(Text, nullable=True)
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    age: Mapped[int] = mapped_column(Integer, nullable=False)
-    country: Mapped[str] = mapped_column(Text, nullable=False)
-    education_level: Mapped[str] = mapped_column(Text, nullable=False)
-    employment_status: Mapped[str] = mapped_column(Text, nullable=True)
-    career_path: Mapped[str] = mapped_column(Text, nullable=False)
-    interests: Mapped[list[str]] = mapped_column(
-        ARRAY(Text), nullable=False, default=list
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    country: Mapped[str | None] = mapped_column(Text, nullable=True)
+    education_level: Mapped[str | None] = mapped_column(Text, nullable=True)
+    career_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    interests: Mapped[list[str] | None] = mapped_column(
+        ARRAY(Text), nullable=True, default=list
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -50,6 +52,9 @@ class User(Base):
     resumes: Mapped[list["Resume"]] = relationship(back_populates="user")
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="user")
     evidence_items: Mapped[list["Evidence"]] = relationship(back_populates="user")
+
+
+# ── Roadmap ────────────────────────────────────────────────────────────────
 
 
 class Roadmap(Base):
@@ -73,6 +78,9 @@ class Roadmap(Base):
     )
 
 
+# ── Step ───────────────────────────────────────────────────────────────────
+
+
 class Step(Base):
     __tablename__ = "steps"
 
@@ -90,6 +98,9 @@ class Step(Base):
     tasks: Mapped[list["Task"]] = relationship(
         back_populates="step", order_by="Task.order"
     )
+
+
+# ── Task ───────────────────────────────────────────────────────────────────
 
 
 class Task(Base):
@@ -111,6 +122,9 @@ class Task(Base):
 
     step: Mapped["Step"] = relationship(back_populates="tasks")
     evidence_items: Mapped[list["Evidence"]] = relationship(back_populates="task")
+
+
+# ── Evidence ───────────────────────────────────────────────────────────────
 
 
 class Evidence(Base):
@@ -138,6 +152,9 @@ class Evidence(Base):
     user: Mapped["User"] = relationship(back_populates="evidence_items")
 
 
+# ── Resume ─────────────────────────────────────────────────────────────────
+
+
 class Resume(Base):
     __tablename__ = "resumes"
 
@@ -158,6 +175,9 @@ class Resume(Base):
     user: Mapped["User"] = relationship(back_populates="resumes")
 
 
+# ── Conversation ───────────────────────────────────────────────────────────
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
 
@@ -175,6 +195,9 @@ class Conversation(Base):
     messages: Mapped[list["Message"]] = relationship(
         back_populates="conversation", order_by="Message.created_at"
     )
+
+
+# ── Message ────────────────────────────────────────────────────────────────
 
 
 class Message(Base):
