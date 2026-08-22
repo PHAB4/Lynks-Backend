@@ -1,8 +1,8 @@
 """
-Resume API routes -- generate and retrieve resumes.
+Resume API routes — LLM-powered resume builder.
 
-POST /resume/generate  -> generate a resume from user profile + portfolio
-GET  /resume           -> get the user's latest resume
+POST /resume/generate  → build a resume from user profile + portfolio
+GET  /resume           → get the latest resume for the authenticated user
 """
 
 from __future__ import annotations
@@ -12,45 +12,48 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from openai import OpenAI
-from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.agents.portfolio_manager import get_user_portfolio
 from app.core.config import settings
 from app.core.security import get_current_user_id
 from app.db.postgres import get_db
-from app.models.db_models import Resume, Roadmap, Step, Task, User
+from app.models.db_models import Evidence, Resume, Roadmap, Step, Task, User
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/resume", tags=["resume"])
 
 
-# -- LLM resume generation --------------------------------------------------
+# ── LLM Resume Generation ──────────────────────────────────────────────────
 
 SYSTEM_PROMPT = """\
-You are a professional resume writer for Caribbean young people.
+You are a resume builder for young Caribbean professionals.
 
-Given a user's profile, roadmap, and portfolio of completed tasks with evidence, \
-generate a structured resume as a JSON object.
+Given a user's profile and portfolio data, generate a structured resume in JSON format.
 
-## Output format
+Rules:
+1. Be concise — this is a 1-page resume
+2. Use action verbs ("Built", "Led", "Developed", "Organized")
+3. Highlight Caribbean-relevant achievements
+4. Include technical skills, education, and project experience
+5. Return ONLY valid JSON — no markdown, no commentary
+6. Age-appropriate language (they may be a student)
+"""
 
-Return a JSON object with this exact structure:
-
+RESUME_SCHEMA = """\
 {
   "name": "string",
   "email": "string",
-  "objective": "string (2-3 sentence career objective)",
+  "objective": "string (1-2 sentence career objective)",
   "education": [
     {
       "institution": "string",
-      "level": "string",
-      "details": "string"
+      "level": "string (e.g. High School, Bachelor's)",
+      "field": "string",
+      "status": "string (e.g. In Progress, Completed)"
     }
   ],
   "skills": ["string"],
@@ -58,50 +61,98 @@ Return a JSON object with this exact structure:
     {
       "title": "string",
       "organization": "string",
+      "duration": "string",
       "description": "string"
     }
   ],
   "projects": [
     {
-      "title": "string",
+      "name": "string",
       "description": "string",
-      "skills_used": ["string"]
+      "technologies": ["string"]
     }
   ],
-  "certifications": ["string"],
-  "interests": ["string"]
+  "achievements": ["string"]
 }
-
-## Rules
-- Skills should be derived from completed tasks and career path
-- Projects should come from the portfolio evidence (completed tasks)
-- Keep descriptions concise but impactful
-- Use action verbs (Built, Developed, Implemented, Led, Designed)
-- Tailor to the user's career path
-- Return ONLY valid JSON, no markdown fences
 """
 
 
-def _build_resume_prompt(user, portfolio, roadmap) -> str:
-    parts = [f"## User Profile\n- Name: {user.name}\n- Email: {user.email}\n- Country: {user.country}\n- Education: {user.education_level}\n- Career path: {user.career_path}\n- Interests: {', '.join(user.interests) if user.interests else 'N/A'}"]
+async def build_resume_with_llm(user: User, db: AsyncSession) -> dict:
+    """Generate a resume using the LLM based on user profile and portfolio."""
+    client = OpenAI(
+        api_key=settings.LLM_API_KEY,
+        base_url=settings.LLM_API_BASE_URL,
+    )
 
-    if portfolio:
-        parts.append("\n## Completed Tasks (with evidence)")
-        for item in portfolio:
-            ev_count = len(item.get("evidence", []))
-            parts.append(f"- {item['title']} ({ev_count} evidence files)")
+    # Gather user data
+    profile = {
+        "name": user.name,
+        "email": user.email,
+        "age": user.age,
+        "country": user.country,
+        "education_level": user.education_level,
+        "career_path": user.career_path,
+        "interests": user.interests or [],
+    }
 
+    # Gather portfolio data (completed tasks with evidence)
+    portfolio_items = []
+    result = await db.execute(
+        select(Task).where(Task.status == "completed")
+    )
+    tasks = result.scalars().all()
+    for task in tasks:
+        ev_result = await db.execute(
+            select(Evidence).where(Evidence.task_id == task.id)
+        )
+        evidences = ev_result.scalars().all()
+        portfolio_items.append({
+            "task": task.title,
+            "description": task.description,
+            "evidence_count": len(evidences),
+        })
+
+    # Gather roadmap steps
+    roadmap_result = await db.execute(
+        select(Roadmap).where(Roadmap.user_id == user.id))
+    roadmap = roadmap_result.scalars().first()
+    steps_info = []
     if roadmap:
-        parts.append(f"\n## Career Roadmap: {roadmap.career_path}")
-        for step in roadmap.steps:
-            completed = [t.title for t in step.tasks if t.status == "complete"]
-            if completed:
-                parts.append(f"- Step {step.order}: {step.title} -- completed: {', '.join(completed)}")
+        step_result = await db.execute(
+            select(Step).where(Step.roadmap_id == roadmap.id))
+        steps = step_result.scalars().all()
+        steps_info = [{"title": s.title, "description": s.description} for s in steps]
 
-    return "\n".join(parts)
+    user_data = (
+        f"User profile:\n{json.dumps(profile, indent=2)}\n\n"
+        f"Completed projects (from portfolio):\n{json.dumps(portfolio_items, indent=2)}\n\n"
+        f"Roadmap steps:\n{json.dumps(steps_info, indent=2)}"
+    )
+
+    response = client.chat.completions.create(
+        model=settings.LLM_MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT + "\n\nOutput schema:\n" + RESUME_SCHEMA},
+            {"role": "user", "content": user_data},
+        ],
+        temperature=0.3,
+        max_tokens=4096,
+    )
+
+    raw = response.choices[0].message.content.strip()
+
+    # Strip markdown fences if present
+    if raw.startswith("```"):
+        lines = raw.split("\n")
+        lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        raw = "\n".join(lines)
+
+    return json.loads(raw)
 
 
-# -- Routes -----------------------------------------------------------------
+# ── Routes ─────────────────────────────────────────────────────────────────
 
 
 @router.post("/generate", status_code=201)
@@ -109,53 +160,24 @@ async def generate_resume(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    """Generate a new resume using the LLM."""
     user = await db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    portfolio = await get_user_portfolio(db, user_id)
-
-    result = await db.execute(
-        select(Roadmap)
-        .options(selectinload(Roadmap.steps).selectinload(Step.tasks))
-        .where(Roadmap.user_id == user_id, Roadmap.is_active == True)
-    )
-    roadmap = result.scalar_one_or_none()
-
-    user_prompt = _build_resume_prompt(user, portfolio, roadmap)
-
-    client = OpenAI(api_key=settings.LLM_API_KEY, base_url=settings.LLM_API_BASE_URL)
-    response = client.chat.completions.create(
-        model=settings.LLM_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.5,
-        max_tokens=4096,
-    )
-
-    raw_content = response.choices[0].message.content.strip()
-    if raw_content.startswith("```"):
-        lines = raw_content.split("\n")
-        lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        raw_content = "\n".join(lines)
+        raise HTTPException(status_code=404, detail="user_not_found")
 
     try:
-        resume_data = json.loads(raw_content)
-    except json.JSONDecodeError as e:
-        logger.error("LLM returned invalid JSON for resume: %s", e)
-        raise HTTPException(
-            status_code=500,
-            detail={"error": {"code": "resume_parse_error", "message": str(e)}},
-        )
+        content = await build_resume_with_llm(user, db)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=502, detail="LLM returned invalid JSON")
+    except Exception as e:
+        logger.error("Resume generation failed: %s", e)
+        raise HTTPException(status_code=502, detail=f"LLM error: {str(e)[:200]}")
 
     resume = Resume(
         id=str(uuid.uuid4()),
         user_id=user_id,
-        content=resume_data,
+        content=content,
+        created_at=datetime.now(timezone.utc),
     )
     db.add(resume)
     await db.commit()
@@ -163,8 +185,8 @@ async def generate_resume(
 
     return {
         "resume_id": resume.id,
-        "content": resume_data,
-        "created_at": resume.created_at.isoformat() if resume.created_at else None,
+        "content": content,
+        "created_at": resume.created_at.isoformat(),
     }
 
 
@@ -173,22 +195,19 @@ async def get_resume(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    """Get the latest resume for the authenticated user."""
     result = await db.execute(
         select(Resume)
         .where(Resume.user_id == user_id)
         .order_by(Resume.created_at.desc())
         .limit(1)
     )
-    resume = result.scalar_one_or_none()
+    resume = result.scalars().first()
     if not resume:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": {"code": "no_resume", "message": "No resume found. Call POST /resume/generate first."}},
-        )
+        raise HTTPException(status_code=404, detail="no_resume_found")
 
     return {
         "resume_id": resume.id,
         "content": resume.content,
-        "created_at": resume.created_at.isoformat() if resume.created_at else None,
-        "updated_at": resume.updated_at.isoformat() if resume.updated_at else None,
+        "created_at": resume.created_at.isoformat(),
     }
