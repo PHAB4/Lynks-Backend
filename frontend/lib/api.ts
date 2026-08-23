@@ -1,9 +1,7 @@
 import { supabase } from './supabase'
 import type { User, RoadmapResponse, EvidenceResponse, PortfolioEntry, Opportunity, ChatSendResponse, ChatConversation } from './types'
-
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
 const BASE = BACKEND || '/api'
-
 export class LynksApiError extends Error {
   code: string
   constructor(code: string, message: string) {
@@ -11,7 +9,6 @@ export class LynksApiError extends Error {
     this.code = code
   }
 }
-
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession()
   const token = session?.access_token
@@ -33,21 +30,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
   return body as T
 }
-
 export const profile = {
   get: () => request<User>('/profile'),
-  update: (fields: Partial<Pick<User, 'name' | 'age' | 'country' | 'education_level' | 'interests'>>) =>
+  update: (fields: Partial<Pick<User, 'name' | 'age' | 'country' | 'education_level' | 'employment_status' | 'interests'>>) =>
     request<User>('/profile', { method: 'PATCH', body: JSON.stringify(fields) }),
   setCareerPath: (careerPath: string) =>
     request<{ career_path: string }>('/profile/career-path', { method: 'PATCH', body: JSON.stringify({ career_path: careerPath }) }),
 }
-
 export const roadmap = {
   get: () => request<RoadmapResponse>('/roadmap'),
   generate: () => request<RoadmapResponse>('/roadmap/generate', { method: 'POST' }),
   regenerate: () => request<RoadmapResponse>('/roadmap/regenerate', { method: 'POST' }),
 }
-
 export const evidence = {
   upload: async (taskId: string, file: File) => {
     const formData = new FormData()
@@ -64,9 +58,9 @@ export const evidence = {
     return body as EvidenceResponse
   },
 }
-
-export const portfolio = { get: () => request<PortfolioEntry[]>('/portfolio') }
-
+export const portfolio = {
+  get: () => request<PortfolioEntry[]>('/portfolio'),
+}
 export const opportunities = {
   list: (filters?: { category?: string }) => {
     const params = new URLSearchParams()
@@ -75,7 +69,6 @@ export const opportunities = {
     return request<Opportunity[]>(`/opportunities${qs ? `?${qs}` : ''}`)
   },
 }
-
 export const chat = {
   send: (message: string, conversationId?: string) =>
     request<ChatSendResponse>('/chat/message', {
@@ -88,5 +81,6 @@ export const chat = {
   },
   clear: () => request<{ success: boolean }>('/chat/history', { method: 'DELETE' }),
 }
-
-export const health = { check: () => request<{ status: string }>('/health') }
+export const health = {
+  check: () => request<{ status: string }>('/health'),
+}
