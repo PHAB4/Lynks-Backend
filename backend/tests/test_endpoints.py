@@ -40,7 +40,7 @@ LLM_TIMEOUT = 60.0  # seconds — LLM calls need more headroom
 #  CONFIG — Reads from .env automatically
 # ══════════════════════════════════════════════════════════════════════════════
 
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BASE_URL", "https://lynks-backend-production.up.railway.app")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://your-project.supabase.co")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
