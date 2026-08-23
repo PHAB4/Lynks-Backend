@@ -14,14 +14,18 @@ class Settings(BaseSettings):
     # Postgres (Supabase provides this — pooler URL for async access)
     DATABASE_URL: str  # e.g. postgresql+asyncpg://user:pass@host:6543/postgres
 
-    # LLM — OpenAI-compatible compute gateway
-    LLM_API_BASE_URL: str  # e.g. https://api.groq.com/openai/v1
+    # LLM — OpenAI-compatible compute gateway (Highrise / Impala AI)
+    LLM_API_BASE_URL: str  # e.g. https://api.highrise.ai/v1
     LLM_API_KEY: str
-    LLM_MODEL: str = "llama3-70b-8192"  # default for Groq
+    LLM_MODEL: str = "openai/gpt-oss-120b"  # Groq model — override in .env if needed
+
+    # Test config (optional)
+    JWT_TOKEN: str = ""
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()
