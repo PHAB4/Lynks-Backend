@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lynks Frontend
 
-## Getting Started
-
-First, run the development server:
+## Setup
 
 ```bash
+cd frontend
+npx create-next-app@latest . --typescript --tailwind --eslint
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create `.env.local` in this directory:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+NEXT_PUBLIC_API_URL=https://lynks-backend-production.up.railway.app
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
+```
 
-## Learn More
+## Backend API
 
-To learn more about Next.js, take a look at the following resources:
+The backend runs at `https://lynks-backend-production.up.railway.app` (production) or `http://localhost:8000` (local). Key endpoints:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Method | Endpoint | What it does |
+|--------|----------|-------------|
+| POST | `/auth/v1/signup` | Create account |
+| POST | `/auth/v1/token?grant_type=password` | Log in |
+| GET | `/profile` | Get user profile |
+| POST | `/roadmap/generate` | Generate career roadmap |
+| GET | `/roadmap` | Get active roadmap |
+| POST | `/roadmap/regenerate` | Generate new roadmap |
+| POST | `/tasks/{task_id}/evidence` | Upload evidence |
+| GET | `/portfolio` | Get verified portfolio |
+| GET | `/opportunities` | Browse opportunities |
+| GET | `/opportunities?mode=relevant` | Get relevant opportunities |
+| POST | `/chat/message` | Send message to Mentor |
+| GET | `/chat/history` | Get chat history |
+| DELETE | `/chat/history` | Clear chat history |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Full request/response shapes are in `docs/API_CONTRACT.md`.
 
-## Deploy on Vercel
+## Folder Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+frontend/
+├── app/
+│   ├── page.tsx                    ← landing page
+│   ├── login/page.tsx              ← login
+│   ├── onboarding/page.tsx         ← onboarding (3 steps)
+│   ├── dashboard/page.tsx          ← main dashboard
+│   ├── roadmap/page.tsx            ← career roadmap
+│   ├── opportunities/page.tsx      ← career opportunities
+│   ├── portfolio/page.tsx          ← verified portfolio
+│   └── chat/page.tsx               ← mentor chatbot
+├── components/
+│   ├── ChatWidget.tsx              ← chatbot UI
+│   ├── OpportunityCard.tsx         ← opportunity card with "Ask About This"
+│   ├── RoadmapTimeline.tsx         ← roadmap visualization
+│   └── ...
+└── ...
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Rules
+
+- Work **only** in this `frontend/` folder
+- Do **not** edit anything in `backend/` or `docs/`
+- Call the API via `fetch()` using `NEXT_PUBLIC_API_URL`
+- Use shadcn/ui components and Tailwind CSS
+- Use `lucide-react` for icons
