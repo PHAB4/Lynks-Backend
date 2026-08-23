@@ -176,7 +176,7 @@ def run_tests():
     @test("GET /profile (returns 404 for fresh user)")
     def test_profile():
         token = _state.get("token")
-        resp = httpx.get(f"{BASE_URL}/profile", headers=headers(token))
+        resp = httpx.get(f"{BASE_URL}/profile", headers=headers(token), timeout=HTTP_TIMEOUT)
         if resp.status_code in (200, 404):
             return True, f"status {resp.status_code}"
         else:
@@ -217,7 +217,7 @@ def run_tests():
     @test("POST /roadmap/generate (career architect)")
     def test_roadmap_generate():
         token = _state.get("token")
-        resp = httpx.post(f"{BASE_URL}/roadmap/generate", headers=headers(token))
+        resp = httpx.post(f"{BASE_URL}/roadmap/generate", headers=headers(token), timeout=LLM_TIMEOUT)
         if resp.status_code == 201:
             data = resp.json()
             roadmap_id = data.get("roadmap_id")
@@ -238,7 +238,7 @@ def run_tests():
     @test("GET /roadmap (returns active roadmap)")
     def test_roadmap_get():
         token = _state.get("token")
-        resp = httpx.get(f"{BASE_URL}/roadmap", headers=headers(token))
+        resp = httpx.get(f"{BASE_URL}/roadmap", headers=headers(token), timeout=HTTP_TIMEOUT)
         if resp.status_code == 200:
             data = resp.json()
             steps = data.get("steps", [])
@@ -251,7 +251,7 @@ def run_tests():
     @test("POST /roadmap/regenerate (rebuilds roadmap)")
     def test_roadmap_regenerate():
         token = _state.get("token")
-        resp = httpx.post(f"{BASE_URL}/roadmap/regenerate", headers=headers(token))
+        resp = httpx.post(f"{BASE_URL}/roadmap/regenerate", headers=headers(token), timeout=LLM_TIMEOUT)
         if resp.status_code == 201:
             data = resp.json()
             old_roadmap_id = _state.get("roadmap_id")
@@ -304,7 +304,7 @@ def run_tests():
     @test("GET /portfolio (shows uploaded evidence)")
     def test_portfolio():
         token = _state.get("token")
-        resp = httpx.get(f"{BASE_URL}/portfolio", headers=headers(token))
+        resp = httpx.get(f"{BASE_URL}/portfolio", headers=headers(token), timeout=HTTP_TIMEOUT)
         if resp.status_code == 200:
             data = resp.json()
             tasks_with_evidence = len(data)
@@ -392,6 +392,7 @@ def run_tests():
         resp = httpx.get(
             f"{BASE_URL}/chat/history?conversation_id={conversation_id}",
             headers=headers(token),
+            timeout=HTTP_TIMEOUT,
         )
         if resp.status_code == 200:
             data = resp.json()
@@ -405,7 +406,7 @@ def run_tests():
     @test("DELETE /chat/history (clears conversation)")
     def test_chat_delete():
         token = _state.get("token")
-        resp = httpx.delete(f"{BASE_URL}/chat/history", headers=headers(token))
+        resp = httpx.delete(f"{BASE_URL}/chat/history", headers=headers(token), timeout=HTTP_TIMEOUT)
         if resp.status_code == 200:
             data = resp.json()
             return True, f"success={data.get('success')}"
@@ -437,7 +438,7 @@ def run_tests():
     @test("GET /opportunities?category=invalid (returns 400)")
     def test_invalid_category():
         token = _state.get("token")
-        resp = httpx.get(f"{BASE_URL}/opportunities?category=invalid", headers=headers(token))
+        resp = httpx.get(f"{BASE_URL}/opportunities?category=invalid", headers=headers(token), timeout=HTTP_TIMEOUT)
         if resp.status_code == 400:
             return True, "400 returned correctly"
         else:
