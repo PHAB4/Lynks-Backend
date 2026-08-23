@@ -7,7 +7,7 @@
 
 ## Overview
 
-All tables use UUID primary keys in the `public` schema. Auth is handled by Supabase's internal `auth.users` — a trigger copies id, email, and created_at into `public.users` on signup.
+All tables use **UUID primary keys** and live in the `public` schema. Auth is handled by Supabase's internal `auth.users` — a trigger copies `id`, `email`, and `created_at` into `public.users` on signup.
 
 ```
 users ──< roadmaps ──< steps ──< tasks ──< evidence
@@ -25,13 +25,13 @@ opportunities (standalone)
 | id | uuid | NO | gen_random_uuid() | PK, FK → auth.users.id |
 | email | text | NO | null | UNIQUE, from Supabase Auth |
 | username | text | YES | null | UNIQUE, set by user |
-| name | text | YES | null | |
-| age | bigint | YES | null | |
-| country | text | YES | null | |
-| education_level | text | YES | null | |
-| career_path | text | YES | null | |
-| interests | ARRAY | YES | null | text[] |
-| created_at | timestamptz | NO | now() | |
+| name | text | YES | null | Set by user |
+| age | bigint | YES | null | Set by user |
+| country | text | YES | null | Set by user |
+| education_level | text | YES | null | Set by user |
+| career_path | text | YES | null | Set by user |
+| interests | ARRAY | YES | null | text[] — array of strings |
+| created_at | timestamptz | NO | now() | Set by signup trigger |
 
 ---
 
@@ -41,8 +41,8 @@ opportunities (standalone)
 |-------|------|----------|---------|-------|
 | id | uuid | NO | gen_random_uuid() | PK |
 | user_id | uuid | NO | gen_random_uuid() | FK → users.id |
-| career_path | text | YES | null | Snapshot at generation time |
-| is_active | boolean | NO | null | |
+| career_path | text | YES | null | Snapshot of career path at generation time |
+| is_active | boolean | NO | null | Only one active per user |
 | created_at | timestamptz | NO | now() | |
 
 ---
@@ -53,9 +53,9 @@ opportunities (standalone)
 |-------|------|----------|---------|-------|
 | id | uuid | NO | gen_random_uuid() | PK |
 | roadmap_id | uuid | NO | gen_random_uuid() | FK → roadmaps.id |
-| title | text | NO | null | |
-| description | text | NO | null | |
-| order | bigint | YES | null | 1-based |
+| title | text | NO | null | Step name |
+| description | text | NO | null | 2-3 sentence description |
+| order | bigint | YES | null | 1-based position in roadmap |
 | created_at | timestamptz | NO | now() | |
 
 ---
@@ -66,11 +66,11 @@ opportunities (standalone)
 |-------|------|----------|---------|-------|
 | id | uuid | NO | gen_random_uuid() | PK |
 | step_id | uuid | NO | gen_random_uuid() | FK → steps.id |
-| title | text | NO | null | |
-| description | text | NO | null | |
-| status | text | NO | null | pending / complete |
-| order | integer | YES | 0 | 1-based |
-| completed_at | timestamptz | YES | null | |
+| title | text | NO | null | Task name |
+| description | text | NO | null | What to do and why |
+| status | text | NO | null | "pending" or "complete" |
+| order | integer | YES | 0 | 1-based position in step |
+| completed_at | timestamptz | YES | null | When marked complete |
 | created_at | timestamptz | NO | now() | |
 
 ---
@@ -83,8 +83,8 @@ opportunities (standalone)
 | task_id | uuid | NO | gen_random_uuid() | FK → tasks.id |
 | user_id | uuid | NO | gen_random_uuid() | FK → users.id |
 | file_url | text | NO | null | Supabase Storage URL |
-| file_type | text | NO | null | MIME type |
-| uploaded_at | timestamptz | NO | now() | |
+| file_type | text | NO | null | MIME type (e.g. "image/png") |
+| uploaded_at | timestamptz | NO | now() | When uploaded |
 | verification_status | text | YES | null | pending / verified / rejected |
 | created_at | timestamptz | NO | now() | |
 
@@ -96,11 +96,11 @@ opportunities (standalone)
 |-------|------|----------|---------|-------|
 | id | uuid | NO | gen_random_uuid() | PK |
 | user_id | uuid | NO | gen_random_uuid() | FK → users.id |
-| content | jsonb | YES | null | |
+| content | jsonb | YES | null | Structured resume data |
 | created_at | timestamptz | NO | now() | |
-| updated_at | timestamptz | NO | null | |
+| updated_at | timestamptz | NO | null | Auto-updated |
 
-**Not yet implemented** — no endpoint.
+**Implemented** — see `POST /resume/generate` and `GET /resume` in API contract.
 
 ---
 
@@ -120,9 +120,9 @@ opportunities (standalone)
 |-------|------|----------|---------|-------|
 | id | uuid | NO | gen_random_uuid() | PK |
 | conversation_id | uuid | NO | gen_random_uuid() | FK → conversations.id, ON DELETE CASCADE |
-| role | text | NO | null | user / assistant / tool |
-| content | text | NO | null | |
-| tool_calls | json | YES | null | |
+| role | text | NO | null | "user", "assistant", or "tool" |
+| content | text | NO | null | Message text |
+| tool_calls | json | YES | null | Tool call data (if any) |
 | created_at | timestamptz | NO | now() | |
 
 ---
@@ -131,23 +131,23 @@ opportunities (standalone)
 
 | Field | Type | Nullable | Default | Notes |
 |-------|------|----------|---------|-------|
-| id | text | NO | null | Text ID (not UUID) |
-| title | text | NO | null | |
-| company | text | NO | null | |
-| location | text | NO | null | |
-| pay | text | YES | null | |
-| age_requirement | text | YES | null | |
-| expereince_required | text | YES | null | ⚠️ Typo in DB |
-| url | text | NO | null | |
-| fetched_at | timestamptz | NO | now() | |
+| id | text | NO | null | NOT a UUID — text identifier |
+| title | text | NO | null | Opportunity name |
+| company | text | NO | null | Organization offering it |
+| location | text | NO | null | Country/city |
+| pay | text | YES | null | Cost or stipend info |
+| age_requirement | text | YES | null | Age range (e.g. "13-18") |
+| expereince_required | text | YES | null | ⚠️ Typo in DB — should be "experience_required" |
+| url | text | NO | null | Link to apply/learn more |
+| fetched_at | timestamptz | NO | now() | When scraped/added |
 
-**Note:** No `category` column — categories are in the agent's hardcoded data.
+**Note:** This table does NOT have a `category` column in the database — categories are embedded in the agent's hardcoded data, not in a DB column.
 
 ---
 
 ## Supabase Storage
 
 **Bucket:** `evidence` (public)
-- Anyone can upload
-- Anyone can read
-- URL: `https://...supabase.co/storage/v1/object/public/evidence/{filename}`
+- Anyone can upload files
+- Anyone can read files
+- URL format: `https://qcyxyunngbkupttcwlbk.supabase.co/storage/v1/object/public/evidence/{filename}`
