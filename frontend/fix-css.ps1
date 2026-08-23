@@ -1,4 +1,5 @@
-﻿@import "tw-animate-css";
+$css = @"
+@import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @custom-variant dark (&:is(.dark *));
 @theme inline {
@@ -24,3 +25,6 @@
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
 }
+"@
+Set-Content -Path "app\globals.css" -Value $css -Encoding UTF8
+Write-Host "Done! File updated."
