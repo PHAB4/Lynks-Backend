@@ -288,8 +288,9 @@ def run_tests():
         resp = httpx.post(
             f"{BASE_URL}/tasks/{task_id}/evidence",
             headers={"Authorization": f"Bearer {token}"},
-            files={"file": (filename, file_bytes, file_type, timeout=HTTP_TIMEOUT)},
+            files={"file": (filename, file_bytes, file_type)},
             data={"file_type": file_type},
+            timeout=HTTP_TIMEOUT,
         )
         if resp.status_code == 201:
             data = resp.json()
