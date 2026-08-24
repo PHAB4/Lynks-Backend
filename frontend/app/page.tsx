@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
-function AnimatedSection({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+function ScrollReveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = ref.current
@@ -11,53 +11,33 @@ function AnimatedSection({ children, className = '', delay = 0 }: { children: Re
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setTimeout(() => el.classList.add('animate-in'), delay)
-          observer.unobserve(el)
+          setTimeout(() => {
+            el.style.opacity = '1'
+            el.style.transform = 'translateY(0)'
+          }, delay)
+        } else {
+          el.style.opacity = '0'
+          el.style.transform = 'translateY(30px)'
         }
       },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
     )
+    el.style.opacity = '0'
+    el.style.transform = 'translateY(30px)'
+    el.style.transition = 'opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)'
     observer.observe(el)
     return () => observer.disconnect()
   }, [delay])
   return (
-    <div ref={ref} className={`scroll-animate ${className}`}>
+    <div ref={ref} className={className}>
       {children}
     </div>
   )
 }
 
 export default function LandingPage() {
-  const glowRef = useRef<HTMLDivElement>(null)
   const [showLogin, setShowLogin] = useState(false)
   const [loginForm, setLoginForm] = useState({ email: '', password: '' })
-  const rafRef = useRef<number>(0)
-  const targetRef = useRef({ x: 0, y: 0 })
-  const currentRef = useRef({ x: 0, y: 0 })
-
-  const animateGlow = useCallback(() => {
-    const glow = glowRef.current
-    if (!glow) return
-    const dx = targetRef.current.x - currentRef.current.x
-    const dy = targetRef.current.y - currentRef.current.y
-    currentRef.current.x += dx * 0.1
-    currentRef.current.y += dy * 0.1
-    glow.style.left = `${currentRef.current.x}px`
-    glow.style.top = `${currentRef.current.y}px`
-    rafRef.current = requestAnimationFrame(animateGlow)
-  }, [])
-
-  useEffect(() => {
-    rafRef.current = requestAnimationFrame(animateGlow)
-    const handleMouseMove = (e: MouseEvent) => {
-      targetRef.current = { x: e.clientX, y: e.clientY }
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      cancelAnimationFrame(rafRef.current)
-    }
-  }, [animateGlow])
 
   const features = [
     {
@@ -95,10 +75,7 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="flex flex-col items-center bg-[#F9F5FF] min-h-screen w-full overflow-hidden relative z-10">
-      {/* Mouse glow — follows cursor with smooth lerp */}
-      <div ref={glowRef} className="mouse-glow" style={{ left: 0, top: 0 }} />
-
+    <div className="flex flex-col items-center bg-[#F9F5FF] min-h-screen w-full overflow-hidden">
       {/* Navbar */}
       <nav className="nav-shadow flex items-center justify-between w-full max-w-[1200px] mx-auto px-5 py-4 relative z-20">
         <div className="flex items-center gap-1">
@@ -116,7 +93,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <div className="flex flex-col items-center justify-center flex-1 w-full max-w-[1200px] mx-auto px-5 py-12 relative z-10">
+      <ScrollReveal className="flex flex-col items-center justify-center flex-1 w-full max-w-[1200px] mx-auto px-5 py-12">
         <div className="relative">
           <p className="text-[128px] leading-[55px] text-[#6B26EA] mb-2" style={{ fontFamily: "'Birthstone', cursive" }}>Let&apos;s</p>
           <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Lynk</h1>
@@ -125,41 +102,39 @@ export default function LandingPage() {
         <Link href="/onboarding" className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
           Get started
         </Link>
-      </div>
+      </ScrollReveal>
 
       {/* Purple tagline bar */}
-      <div className="w-full bg-[#6B26EA] py-10 px-12 relative z-10">
+      <ScrollReveal className="w-full bg-[#6B26EA] py-10 px-12">
         <h2 className="text-white text-[29px] font-medium leading-[130%] text-center max-w-[800px] mx-auto" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 500 }}>
           Get connected, get informed and receive guidance. Make your career journey easier than its ever been
         </h2>
-      </div>
+      </ScrollReveal>
 
-      {/* Feature sections with scroll animations */}
+      {/* Feature sections */}
       {features.map((feature, i) => (
-        <AnimatedSection key={i} delay={i * 100} className="w-full">
-          <div className={`w-full max-w-[1200px] mx-auto px-[60px] py-16 flex items-center gap-14 ${feature.reverse ? 'flex-row-reverse' : ''}`}>
-            <div className={`flex-1 flex flex-col gap-6 ${feature.reverse ? 'items-end text-right' : 'items-start text-left'}`}>
-              <span className="text-[#6B26EA] text-xs font-semibold tracking-[0.15em] uppercase" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
-                {feature.label}
-              </span>
-              <h3 className="text-[25px] font-bold leading-[40px] text-[#0D0026]" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
-                {feature.title}
-              </h3>
-              <p className="text-[16px] leading-[28px] text-[rgba(0,0,0,0.6)]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
-                {feature.description}
-              </p>
+        <div key={i} className={`w-full max-w-[1200px] mx-auto px-[60px] py-16 flex items-center gap-14 ${feature.reverse ? 'flex-row-reverse' : ''}`}>
+          <ScrollReveal delay={0} className={`flex-1 flex flex-col gap-6 ${feature.reverse ? 'items-end text-right' : 'items-start text-left'}`}>
+            <span className="text-[#6B26EA] text-xs font-semibold tracking-[0.15em] uppercase" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
+              {feature.label}
+            </span>
+            <h3 className="text-[25px] font-bold leading-[40px] text-[#0D0026]" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
+              {feature.title}
+            </h3>
+            <p className="text-[16px] leading-[28px] text-[rgba(0,0,0,0.6)]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
+              {feature.description}
+            </p>
+          </ScrollReveal>
+          <ScrollReveal delay={150} className="flex-1 flex justify-center">
+            <div className="feature-image-ring relative w-[380px] h-[380px]">
+              <img src={feature.image} alt={feature.imageAlt} className="w-full h-full object-cover rounded-full" />
             </div>
-            <div className="flex-1 flex justify-center">
-              <div className="feature-image-ring relative w-[380px] h-[380px]">
-                <img src={feature.image} alt={feature.imageAlt} className="w-full h-full object-cover rounded-full" />
-              </div>
-            </div>
-          </div>
-        </AnimatedSection>
+          </ScrollReveal>
+        </div>
       ))}
 
       {/* Footer */}
-      <footer className="w-full bg-[#E0E0E0] py-5 px-5 mt-12 relative z-10">
+      <footer className="w-full bg-[#E0E0E0] py-5 px-5 mt-12">
         <div className="flex items-center justify-between max-w-[1200px] mx-auto">
           <div className="flex items-center gap-1">
             <span className="text-xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>LYNKS</span>
