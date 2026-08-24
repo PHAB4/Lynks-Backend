@@ -144,32 +144,80 @@ def run_tests():
     @test("POST /auth/v1/signup (get test JWT)")
     def test_auth():
         global JWT_TOKEN
+
+        # ── Step 1: Try existing JWT_TOKEN from .env ────────────────────
         if JWT_TOKEN and JWT_TOKEN != "your-anon-key-here":
-            _state["token"] = JWT_TOKEN
-            return True, "using pre-supplied token"
+            try:
+                resp = httpx.get(
+                    f"{BASE_URL}/profile",
+                    headers=headers(JWT_TOKEN),
+                    timeout=HTTP_TIMEOUT,
+                )
+                if resp.status_code in (200, 404):
+                    _state["token"] = JWT_TOKEN
+                    return True, "using pre-supplied token (verified)"
+            except Exception:
+                pass
+            # Token was set but expired — fall through to refresh
 
-        if SUPABASE_ANON_KEY == "your-anon-key-here":
-            # No Supabase key configured — check if server accepts requests without auth
-            resp = httpx.get(f"{BASE_URL}/roadmap", headers=headers("fake-token"))
-            if resp.status_code in (401, 403):
-                return True, "auth required (no anon key to test signup)"
-            else:
-                return False, "Server should require auth but returned 200 without valid token"
+        # ── Step 2: Need Supabase keys to generate a fresh token ────────
+        if not SUPABASE_ANON_KEY or SUPABASE_ANON_KEY == "your-anon-key-here":
+            return False, (
+                "JWT expired and no SUPABASE_ANON_KEY to refresh. "
+                "Add SUPABASE_URL and SUPABASE_ANON_KEY to .env"
+            )
 
+        # ── Step 3: Sign in via Supabase to get a fresh token ──────────
         test_email = f"test_{int(time.time())}@lynks-test.com"
         test_password = "TestPassword123!"
+
+        # Try signup first
         resp = httpx.post(
             f"{SUPABASE_URL}/auth/v1/signup",
             headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
             json={"email": test_email, "password": test_password},
             timeout=HTTP_TIMEOUT,
         )
+
+        # If signup fails (user already exists), try sign in
+        if resp.status_code != 200:
+            # Try common test credentials
+            for email, password in [
+                ("test@lynks.com", "TestPassword123!"),
+                ("test@example.com", "TestPassword123!"),
+            ]:
+                resp = httpx.post(
+                    f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
+                    headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+                    json={"email": email, "password": password},
+                    timeout=HTTP_TIMEOUT,
+                )
+                if resp.status_code == 200:
+                    test_email = email
+                    break
+
         if resp.status_code == 200:
-            _state["token"] = resp.json().get("access_token", "")
-            _state["email"] = test_email
-            return True, f"created test user: {test_email}"
-        else:
-            return False, f"Signup failed: {resp.status_code} — {resp.text[:200]}"
+            token = resp.json().get("access_token", "")
+            if token:
+                _state["token"] = token
+                # Save fresh token back to .env so next run is instant
+                try:
+                    env_path = Path(__file__).resolve().parent.parent / ".env"
+                    env_content = env_path.read_text()
+                    if "JWT_TOKEN=" in env_content:
+                        env_content = env_content.replace(
+                            f"JWT_TOKEN={JWT_TOKEN}" if JWT_TOKEN else "JWT_TOKEN=",
+                            f"JWT_TOKEN={token}"
+                        )
+                    else:
+                        env_content += f"\nJWT_TOKEN={token}\n"
+                    env_path.write_text(env_content)
+                    JWT_TOKEN = token
+                except Exception:
+                    pass
+                return True, f"fresh token via Supabase ({test_email})"
+
+        return False, f"Could not get JWT: {resp.status_code} — {resp.text[:200]}"
 
     # ── 3. Profile ───────────────────────────────────────────────────────────
 
