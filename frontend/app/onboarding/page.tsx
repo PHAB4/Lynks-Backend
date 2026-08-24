@@ -2,43 +2,31 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth'
-import { submitOnboarding, ONBOARDING_STEPS, type OnboardingData } from '@/lib/onboarding'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ChevronRight, ChevronLeft } from 'lucide-react'
+import { cn } from '@/lib/cn'
+
+const STEPS = [
+  { title: 'Welcome to Lynks', subtitle: "Let's set up your profile to personalize your career journey.", content: (<div className="flex flex-col items-center gap-6 py-8"><div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center"><span className="text-4xl">🚀</span></div><p className="text-center text-text-secondary max-w-sm">We&apos;ll ask you a few questions to understand your career goals and interests.</p></div>) },
+  { title: "What's your name?", subtitle: "We'll use this to personalize your experience.", content: (<div className="py-8 max-w-sm mx-auto"><input type="text" placeholder="Enter your full name" className="w-full py-3 px-4 rounded-xl border border-border bg-surface text-sm text-text-primary focus:outline-none focus:border-primary transition-colors" /></div>) },
+  { title: 'Where are you located?', subtitle: 'This helps us find opportunities near you.', content: (<div className="py-8 max-w-sm mx-auto"><select className="w-full py-3 px-4 rounded-xl border border-border bg-surface text-sm text-text-primary focus:outline-none focus:border-primary transition-colors appearance-none"><option value="">Select your country</option><option value="TT">Trinidad and Tobago</option><option value="JM">Jamaica</option><option value="BB">Barbados</option><option value="BS">Bahamas</option><option value="GY">Guyana</option><option value="OTHER">Other</option></select></div>) },
+  { title: "What's your education level?", subtitle: 'This helps us match opportunities to your qualifications.', content: (<div className="py-8 max-w-sm mx-auto"><div className="flex flex-col gap-2">{['High School', "Associate's Degree", "Bachelor's Degree", "Master's Degree", 'PhD', 'Self-taught'].map((level) => (<label key={level} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface cursor-pointer hover:border-primary transition-colors"><input type="radio" name="education" className="accent-primary" /><span className="text-sm text-text-primary">{level}</span></label>))}</div></div>) },
+  { title: 'What are your career interests?', subtitle: 'Select all that apply.', content: (<div className="py-8 max-w-sm mx-auto"><div className="flex flex-wrap gap-2">{['Technology', 'Design', 'Business', 'Healthcare', 'Education', 'Finance', 'Marketing', 'Engineering', 'Data Science', 'AI/ML'].map((interest) => (<label key={interest} className="flex items-center gap-2 py-2 px-4 rounded-full border border-border bg-surface cursor-pointer hover:border-primary transition-colors"><input type="checkbox" className="accent-primary" /><span className="text-sm text-text-primary">{interest}</span></label>))}</div></div>) },
+]
 
 export default function OnboardingPage() {
-  const router = useRouter()
-  const { user } = useAuth()
   const [step, setStep] = useState(0)
-  const [data, setData] = useState<OnboardingData>({ name: user?.name ?? '', country: user?.country ?? '', employment_status: user?.employment_status ?? '', career_path: user?.career_path ?? '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const current = ONBOARDING_STEPS[step]
-  const isLast = step === ONBOARDING_STEPS.length - 1
-
-  const goNext = () => { if (!data[current.field]) return; if (step < ONBOARDING_STEPS.length - 1) setStep(step + 1) }
-  const goBack = () => { if (step > 0) setStep(step - 1) }
-  const handleSubmit = async () => { setLoading(true); setError(''); try { await submitOnboarding(data); router.push('/dashboard') } catch (err: any) { setError(err.message ?? 'Something went wrong') } finally { setLoading(false) } }
-
+  const router = useRouter()
+  const current = STEPS[step]
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="flex items-center justify-center min-h-screen bg-background px-6">
       <div className="w-full max-w-lg">
-        {step > 0 && <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700 font-medium mb-6"><ArrowLeft className="w-4 h-4" /> Back</button>}
-        <div className="flex gap-2 mb-8">{ONBOARDING_STEPS.map((_, i) => <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-purple-600' : 'bg-gray-200'}`} />)}</div>
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{current.question}</h1>
-          <p className="text-sm text-gray-500 mb-6">{current.subtitle}</p>
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-          {current.type === 'text' ? (
-            <Input value={data[current.field]} onChange={e => setData({ ...data, [current.field]: e.target.value })} placeholder="Type here..." className="mb-6" />
-          ) : (
-            <select value={data[current.field]} onChange={e => setData({ ...data, [current.field]: e.target.value })} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:outline-none focus:border-purple-400 mb-6"><option value="">Select...</option>{current.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select>
-          )}
-          {isLast ? (<Button onClick={handleSubmit} disabled={loading || !data[current.field]} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5">{loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}{loading ? 'Generating your roadmap...' : 'Finish'}</Button>) : (<Button onClick={goNext} disabled={!data[current.field]} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5">Continue</Button>)}
+        <div className="flex items-center gap-2 mb-8">{STEPS.map((_, i) => (<div key={i} className={cn('h-1.5 rounded-full transition-all duration-300', i === step ? 'bg-primary flex-1' : i < step ? 'bg-primary/40 flex-1' : 'bg-border flex-1')} />))}</div>
+        <div className="text-center mb-8"><h1 className="text-2xl font-semibold text-text-primary mb-2">{current.title}</h1><p className="text-sm text-text-secondary">{current.subtitle}</p></div>
+        {current.content}
+        <div className="flex justify-between items-center mt-8">
+          <button onClick={() => setStep(s => s - 1)} disabled={step === 0} className="flex items-center gap-1 py-2 px-4 text-sm text-text-secondary hover:text-text-primary disabled:opacity-30 transition-colors"><ChevronLeft size={16} /> Back</button>
+          {step < STEPS.length - 1 ? (<button onClick={() => setStep(s => s + 1)} className="flex items-center gap-1 py-3 px-6 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-colors">Continue <ChevronRight size={16} /></button>) : (<button onClick={() => router.push('/dashboard')} className="flex items-center gap-1 py-3 px-6 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-colors">Get Started <ChevronRight size={16} /></button>)}
         </div>
-        <p className="text-center text-sm text-gray-400 mt-4">Step {step + 1} of {ONBOARDING_STEPS.length}</p>
       </div>
     </div>
   )
