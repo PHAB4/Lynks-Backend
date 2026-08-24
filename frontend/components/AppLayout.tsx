@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, createContext, useContext } from 'react'
-import { usePathname } from 'next/navigation'
+import { useState, useEffect, createContext, useContext } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Home, Briefcase, MessageSquare, Map, FileText,
-  ChevronLeft, ChevronRight, Clock, Folder
+  ChevronLeft, ChevronRight, LogOut, Settings
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -20,26 +20,32 @@ const NAV_ITEMS = [
   { icon: FileText, label: 'Resume', href: '/resume' },
 ]
 
-const PROJECTS = [
-  { name: 'Resume Review & Alignment', active: true },
-  { name: 'Spotify Match Rate Deep Dive', active: false },
-]
-
-const PREVIOUS = [
-  'Interview Prep: Amazon Case Study',
-  'Career Roadmap Planning',
-  'Salary Negotiation Tips',
-  'Portfolio Layout Feedback',
-]
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+  const [userName, setUserName] = useState('User')
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('lynks_user')
+      if (raw) {
+        const user = JSON.parse(raw)
+        if (user.name) setUserName(user.name)
+        else if (user.email) setUserName(user.email.split('@')[0])
+      }
+    } catch {}
+  }, [])
+
+  const initials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+  const handleLogout = () => {
+    localStorage.removeItem('lynks_user')
+    router.push('/')
+  }
 
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
       <div className="flex min-h-screen bg-[#F7F3FE]">
-        {/* Desktop sidebar - hidden on mobile */}
         <aside className={cn(
           'hidden md:flex flex-col border-r border-[#EDE3FF] bg-[#F9F5FF] transition-all duration-300 shrink-0 h-screen sticky top-0',
           collapsed ? 'w-[72px] items-center py-2.5 px-[11px]' : 'w-[305px] py-2.5 px-[11px]'
@@ -78,47 +84,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </div>
           {!collapsed && (
-            <div className="flex-1 overflow-y-auto mt-6">
-              <p className="text-[13px] font-semibold text-[#0D0026] mb-3 px-1">Projects</p>
-              {PROJECTS.map((p, i) => (
-                <div key={i} className={cn('flex items-center gap-[10px] p-3 rounded-2xl mb-1 cursor-pointer transition-colors', p.active ? 'bg-[#F7F3FE]' : 'hover:bg-[rgba(0,0,0,0.03)]')}>
-                  <Folder size={14} className={p.active ? 'text-[#6B26EA]' : 'text-[#A8A8A8]'} strokeWidth={2} />
-                  <p className={cn('text-[13px] truncate', p.active ? 'text-[#6B26EA] font-medium' : 'text-[#0D0026]')}>{p.name}</p>
-                </div>
-              ))}
-              <p className="text-[11px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mt-6 mb-3 px-1">PREVIOUSLY</p>
-              {PREVIOUS.map((p, i) => (
-                <div key={i} className="flex items-center gap-[10px] p-3 rounded-2xl cursor-pointer hover:bg-[rgba(0,0,0,0.03)] transition-colors">
-                  <Clock size={14} className="text-[rgba(0,0,0,0.50)]" strokeWidth={2} />
-                  <p className="text-[13px] text-[#0D0026] truncate">{p}</p>
-                </div>
-              ))}
-            </div>
+            <div className="flex-1" />
           )}
           <div className={cn('flex items-center gap-3 border-t border-[#EDE3FF] p-3 shrink-0 mt-auto', collapsed && 'justify-center')}>
             <button className="shrink-0 flex justify-center items-center rounded-full bg-[#EADFFF] w-10 h-10">
-              <span className="text-[#6B26EA] text-sm font-semibold">JD</span>
+              <span className="text-[#6B26EA] text-sm font-semibold">{initials}</span>
             </button>
             {!collapsed && (
-              <div className="flex flex-col min-w-0">
-                <p className="text-[13px] font-semibold text-[#0D0026] truncate">John Doe</p>
-                <p className="text-[11px] text-[rgba(0,0,0,0.50)]">Premium Member</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-[#0D0026] truncate">{userName}</p>
+              </div>
+            )}
+            {!collapsed && (
+              <div className="flex items-center gap-1">
+                <Link href="/settings" className="flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-[#6B26EA] hover:bg-[#F7F3FE] transition-colors">
+                  <Settings size={14} />
+                </Link>
+                <button onClick={handleLogout} className="flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-red-500 hover:bg-red-50 transition-colors">
+                  <LogOut size={14} />
+                </button>
               </div>
             )}
           </div>
         </aside>
 
-        {/* Collapse button - desktop only */}
         {collapsed && (
           <button onClick={() => setCollapsed(false)} className="hidden md:flex absolute top-4 left-[62px] z-10 items-center justify-center w-6 h-6 rounded-full bg-white border border-[#EDE3FF] shadow-sm hover:bg-[#F7F3FE] transition-colors">
             <ChevronRight size={12} />
           </button>
         )}
 
-        {/* Main content */}
         <main className="flex-1 overflow-hidden pb-16 md:pb-0">{children}</main>
 
-        {/* Mobile bottom nav - hidden on desktop */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t border-[#EDE3FF] px-2 py-2 safe-area-pb">
           {NAV_ITEMS.slice(0, 5).map((item) => {
             const isActive = pathname === item.href

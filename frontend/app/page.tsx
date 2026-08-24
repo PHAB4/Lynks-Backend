@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 function ScrollReveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -36,9 +36,6 @@ function ScrollReveal({ children, className = '', delay = 0 }: { children: React
 }
 
 export default function LandingPage() {
-  const [showLogin, setShowLogin] = useState(false)
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
-
   const features = [
     {
       label: 'NOTIFICATIONS',
@@ -76,23 +73,21 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col items-center bg-[#F9F5FF] min-h-screen w-full overflow-hidden">
-      {/* Navbar */}
       <nav className="nav-shadow flex items-center justify-between w-full max-w-[1200px] mx-auto px-5 py-4 relative z-20">
         <div className="flex items-center gap-1">
           <span className="text-[#0D0026] text-xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>LYNKS</span>
           <span className="text-[#6B26EA] text-lg font-bold">&raquo;</span>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={() => setShowLogin(true)} className="text-[#8B898E] text-sm hover:text-[#0D0026] transition-colors cursor-pointer" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
+          <Link href="/login" className="text-[#8B898E] text-sm hover:text-[#0D0026] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
             Login
-          </button>
+          </Link>
           <Link href="/signup" className="bg-[#6B26EA] text-white text-sm px-6 py-2 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
             Sign up
           </Link>
         </div>
       </nav>
 
-      {/* Hero */}
       <ScrollReveal className="flex flex-col items-center justify-center flex-1 w-full max-w-[1200px] mx-auto px-5 py-12">
         <div className="relative">
           <p className="text-[128px] leading-[55px] text-[#6B26EA] mb-2" style={{ fontFamily: "'Birthstone', cursive" }}>Let&apos;s</p>
@@ -104,26 +99,18 @@ export default function LandingPage() {
         </Link>
       </ScrollReveal>
 
-      {/* Purple tagline bar */}
       <ScrollReveal className="w-full bg-[#6B26EA] py-10 px-12">
         <h2 className="text-white text-[29px] font-medium leading-[130%] text-center max-w-[800px] mx-auto" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 500 }}>
           Get connected, get informed and receive guidance. Make your career journey easier than its ever been
         </h2>
       </ScrollReveal>
 
-      {/* Feature sections */}
       {features.map((feature, i) => (
         <div key={i} className={`w-full max-w-[1200px] mx-auto px-[60px] py-16 flex items-center gap-14 ${feature.reverse ? 'flex-row-reverse' : ''}`}>
           <ScrollReveal delay={0} className={`flex-1 flex flex-col gap-6 ${feature.reverse ? 'items-end text-right' : 'items-start text-left'}`}>
-            <span className="text-[#6B26EA] text-xs font-semibold tracking-[0.15em] uppercase" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
-              {feature.label}
-            </span>
-            <h3 className="text-[25px] font-bold leading-[40px] text-[#0D0026]" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
-              {feature.title}
-            </h3>
-            <p className="text-[16px] leading-[28px] text-[rgba(0,0,0,0.6)]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
-              {feature.description}
-            </p>
+            <span className="text-[#6B26EA] text-xs font-semibold tracking-[0.15em] uppercase" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>{feature.label}</span>
+            <h3 className="text-[25px] font-bold leading-[40px] text-[#0D0026]" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>{feature.title}</h3>
+            <p className="text-[16px] leading-[28px] text-[rgba(0,0,0,0.6)]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>{feature.description}</p>
           </ScrollReveal>
           <ScrollReveal delay={150} className="flex-1 flex justify-center">
             <div className="feature-image-ring relative w-[380px] h-[380px]">
@@ -133,7 +120,6 @@ export default function LandingPage() {
         </div>
       ))}
 
-      {/* Footer */}
       <footer className="w-full bg-[#E0E0E0] py-5 px-5 mt-12">
         <div className="flex items-center justify-between max-w-[1200px] mx-auto">
           <div className="flex items-center gap-1">
@@ -151,29 +137,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-      {/* Login Modal */}
-      {showLogin && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowLogin(false)}>
-          <div className="bg-white rounded-3xl p-10 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-[28px] font-semibold text-[#0D0026] mb-2" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Log in</h2>
-            <p className="text-sm text-[rgba(30,30,30,0.6)] mb-8">Welcome back! Sign in to continue your journey.</p>
-            <div className="flex flex-col gap-5">
-              <div>
-                <label className="text-sm font-semibold text-[rgba(30,30,30,0.8)] block mb-2">Email Address</label>
-                <input type="email" placeholder="email@gmail.com" value={loginForm.email} onChange={(e) => setLoginForm(p => ({ ...p, email: e.target.value }))} className="w-full p-3.5 rounded-[10px] border border-[rgba(0,0,0,0.20)] bg-[rgba(215,212,212,0.10)] text-[15px] focus:outline-none focus:border-[#6B26EA] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }} />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-[rgba(30,30,30,0.8)] block mb-2">Password</label>
-                <input type="password" placeholder="••••••••" value={loginForm.password} onChange={(e) => setLoginForm(p => ({ ...p, password: e.target.value }))} className="w-full p-3.5 rounded-[10px] border border-[rgba(0,0,0,0.20)] bg-[rgba(215,212,212,0.10)] text-[15px] focus:outline-none focus:border-[#6B26EA] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }} />
-              </div>
-              <Link href="/login" className="w-full py-3 rounded-[20px] bg-[#EADFFF] border border-[rgba(0,0,0,0.43)] text-sm font-medium hover:bg-[#D4C4F7] transition-colors cursor-pointer text-center block" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
-                Continue
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
