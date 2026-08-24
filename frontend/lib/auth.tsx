@@ -14,7 +14,6 @@ interface AuthState {
 }
 
 const AuthContext = createContext<AuthState | null>(null)
-
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
 const BASE = BACKEND || '/api'
 
@@ -33,11 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.access_token) { const profile = await fetchProfile(session.access_token); setUser(profile) }
+      if (session?.access_token) { setUser(await fetchProfile(session.access_token)) }
       setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.access_token) { const profile = await fetchProfile(session.access_token); setUser(profile) } else { setUser(null) }
+      setUser(session?.access_token ? await fetchProfile(session.access_token) : null)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -46,12 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
   }, [])
-
   const signUp = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
   }, [])
-
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     setUser(null)
