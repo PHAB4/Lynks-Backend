@@ -25,7 +25,7 @@ class Base(DeclarativeBase):
     pass
 
 
-# -- User -----------------------------------------------------------------
+# ── User ───────────────────────────────────────────────────────────────────
 
 
 class User(Base):
@@ -40,6 +40,7 @@ class User(Base):
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     country: Mapped[str | None] = mapped_column(Text, nullable=True)
     education_level: Mapped[str | None] = mapped_column(Text, nullable=True)
+    employment_status: Mapped[str | None] = mapped_column(Text, nullable=True)
     career_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     interests: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text), nullable=True, default=list
@@ -54,7 +55,7 @@ class User(Base):
     evidence_items: Mapped[list["Evidence"]] = relationship(back_populates="user")
 
 
-# -- Roadmap --------------------------------------------------------------
+# ── Roadmap ────────────────────────────────────────────────────────────────
 
 
 class Roadmap(Base):
@@ -78,7 +79,7 @@ class Roadmap(Base):
     )
 
 
-# -- Step -----------------------------------------------------------------
+# ── Step ───────────────────────────────────────────────────────────────────
 
 
 class Step(Base):
@@ -93,6 +94,7 @@ class Step(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     order: Mapped[int] = mapped_column(Integer, nullable=False)
+    # status is COMPUTED from child tasks, not stored — see SCHEMA.md
 
     roadmap: Mapped["Roadmap"] = relationship(back_populates="steps")
     tasks: Mapped[list["Task"]] = relationship(
@@ -100,7 +102,7 @@ class Step(Base):
     )
 
 
-# -- Task -----------------------------------------------------------------
+# ── Task ───────────────────────────────────────────────────────────────────
 
 
 class Task(Base):
@@ -124,7 +126,7 @@ class Task(Base):
     evidence_items: Mapped[list["Evidence"]] = relationship(back_populates="task")
 
 
-# -- Evidence -------------------------------------------------------------
+# ── Evidence ───────────────────────────────────────────────────────────────
 
 
 class Evidence(Base):
@@ -152,7 +154,7 @@ class Evidence(Base):
     user: Mapped["User"] = relationship(back_populates="evidence_items")
 
 
-# -- Resume ---------------------------------------------------------------
+# ── Resume ─────────────────────────────────────────────────────────────────
 
 
 class Resume(Base):
@@ -175,7 +177,7 @@ class Resume(Base):
     user: Mapped["User"] = relationship(back_populates="resumes")
 
 
-# -- Conversation ---------------------------------------------------------
+# ── Conversation ───────────────────────────────────────────────────────────
 
 
 class Conversation(Base):
@@ -199,7 +201,7 @@ class Conversation(Base):
     )
 
 
-# -- Message --------------------------------------------------------------
+# ── Message ────────────────────────────────────────────────────────────────
 
 
 class Message(Base):
