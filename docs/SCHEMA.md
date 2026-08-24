@@ -29,6 +29,7 @@ opportunities (standalone)
 | age | bigint | YES | null | Set by user |
 | country | text | YES | null | Set by user |
 | education_level | text | YES | null | Set by user |
+| employment_status | text | YES | null | Set by user — "student", "employed", "unemployed", "freelancer", "looking for first job" |
 | career_path | text | YES | null | Set by user |
 | interests | ARRAY | YES | null | text[] — array of strings |
 | created_at | timestamptz | NO | now() | Set by signup trigger |
