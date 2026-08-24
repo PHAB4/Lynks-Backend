@@ -26,70 +26,75 @@ export default function OpportunitiesPage() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col min-h-screen bg-surface-alt">
-        <div className="flex-1 p-10">
-          <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col min-h-screen bg-[#F9F5FF]">
+        <div className="flex-1 p-4 md:p-10">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
             <div>
-              <h1 className="text-[40px] font-semibold leading-[50px] text-text-primary">Opportunities</h1>
-              <p className="text-sm text-text-secondary">AI-powered matches scraped live across the web.</p>
+              <h1 className="text-2xl md:text-[40px] font-semibold leading-tight md:leading-[50px] text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Opportunities</h1>
+              <p className="text-sm text-[#8B898E]">AI-powered matches scraped live across the web.</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-text-secondary">View Mode:</span>
+              <span className="text-sm font-medium text-[#8B898E]">View Mode:</span>
               <div className="relative">
-                <select value={viewMode} onChange={(e) => setViewMode(e.target.value as 'career' | 'general')} className="appearance-none py-3 px-4 pr-10 rounded-xl border border-border bg-surface-muted text-sm font-medium text-text-primary cursor-pointer focus:outline-none">
+                <select value={viewMode} onChange={(e) => setViewMode(e.target.value as 'career' | 'general')} className="appearance-none py-3 px-4 pr-10 rounded-xl border border-[#EDE3FF] bg-[#F6F5F8] text-sm font-medium text-[#0D0026] cursor-pointer focus:outline-none">
                   <option value="career">Career</option>
                   <option value="general">General Opportunities</option>
                 </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A8] pointer-events-none" />
               </div>
             </div>
           </div>
-          <div className="p-5 rounded-2xl border border-border bg-surface mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2.5 rounded-[10px] border border-border-strong bg-[rgba(215,212,212,0.10)] px-4 py-2.5 w-[500px]">
-                <Search size={16} className="text-text-input shrink-0" />
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search opportunity....." className="bg-transparent text-base text-text-primary placeholder:text-text-input focus:outline-none w-full" />
+
+          {/* Search & Filters */}
+          <div className="p-4 md:p-5 rounded-2xl border border-[#EDE3FF] bg-white mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+              <div className="flex items-center gap-2.5 rounded-[10px] border border-[rgba(0,0,0,0.30)] bg-[rgba(215,212,212,0.10)] px-4 py-2.5 w-full md:w-[500px]">
+                <Search size={16} className="text-[rgba(0,0,0,0.30)] shrink-0" />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search opportunity....." className="bg-transparent text-base text-[#0D0026] placeholder:text-[rgba(0,0,0,0.30)] focus:outline-none w-full" />
               </div>
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} className="appearance-none py-3 px-4 pr-10 rounded-xl border border-border bg-surface-muted text-sm font-medium text-text-primary cursor-pointer focus:outline-none">
+                  <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} className="appearance-none py-3 px-4 pr-10 rounded-xl border border-[#EDE3FF] bg-[#F6F5F8] text-sm font-medium text-[#0D0026] cursor-pointer focus:outline-none">
                     <option value="day">Today</option>
                     <option value="week">Within the week</option>
                     <option value="month">This month</option>
                   </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A8] pointer-events-none" />
                 </div>
-                <button className="flex items-center justify-center p-3 rounded-[10px] bg-surface-alt border border-border">
-                  <Bookmark size={20} className="text-primary" />
+                <button className="flex items-center justify-center p-3 rounded-[10px] bg-[#F9F5FF] border border-[#EDE3FF]">
+                  <Bookmark size={20} className="text-[#6B26EA]" />
                 </button>
               </div>
             </div>
-            <div className="flex items-center gap-2.5">
-              <span className="text-[13px] font-semibold text-text-secondary">Filter Results:</span>
-              <button onClick={() => setFilter('personal')} className={cn('py-2 px-4 rounded-full text-sm font-semibold transition-colors', filter === 'personal' ? 'bg-primary text-white' : 'border border-border bg-surface-alt text-primary')}>Personal Matches</button>
-              <button onClick={() => setFilter('all')} className={cn('py-2 px-4 rounded-full text-sm font-semibold transition-colors', filter === 'all' ? 'bg-primary text-white' : 'border border-border bg-surface-alt text-primary')}>All Web Scraped</button>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-[13px] font-semibold text-[#8B898E]">Filter Results:</span>
+              <button onClick={() => setFilter('personal')} className={cn('py-2 px-4 rounded-full text-sm font-semibold transition-colors', filter === 'personal' ? 'bg-[#6B26EA] text-white' : 'border border-[#EDE3FF] bg-[#F9F5FF] text-[#6B26EA]')}>Personal Matches</button>
+              <button onClick={() => setFilter('all')} className={cn('py-2 px-4 rounded-full text-sm font-semibold transition-colors', filter === 'all' ? 'bg-[#6B26EA] text-white' : 'border border-[#EDE3FF] bg-[#F9F5FF] text-[#6B26EA]')}>All Web Scraped</button>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+
+          {/* Cards Grid - responsive columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
             {OPPORTUNITIES.map((opp) => (
-              <div key={opp.id} className="flex flex-col gap-4 p-4 rounded-2xl border border-border bg-surface hover:shadow-md transition-shadow">
+              <div key={opp.id} className="flex flex-col gap-4 p-4 rounded-2xl border border-[#EDE3FF] bg-white hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-[10px] bg-surface-alt text-xl">{opp.logo}</div>
+                  <div className="flex items-center justify-center w-12 h-12 rounded-[10px] bg-[#F9F5FF] text-xl">{opp.logo}</div>
                   <div className="flex items-center gap-2">
-                    <span className="py-1 px-2 rounded-md bg-surface-alt text-xs font-bold text-primary">#{opp.id}</span>
-                    <button onClick={() => toggleSave(opp.id)} className={cn('flex items-center justify-center w-8 h-8 rounded-lg transition-colors', saved.has(opp.id) ? 'bg-primary text-white' : 'bg-surface-alt')}>
-                      <Bookmark size={14} className={saved.has(opp.id) ? 'fill-white text-white' : 'text-primary'} />
+                    <span className="py-1 px-2 rounded-md bg-[#F9F5FF] text-xs font-bold text-[#6B26EA]">#{opp.id}</span>
+                    <button onClick={() => toggleSave(opp.id)} className={cn('flex items-center justify-center w-8 h-8 rounded-lg transition-colors', saved.has(opp.id) ? 'bg-[#6B26EA] text-white' : 'bg-[#F9F5FF]')}>
+                      <Bookmark size={14} className={saved.has(opp.id) ? 'fill-white text-white' : 'text-[#6B26EA]'} />
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-col gap-1"><p className="text-base font-semibold text-text-primary truncate">{opp.title}</p><p className="text-sm font-medium text-text-secondary">{opp.company}</p></div>
+                <div className="flex flex-col gap-1"><p className="text-base font-semibold text-[#0D0026] truncate">{opp.title}</p><p className="text-sm font-medium text-[#8B898E]">{opp.company}</p></div>
                 <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5"><MapPin size={14} className="text-text-muted shrink-0" /><p className="text-xs text-text-secondary truncate">{opp.location}</p></div>
-                  <div className="flex items-center gap-1.5"><DollarSign size={14} className="text-text-muted shrink-0" /><p className="text-xs font-semibold text-primary">{opp.salary}</p></div>
+                  <div className="flex items-center gap-1.5"><MapPin size={14} className="text-[#A8A8A8] shrink-0" /><p className="text-xs text-[#8B898E] truncate">{opp.location}</p></div>
+                  <div className="flex items-center gap-1.5"><DollarSign size={14} className="text-[#A8A8A8] shrink-0" /><p className="text-xs font-semibold text-[#6B26EA]">{opp.salary}</p></div>
                 </div>
                 <div className="flex justify-between items-center mt-auto pt-1">
-                  <p className="text-[11px] text-text-muted">AI Scraped</p>
-                  <button className="py-1.5 px-3 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary-dark transition-colors">Go to source</button>
+                  <p className="text-[11px] text-[#A8A8A8]">AI Scraped</p>
+                  <button className="py-1.5 px-3 rounded-lg bg-[#6B26EA] text-white text-xs font-semibold hover:bg-[#5A1FD0] transition-colors">Go to source</button>
                 </div>
               </div>
             ))}
