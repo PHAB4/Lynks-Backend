@@ -22,12 +22,23 @@ import time
 from pathlib import Path
 
 import httpx
+import pytest
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 HTTP_TIMEOUT = 30.0
 LLM_TIMEOUT = 120.0
+
+
+@pytest.fixture(autouse=True)
+def _setup_auth(auth_token, base_url):
+    """Set module-level auth state from conftest session fixture."""
+    global BASE_URL
+    BASE_URL = base_url
+    if auth_token:
+        _state["token"] = auth_token
+        _cleanup_test_data()
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  CONFIG — Reads from .env automatically

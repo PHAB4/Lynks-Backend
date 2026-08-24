@@ -77,7 +77,7 @@ class TestResult:
 results: list[TestResult] = []
 
 
-def test(name: str):
+def _run_helper(name: str):
     """Decorator that runs a test function and records the result."""
     def decorator(func):
         def wrapper():
@@ -129,7 +129,7 @@ def run_tests():
 
     # ── 1. Health Check ──────────────────────────────────────────────────────
 
-    @test("GET /health")
+    @_run_helper("GET /health")
     def test_health():
         resp = httpx.get(f"{BASE_URL}/health", timeout=HTTP_TIMEOUT)
         if resp.status_code != 200:
@@ -141,7 +141,7 @@ def run_tests():
 
     # ── 2. Auth — Get or create JWT ──────────────────────────────────────────
 
-    @test("POST /auth/v1/signup (get test JWT)")
+    @_run_helper("POST /auth/v1/signup (get test JWT)")
     def test_auth():
         global JWT_TOKEN
 
@@ -232,7 +232,7 @@ def run_tests():
 
     # ── 3. Profile ───────────────────────────────────────────────────────────
 
-    @test("GET /profile (returns 404 for fresh user)")
+    @_run_helper("GET /profile (returns 404 for fresh user)")
     def test_profile():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/profile", headers=headers(token), timeout=HTTP_TIMEOUT)
@@ -241,7 +241,7 @@ def run_tests():
         else:
             return False, f"Expected 200 or 404, got {resp.status_code}: {resp.text[:200]}"
 
-    @test("PATCH /profile (fill in career path, age, etc.)")
+    @_run_helper("PATCH /profile (fill in career path, age, etc.)")
     def test_profile_fill():
         token = _state.get("token")
         resp = httpx.patch(
@@ -259,7 +259,7 @@ def run_tests():
             return True, f"career_path={resp.json().get('career_path')}"
         return False, f"Expected 200, got {resp.status_code}: {resp.text[:200]}"
 
-    @test("PATCH /profile/career-path")
+    @_run_helper("PATCH /profile/career-path")
     def test_profile_career_path():
         token = _state.get("token")
         resp = httpx.patch(
@@ -273,7 +273,7 @@ def run_tests():
 
     # ── 4. Roadmap — Generate ────────────────────────────────────────────────
 
-    @test("POST /roadmap/generate (career architect)")
+    @_run_helper("POST /roadmap/generate (career architect)")
     def test_roadmap_generate():
         token = _state.get("token")
         resp = httpx.post(f"{BASE_URL}/roadmap/generate", headers=headers(token), timeout=LLM_TIMEOUT)
@@ -294,7 +294,7 @@ def run_tests():
 
     # ── 5. Roadmap — Get ────────────────────────────────────────────────────
 
-    @test("GET /roadmap (returns active roadmap)")
+    @_run_helper("GET /roadmap (returns active roadmap)")
     def test_roadmap_get():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/roadmap", headers=headers(token), timeout=HTTP_TIMEOUT)
@@ -307,7 +307,7 @@ def run_tests():
 
     # ── 6. Roadmap — Regenerate ─────────────────────────────────────────────
 
-    @test("POST /roadmap/regenerate (rebuilds roadmap)")
+    @_run_helper("POST /roadmap/regenerate (rebuilds roadmap)")
     def test_roadmap_regenerate():
         token = _state.get("token")
         resp = httpx.post(f"{BASE_URL}/roadmap/regenerate", headers=headers(token), timeout=LLM_TIMEOUT)
@@ -323,7 +323,7 @@ def run_tests():
 
     # ── 7. Evidence Upload ──────────────────────────────────────────────────
 
-    @test("POST /tasks/{task_id}/evidence (upload + verify)")
+    @_run_helper("POST /tasks/{task_id}/evidence (upload + verify)")
     def test_evidence_upload():
         token = _state.get("token")
         task_id = _state.get("task_id")
@@ -365,7 +365,7 @@ def run_tests():
 
     # ── 8. Portfolio ────────────────────────────────────────────────────────
 
-    @test("GET /portfolio (shows uploaded evidence)")
+    @_run_helper("GET /portfolio (shows uploaded evidence)")
     def test_portfolio():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/portfolio", headers=headers(token), timeout=HTTP_TIMEOUT)
@@ -378,7 +378,7 @@ def run_tests():
 
     # ── 9. Opportunities — All ──────────────────────────────────────────────
 
-    @test("GET /opportunities (discovers opportunities)")
+    @_run_helper("GET /opportunities (discovers opportunities)")
     def test_opportunities():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/opportunities", headers=headers(token), timeout=LLM_TIMEOUT)
@@ -392,7 +392,7 @@ def run_tests():
 
     # ── 10. Opportunities — Filtered ────────────────────────────────────────
 
-    @test("GET /opportunities?category=competition (filtered)")
+    @_run_helper("GET /opportunities?category=competition (filtered)")
     def test_opportunities_filtered():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/opportunities?category=competition", headers=headers(token), timeout=LLM_TIMEOUT)
@@ -406,7 +406,7 @@ def run_tests():
 
     # ── 11. Chat — Send Message ─────────────────────────────────────────────
 
-    @test("POST /chat/message (mentor chat)")
+    @_run_helper("POST /chat/message (mentor chat)")
     def test_chat_message():
         token = _state.get("token")
         resp = httpx.post(
@@ -425,7 +425,7 @@ def run_tests():
 
     # ── 12. Chat — Send Message with Agent Call ─────────────────────────────
 
-    @test("POST /chat/message (mentor calls Job Scout)")
+    @_run_helper("POST /chat/message (mentor calls Job Scout)")
     def test_chat_agent_call():
         token = _state.get("token")
         conversation_id = _state.get("conversation_id")
@@ -449,7 +449,7 @@ def run_tests():
 
     # ── 13. Chat — History ──────────────────────────────────────────────────
 
-    @test("GET /chat/history (retrieves conversation)")
+    @_run_helper("GET /chat/history (retrieves conversation)")
     def test_chat_history():
         token = _state.get("token")
         conversation_id = _state.get("conversation_id")
@@ -467,7 +467,7 @@ def run_tests():
 
     # ── 14. Chat — Delete History ───────────────────────────────────────────
 
-    @test("DELETE /chat/history (clears conversation)")
+    @_run_helper("DELETE /chat/history (clears conversation)")
     def test_chat_delete():
         token = _state.get("token")
         resp = httpx.delete(f"{BASE_URL}/chat/history", headers=headers(token), timeout=HTTP_TIMEOUT)
@@ -479,7 +479,7 @@ def run_tests():
 
     # ── 15. Error Handling — Invalid Endpoint ───────────────────────────────
 
-    @test("GET /nonexistent (returns 404)")
+    @_run_helper("GET /nonexistent (returns 404)")
     def test_404():
         resp = httpx.get(f"{BASE_URL}/nonexistent", timeout=HTTP_TIMEOUT)
         if resp.status_code == 404:
@@ -489,7 +489,7 @@ def run_tests():
 
     # ── 16. Error Handling — Unauthorized ────────────────────────────────────
 
-    @test("GET /roadmap without auth (returns 401/403)")
+    @_run_helper("GET /roadmap without auth (returns 401/403)")
     def test_unauthorized():
         resp = httpx.get(f"{BASE_URL}/roadmap", timeout=HTTP_TIMEOUT)
         if resp.status_code in (401, 403):
@@ -499,7 +499,7 @@ def run_tests():
 
     # ── 17. Error Handling — Invalid Category ────────────────────────────────
 
-    @test("GET /opportunities?category=invalid (returns 400)")
+    @_run_helper("GET /opportunities?category=invalid (returns 400)")
     def test_invalid_category():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/opportunities?category=invalid", headers=headers(token), timeout=HTTP_TIMEOUT)
@@ -510,7 +510,7 @@ def run_tests():
 
     # ── 18. Employment Status — PATCH then GET ──────────────────────────────
 
-    @test("PATCH /profile (set employment_status)")
+    @_run_helper("PATCH /profile (set employment_status)")
     def test_employment_status_set():
         token = _state.get("token")
         resp = httpx.patch(
@@ -527,7 +527,7 @@ def run_tests():
             return False, f"Expected employment_status=employed, got {status}"
         return False, f"Expected 200, got {resp.status_code}: {resp.text[:200]}"
 
-    @test("GET /profile (employment_status persisted)")
+    @_run_helper("GET /profile (employment_status persisted)")
     def test_employment_status_get():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/profile", headers=headers(token), timeout=HTTP_TIMEOUT)
@@ -541,7 +541,7 @@ def run_tests():
 
     # ── 19. Security Headers ────────────────────────────────────────────────
 
-    @test("GET /health has security headers")
+    @_run_helper("GET /health has security headers")
     def test_security_headers():
         resp = httpx.get(f"{BASE_URL}/health", timeout=HTTP_TIMEOUT)
         if resp.status_code != 200:
@@ -573,7 +573,7 @@ def run_tests():
 
     # ── 20. Rate Limiting ───────────────────────────────────────────────────
 
-    @test("Rate limiting (429 after burst on /health)")
+    @_run_helper("Rate limiting (429 after burst on /health)")
     def test_rate_limiting():
         # /health is exempt, so use /nonexistent which isn't exempt
         # Actually, /health is exempt. Test on a real endpoint without auth —
@@ -600,7 +600,7 @@ def run_tests():
 
     # ── Notifications ───────────────────────────────────────────────────────
 
-    @test("POST /notifications — create")
+    @_run_helper("POST /notifications — create")
     def test_notification_create():
         token = _state.get("token")
         if not token:
@@ -628,7 +628,7 @@ def run_tests():
             return False, f"Expected is_read=False, got {data.get('is_read')}"
         return True, f"created {data['id'][:8]}..."
 
-    @test("GET /notifications — list")
+    @_run_helper("GET /notifications — list")
     def test_notification_list():
         token = _state.get("token")
         if not token:
@@ -647,7 +647,7 @@ def run_tests():
             return False, f"Missing 'unread_count' key"
         return True, f"{len(data['notifications'])} notifications, {data['unread_count']} unread"
 
-    @test("GET /notifications/{id} — get by ID")
+    @_run_helper("GET /notifications/{id} — get by ID")
     def test_notification_get():
         token = _state.get("token")
         nid = _state.get("notification_id")
@@ -667,7 +667,7 @@ def run_tests():
             return False, f"ID mismatch: expected {nid}, got {data.get('id')}"
         return True, f"retrieved '{data.get('title')}'"
 
-    @test("GET /notifications/unread/count — unread count")
+    @_run_helper("GET /notifications/unread/count — unread count")
     def test_notification_unread():
         token = _state.get("token")
         if not token:
@@ -684,7 +684,7 @@ def run_tests():
             return False, f"Missing 'unread_count': {data}"
         return True, f"{data['unread_count']} unread"
 
-    @test("PATCH /notifications/{id}/read — mark read")
+    @_run_helper("PATCH /notifications/{id}/read — mark read")
     def test_notification_mark_read():
         token = _state.get("token")
         nid = _state.get("notification_id")
@@ -704,7 +704,7 @@ def run_tests():
             return False, f"Unexpected response: {data}"
         return True, "marked as read"
 
-    @test("POST /notifications/read-all — mark all read")
+    @_run_helper("POST /notifications/read-all — mark all read")
     def test_notification_read_all():
         token = _state.get("token")
         if not token:
@@ -721,7 +721,7 @@ def run_tests():
             return False, f"Unexpected response: {data}"
         return True, data.get("message", "all marked read")
 
-    @test("GET /notifications/invalid-id — 404")
+    @_run_helper("GET /notifications/invalid-id — 404")
     def test_notification_404():
         token = _state.get("token")
         if not token:

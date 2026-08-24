@@ -62,7 +62,7 @@ results: list[TestResult] = []
 _state: dict = {}
 
 
-def test(name: str):
+def _run_helper(name: str):
     """Decorator that runs a test function and records the result."""
     def decorator(func):
         def wrapper():
@@ -161,7 +161,7 @@ def run_tests():
 
     # ── 1. Health Check ──────────────────────────────────────────────────────
 
-    @test("GET /health")
+    @_run_helper("GET /health")
     def test_health():
         resp = httpx.get(f"{BASE_URL}/health", timeout=10)
         if resp.status_code == 200 and resp.json().get("status") == "ok":
@@ -170,7 +170,7 @@ def run_tests():
 
     # ── 2. Create test user ─────────────────────────────────────────────────
 
-    @test("Create test user via Supabase Auth")
+    @_run_helper("Create test user via Supabase Auth")
     def test_create_user():
         token, user_id = create_test_user()
         if not token:
@@ -181,7 +181,7 @@ def run_tests():
 
     # ── 3. Profile ───────────────────────────────────────────────────────────
 
-    @test("PATCH /profile (fill in profile for roadmap)")
+    @_run_helper("PATCH /profile (fill in profile for roadmap)")
     def test_profile():
         token = _state.get("token")
         if not token:
@@ -204,7 +204,7 @@ def run_tests():
 
     # ── 4. Career path ──────────────────────────────────────────────────────
 
-    @test("PATCH /profile/career-path")
+    @_run_helper("PATCH /profile/career-path")
     def test_career_path():
         token = _state.get("token")
         if not token:
@@ -221,7 +221,7 @@ def run_tests():
 
     # ── 5. Generate roadmap (need a task_id for evidence) ───────────────────
 
-    @test("POST /roadmap/generate")
+    @_run_helper("POST /roadmap/generate")
     def test_roadmap_generate():
         token = _state.get("token")
         if not token:
@@ -237,7 +237,7 @@ def run_tests():
 
     # ── 6. Upload evidence — colored rectangle (should be lenient-verified) ─
 
-    @test("POST /tasks/{task_id}/evidence (upload colored image)")
+    @_run_helper("POST /tasks/{task_id}/evidence (upload colored image)")
     def test_upload_evidence():
         token = _state.get("token")
         task_id = _state.get("task_id")
@@ -268,7 +268,7 @@ def run_tests():
 
     # ── 7. Check verification fields exist on response ──────────────────────
 
-    @test("Response has all verification fields")
+    @_run_helper("Response has all verification fields")
     def test_verification_fields():
         token = _state.get("token")
         task_id = _state.get("task_id")
@@ -304,7 +304,7 @@ def run_tests():
 
     # ── 8. Get verification status for evidence ─────────────────────────────
 
-    @test("GET /evidence/{id}/verification")
+    @_run_helper("GET /evidence/{id}/verification")
     def test_get_verification():
         token = _state.get("token")
         evidence_id = _state.get("evidence_id")
@@ -334,7 +334,7 @@ def run_tests():
 
     # ── 9. Re-verify evidence ───────────────────────────────────────────────
 
-    @test("POST /evidence/{id}/re-verify")
+    @_run_helper("POST /evidence/{id}/re-verify")
     def test_re_verify():
         token = _state.get("token")
         evidence_id = _state.get("evidence_id")
@@ -358,7 +358,7 @@ def run_tests():
 
     # ── 10. Portfolio includes verification fields ──────────────────────────
 
-    @test("GET /portfolio (evidence has verification fields)")
+    @_run_helper("GET /portfolio (evidence has verification fields)")
     def test_portfolio_verification():
         token = _state.get("token")
         if not token:
@@ -380,7 +380,7 @@ def run_tests():
 
     # ── 11. Auth guard — no token ──────────────────────────────────────────
 
-    @test("GET /evidence/{id}/verification without auth (401)")
+    @_run_helper("GET /evidence/{id}/verification without auth (401)")
     def test_no_auth():
         evidence_id = _state.get("evidence_id", "fake-id")
         resp = httpx.get(f"{BASE_URL}/evidence/{evidence_id}/verification", timeout=5)
@@ -390,7 +390,7 @@ def run_tests():
 
     # ── 12. Ownership guard — wrong user ───────────────────────────────────
 
-    @test("GET /evidence/{id}/verification as wrong user (403)")
+    @_run_helper("GET /evidence/{id}/verification as wrong user (403)")
     def test_wrong_user():
         evidence_id = _state.get("evidence_id", "fake-id")
         # Create a second user
@@ -410,7 +410,7 @@ def run_tests():
 
     # ── 13. Non-existent evidence ──────────────────────────────────────────
 
-    @test("GET /evidence/nonexistent/verification (404)")
+    @_run_helper("GET /evidence/nonexistent/verification (404)")
     def test_nonexistent():
         token = _state.get("token")
         if not token:
@@ -426,7 +426,7 @@ def run_tests():
 
     # ── 14. Re-verify nonexistent evidence ─────────────────────────────────
 
-    @test("POST /evidence/nonexistent/re-verify (404)")
+    @_run_helper("POST /evidence/nonexistent/re-verify (404)")
     def test_re_verify_nonexistent():
         token = _state.get("token")
         if not token:
@@ -442,7 +442,7 @@ def run_tests():
 
     # ── 15. Upload invalid file type ───────────────────────────────────────
 
-    @test("POST /tasks/{task_id}/evidence with invalid file type (400)")
+    @_run_helper("POST /tasks/{task_id}/evidence with invalid file type (400)")
     def test_invalid_file_type():
         token = _state.get("token")
         task_id = _state.get("task_id")

@@ -64,7 +64,7 @@ class TestResult:
 results: list[TestResult] = []
 
 
-def test(name: str):
+def _run_helper(name: str):
     def decorator(func):
         def wrapper():
             print(f"\n{Colors.CYAN}▶ {name}{Colors.END}", end=" ... ", flush=True)
@@ -113,7 +113,7 @@ def run_tests():
 
     # ── 1. Health Check ──────────────────────────────────────────────────────
 
-    @test("GET /health")
+    @_run_helper("GET /health")
     def test_health():
         resp = httpx.get(f"{BASE_URL}/health", timeout=HTTP_TIMEOUT)
         if resp.status_code != 200:
@@ -125,7 +125,7 @@ def run_tests():
 
     # ── 2. Auth — Get or create JWT ──────────────────────────────────────────
 
-    @test("POST /auth/v1/signup (get test JWT)")
+    @_run_helper("POST /auth/v1/signup (get test JWT)")
     def test_auth():
         global JWT_TOKEN
 
@@ -207,7 +207,7 @@ def run_tests():
 
     # ── 3. GET /opportunities — Basic list ──────────────────────────────────
 
-    @test("GET /opportunities (returns list with metadata)")
+    @_run_helper("GET /opportunities (returns list with metadata)")
     def test_opportunities_basic():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/opportunities", headers=headers(token), timeout=LLM_TIMEOUT)
@@ -235,7 +235,7 @@ def run_tests():
 
     # ── 4. GET /opportunities — Verify response shape ───────────────────────
 
-    @test("GET /opportunities (response has all required fields)")
+    @_run_helper("GET /opportunities (response has all required fields)")
     def test_opportunities_shape():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/opportunities", headers=headers(token), timeout=LLM_TIMEOUT)
@@ -261,7 +261,7 @@ def run_tests():
 
     # ── 5. GET /opportunities — Category filter ─────────────────────────────
 
-    @test("GET /opportunities?category=job (category filter)")
+    @_run_helper("GET /opportunities?category=job (category filter)")
     def test_opportunities_category_filter():
         token = _state.get("token")
         resp = httpx.get(
@@ -284,7 +284,7 @@ def run_tests():
 
     # ── 6. GET /opportunities — Invalid category returns 400 ────────────────
 
-    @test("GET /opportunities?category=invalid (returns 400)")
+    @_run_helper("GET /opportunities?category=invalid (returns 400)")
     def test_opportunities_invalid_category():
         token = _state.get("token")
         resp = httpx.get(
@@ -299,7 +299,7 @@ def run_tests():
 
     # ── 7. GET /opportunities — Timeframe filter ────────────────────────────
 
-    @test("GET /opportunities?timeframe=week (timeframe filter)")
+    @_run_helper("GET /opportunities?timeframe=week (timeframe filter)")
     def test_opportunities_timeframe_filter():
         token = _state.get("token")
         resp = httpx.get(
@@ -316,7 +316,7 @@ def run_tests():
 
     # ── 8. GET /opportunities — Invalid timeframe returns 400 ───────────────
 
-    @test("GET /opportunities?timeframe=invalid (returns 400)")
+    @_run_helper("GET /opportunities?timeframe=invalid (returns 400)")
     def test_opportunities_invalid_timeframe():
         token = _state.get("token")
         resp = httpx.get(
@@ -331,7 +331,7 @@ def run_tests():
 
     # ── 9. GET /opportunities — Sort by recent ──────────────────────────────
 
-    @test("GET /opportunities?sort=recent (sort by recency)")
+    @_run_helper("GET /opportunities?sort=recent (sort by recency)")
     def test_opportunities_sort_recent():
         token = _state.get("token")
         resp = httpx.get(
@@ -352,7 +352,7 @@ def run_tests():
 
     # ── 10. GET /opportunities — Sort by salary ─────────────────────────────
 
-    @test("GET /opportunities?sort=salary (sort by salary)")
+    @_run_helper("GET /opportunities?sort=salary (sort by salary)")
     def test_opportunities_sort_salary():
         token = _state.get("token")
         resp = httpx.get(
@@ -369,7 +369,7 @@ def run_tests():
 
     # ── 11. GET /opportunities — Pagination (page 1) ────────────────────────
 
-    @test("GET /opportunities?page=1&limit=2 (pagination)")
+    @_run_helper("GET /opportunities?page=1&limit=2 (pagination)")
     def test_opportunities_pagination():
         token = _state.get("token")
         resp = httpx.get(
@@ -393,7 +393,7 @@ def run_tests():
 
     # ── 12. GET /opportunities — Pagination (page 2) ────────────────────────
 
-    @test("GET /opportunities?page=2&limit=2 (page 2)")
+    @_run_helper("GET /opportunities?page=2&limit=2 (page 2)")
     def test_opportunities_pagination_page2():
         token = _state.get("token")
         resp = httpx.get(
@@ -410,7 +410,7 @@ def run_tests():
 
     # ── 13. GET /opportunities — Combined filters ───────────────────────────
 
-    @test("GET /opportunities?category=job&timeframe=month&sort=recent&page=1&limit=5 (combined)")
+    @_run_helper("GET /opportunities?category=job&timeframe=month&sort=recent&page=1&limit=5 (combined)")
     def test_opportunities_combined_filters():
         token = _state.get("token")
         resp = httpx.get(
@@ -428,7 +428,7 @@ def run_tests():
 
     # ── 14. GET /opportunities/new-count ────────────────────────────────────
 
-    @test("GET /opportunities/new-count (returns count)")
+    @_run_helper("GET /opportunities/new-count (returns count)")
     def test_opportunities_new_count():
         token = _state.get("token")
         resp = httpx.get(
@@ -450,7 +450,7 @@ def run_tests():
 
     # ── 15. POST /opportunities/{id}/save ───────────────────────────────────
 
-    @test("POST /opportunities/{id}/save (save opportunity)")
+    @_run_helper("POST /opportunities/{id}/save (save opportunity)")
     def test_opportunities_save():
         token = _state.get("token")
         opp_id = _state.get("first_opp_id")
@@ -470,7 +470,7 @@ def run_tests():
 
     # ── 16. GET /opportunities/saved (list saved) ───────────────────────────
 
-    @test("GET /opportunities/saved (list saved opportunities)")
+    @_run_helper("GET /opportunities/saved (list saved opportunities)")
     def test_opportunities_saved_list():
         token = _state.get("token")
         resp = httpx.get(
@@ -491,7 +491,7 @@ def run_tests():
 
     # ── 17. Verify is_saved flag on saved opportunity ───────────────────────
 
-    @test("GET /opportunities (is_saved flag on saved opportunity)")
+    @_run_helper("GET /opportunities (is_saved flag on saved opportunity)")
     def test_opportunities_is_saved_flag():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/opportunities", headers=headers(token), timeout=LLM_TIMEOUT)
@@ -514,7 +514,7 @@ def run_tests():
 
     # ── 18. DELETE /opportunities/{id}/save ─────────────────────────────────
 
-    @test("DELETE /opportunities/{id}/save (unsave opportunity)")
+    @_run_helper("DELETE /opportunities/{id}/save (unsave opportunity)")
     def test_opportunities_unsave():
         token = _state.get("token")
         opp_id = _state.get("first_opp_id")
@@ -532,7 +532,7 @@ def run_tests():
 
     # ── 19. DELETE /opportunities/{id}/save — idempotent ────────────────────
 
-    @test("DELETE /opportunities/{id}/save (double unsave is idempotent)")
+    @_run_helper("DELETE /opportunities/{id}/save (double unsave is idempotent)")
     def test_opportunities_double_unsave():
         token = _state.get("token")
         opp_id = _state.get("first_opp_id")
@@ -552,7 +552,7 @@ def run_tests():
 
     # ── 20. Verify is_saved=False after unsave ─────────────────────────────
 
-    @test("GET /opportunities (is_saved=False after unsave)")
+    @_run_helper("GET /opportunities (is_saved=False after unsave)")
     def test_opportunities_not_saved_flag():
         token = _state.get("token")
         resp = httpx.get(f"{BASE_URL}/opportunities", headers=headers(token), timeout=LLM_TIMEOUT)
@@ -573,7 +573,7 @@ def run_tests():
 
     # ── 21. Save non-existent opportunity ───────────────────────────────────
 
-    @test("POST /opportunities/fake-id/save (accepts any ID)")
+    @_run_helper("POST /opportunities/fake-id/save (accepts any ID)")
     def test_opportunities_save_nonexistent():
         token = _state.get("token")
         resp = httpx.post(
@@ -592,7 +592,7 @@ def run_tests():
 
     # ── 22. Unauthorized access ─────────────────────────────────────────────
 
-    @test("GET /opportunities without auth (returns 401)")
+    @_run_helper("GET /opportunities without auth (returns 401)")
     def test_opportunities_unauthorized():
         resp = httpx.get(f"{BASE_URL}/opportunities", timeout=HTTP_TIMEOUT)
         if resp.status_code in (401, 403):
@@ -602,7 +602,7 @@ def run_tests():
 
     # ── 23. Invalid sort parameter ──────────────────────────────────────────
 
-    @test("GET /opportunities?sort=invalid (returns 400)")
+    @_run_helper("GET /opportunities?sort=invalid (returns 400)")
     def test_opportunities_invalid_sort():
         token = _state.get("token")
         resp = httpx.get(
@@ -617,7 +617,7 @@ def run_tests():
 
     # ── 24. Invalid page number ─────────────────────────────────────────────
 
-    @test("GET /opportunities?page=0 (returns 400)")
+    @_run_helper("GET /opportunities?page=0 (returns 400)")
     def test_opportunities_invalid_page():
         token = _state.get("token")
         resp = httpx.get(
@@ -636,7 +636,7 @@ def run_tests():
 
     # ── 25. Limit too large ─────────────────────────────────────────────────
 
-    @test("GET /opportunities?limit=500 (clamped to 50)")
+    @_run_helper("GET /opportunities?limit=500 (clamped to 50)")
     def test_opportunities_limit_clamp():
         token = _state.get("token")
         resp = httpx.get(
@@ -657,7 +657,7 @@ def run_tests():
 
     # ── 26. POST /opportunities/refresh (trigger refresh) ───────────────────
 
-    @test("POST /opportunities/refresh (trigger scraper refresh)")
+    @_run_helper("POST /opportunities/refresh (trigger scraper refresh)")
     def test_opportunities_refresh():
         token = _state.get("token")
         resp = httpx.post(
