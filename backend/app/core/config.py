@@ -34,3 +34,9 @@ settings = Settings()
 from supabase import create_client
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+
+# Admin client for storage uploads (requires service role key)
+supabase_admin = create_client(
+    settings.SUPABASE_URL,
+    settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY,
+)
