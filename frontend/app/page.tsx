@@ -2,8 +2,8 @@
 
 export default function Frame97() {
   return (
-    <div className="flex flex-col items-start gap-2.5 bg-[#F7F3FE] min-w-screen min-h-screen relative">
-      <div className="flex min-h-[900px] items-start bg-[#F9F5FF] w-full overflow-hidden">
+    <div className="flex flex-row items-start bg-[#F7F3FE] min-h-screen">
+      <div className="flex min-h-screen items-start bg-[#F9F5FF] w-[305px] shrink-0 overflow-hidden">
         <div className="flex py-2.5 px-[11px] flex-col items-end gap-[9px] border-r border-r-[#EDE3FF] bg-[#F9F5FF] w-[305px] h-full">
           <div className="flex items-start gap-[180px] shrink-0 w-full h-10">
             <div className="flex justify-between items-center w-16">
@@ -325,8 +325,7 @@ export default function Frame97() {
           </div>
         </div>
       </div>
-      <div className="flex p-2.5 flex-col items-start gap-2.5 absolute left-[501px] -bottom-[68px] w-fit overflow-hidden"></div>
-      <div className="flex flex-col items-start gap-2.5 absolute right-0 bottom-0 bg-[#F7F3FE] w-fit h-full">
+      <div className="flex flex-col items-start gap-2.5 bg-[#F7F3FE] flex-1">
         <div className="flex flex-col items-center gap-[15px] bg-[#F7F3FE] w-[880px]">
           <div className="flex justify-center items-center gap-2 w-[856px]">
             <div className="flex py-1 px-3 items-center gap-2.5 w-fit">
