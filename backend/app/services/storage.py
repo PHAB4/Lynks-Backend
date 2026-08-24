@@ -35,12 +35,16 @@ def upload_evidence_file(file_bytes: bytes, filename: str, file_type: str) -> st
     ext = Path(filename).suffix.lower()
     unique_name = f"{uuid.uuid4()}{ext}"
 
-    # Upload to the evidence bucket
-    result = supabase_admin.storage.from_(BUCKET_NAME).upload(
-        path=unique_name,
-        file=file_bytes,
-        file_options={"content-type": file_type},
-    )
+    try:
+        # Upload to the evidence bucket
+        result = supabase_admin.storage.from_(BUCKET_NAME).upload(
+            path=unique_name,
+            file=file_bytes,
+            file_options={"content-type": file_type},
+        )
+    except Exception as e:
+        logger.error("Storage upload failed: %s (type=%s)", e, type(e).__name__)
+        raise
 
     # Get the public URL
     public_url = supabase_admin.storage.from_(BUCKET_NAME).get_public_url(unique_name)
