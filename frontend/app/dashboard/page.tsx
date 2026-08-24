@@ -1,13 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Send, Paperclip } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 
 export default function DashboardPage() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([])
+  const [userName, setUserName] = useState('Human')
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('lynks_user')
+      if (raw) {
+        const user = JSON.parse(raw)
+        if (user.name) setUserName(user.name.split(' ')[0])
+      }
+    } catch {}
+  }, [])
+
   const handleSend = () => { if (!message.trim()) return; setMessages(prev => [...prev, { role: 'user', content: message }]); setMessage('') }
+
   return (
     <AppLayout>
       <div className="flex flex-col h-screen bg-[#F7F3FE]">
@@ -15,7 +28,7 @@ export default function DashboardPage() {
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-8 md:gap-[57px] max-w-[880px] mx-auto">
               <p className="text-2xl md:text-[40px] font-semibold leading-tight md:leading-[50px] text-center text-[#0D0026] px-4" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                Welcome Human<br />Are you ready to move forward in your career journey?
+                Welcome {userName}<br />Are you ready to move forward in your career journey?
               </p>
             </div>
           ) : (
