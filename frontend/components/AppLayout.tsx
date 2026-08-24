@@ -4,8 +4,8 @@ import { useState, createContext, useContext } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Home, Briefcase, MessageSquare, Map, FileText, Settings,
-  ChevronLeft, ChevronRight, Clock, Folder, LogOut
+  Home, Briefcase, MessageSquare, Map, FileText,
+  ChevronLeft, ChevronRight, Clock, Folder
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -38,15 +38,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-[#F7F3FE]">
+        {/* Desktop sidebar - hidden on mobile */}
         <aside className={cn(
-          'flex flex-col border-r border-[#EDE3FF] bg-[#F9F5FF] transition-all duration-300 shrink-0 h-screen sticky top-0',
+          'hidden md:flex flex-col border-r border-[#EDE3FF] bg-[#F9F5FF] transition-all duration-300 shrink-0 h-screen sticky top-0',
           collapsed ? 'w-[72px] items-center py-2.5 px-[11px]' : 'w-[305px] py-2.5 px-[11px]'
         )}>
-          <div className={cn('flex items-center gap-[180px] shrink-0 w-full h-10 mb-2.5', collapsed && 'justify-center gap-0')}>
+          <div className={cn('flex items-center shrink-0 w-full h-10 mb-2.5', collapsed ? 'justify-center' : 'justify-between px-0')}>
             {!collapsed ? (
               <Link href="/dashboard" className="flex items-center">
-                <svg width="62" height="17" viewBox="0 0 38 15" fill="none"><text x="0" y="13" fontFamily="Inter, sans-serif" fontSize="14" fontWeight="700" fill="#1E1E1E">LYNKS</text></svg>
+                <span className="text-[#0D0026] text-xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>LYNKS</span>
               </Link>
             ) : (
               <Link href="/dashboard" className="flex justify-center w-full">
@@ -68,10 +69,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link key={item.href} href={item.href} className={cn(
                   'flex items-center gap-[5px] rounded-2xl transition-all',
                   collapsed ? 'justify-center p-2.5 w-[48px]' : 'p-2.5 w-full',
-                  isActive ? 'text-[#6B26EA]' : 'text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)]'
+                  isActive ? 'text-[#6B26EA] font-medium' : 'text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)]'
                 )}>
                   <item.icon size={14} strokeWidth={isActive ? 2.5 : 1.5} />
-                  {!collapsed && <span className="text-[13px] font-medium">{item.label}</span>}
+                  {!collapsed && <span className="text-[13px]">{item.label}</span>}
                 </Link>
               )
             })}
@@ -106,12 +107,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </aside>
+
+        {/* Collapse button - desktop only */}
         {collapsed && (
-          <button onClick={() => setCollapsed(false)} className="absolute top-4 left-[62px] z-10 flex items-center justify-center w-6 h-6 rounded-full bg-white border border-[#EDE3FF] shadow-sm hover:bg-[#F7F3FE] transition-colors">
+          <button onClick={() => setCollapsed(false)} className="hidden md:flex absolute top-4 left-[62px] z-10 items-center justify-center w-6 h-6 rounded-full bg-white border border-[#EDE3FF] shadow-sm hover:bg-[#F7F3FE] transition-colors">
             <ChevronRight size={12} />
           </button>
         )}
-        <main className="flex-1 overflow-hidden">{children}</main>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-hidden pb-16 md:pb-0">{children}</main>
+
+        {/* Mobile bottom nav - hidden on desktop */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t border-[#EDE3FF] px-2 py-2 safe-area-pb">
+          {NAV_ITEMS.slice(0, 5).map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <Link key={item.href} href={item.href} className={cn(
+                'flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors min-w-[48px]',
+                isActive ? 'text-[#6B26EA]' : 'text-[rgba(0,0,0,0.50)]'
+              )}>
+                <item.icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
       </div>
     </SidebarContext.Provider>
   )
