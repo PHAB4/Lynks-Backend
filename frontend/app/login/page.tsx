@@ -5,8 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { auth } from '@/lib/firebase'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -26,21 +25,21 @@ export default function LoginPage() {
     if (Object.keys(newErrors).length > 0) return
 
     setLoading(true)
-    try {
-      const cred = await signInWithEmailAndPassword(auth, form.email, form.password)
-      const user = cred.user
-      localStorage.setItem('lynks_user', JSON.stringify({ name: user.displayName || user.email?.split('@')[0] || 'User', email: user.email }))
-      router.push('/dashboard')
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code
-      if (code === 'auth/user-not-found') setServerError('No account found with this email.')
-      else if (code === 'auth/wrong-password') setServerError('Incorrect password.')
-      else if (code === 'auth/invalid-email') setServerError('Invalid email address.')
-      else if (code === 'auth/invalid-credential') setServerError('Invalid email or password.')
-      else setServerError('Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
+    const { data, error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password })
+    setLoading(false)
+
+    if (error) {
+      if (error.message.includes('Invalid login credentials')) setServerError('Invalid email or password.')
+      else setServerError(error.message)
+      return
     }
+
+    const user = data.user
+    localStorage.setItem('lynks_user', JSON.stringify({
+      name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+      email: user.email,
+    }))
+    router.push('/dashboard')
   }
 
   return (
@@ -50,9 +49,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-[#6B26EA]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>LYNKS</h1>
           <p className="text-[#8B898E] text-sm">Welcome back</p>
         </div>
-        {serverError && (
-          <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center">{serverError}</div>
-        )}
+        {serverError && <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center">{serverError}</div>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className="text-xs font-medium text-[#8B898E] mb-1 block">Email</label>
