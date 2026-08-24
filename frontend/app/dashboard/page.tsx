@@ -15,7 +15,7 @@ export default function DashboardPage() {
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-8 md:gap-[57px] max-w-[880px] mx-auto">
               <p className="text-2xl md:text-[40px] font-semibold leading-tight md:leading-[50px] text-center text-[#0D0026] px-4" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                Welcome Human<br />Are you ready to move forward in your career journey?
+                Welcome, are you ready to move forward in your career journey?
               </p>
             </div>
           ) : (
