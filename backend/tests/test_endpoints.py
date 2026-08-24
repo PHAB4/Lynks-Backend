@@ -431,7 +431,7 @@ def run_tests():
                 "message": "Are there any competitions I can join?",
                 "conversation_id": conversation_id,
             },
-            timeout=LLM_TIMEOUT,
+            timeout=LLM_TIMEOUT * 2,  # 120s — mentor + scout makes 2 sequential LLM calls
         )
         if resp.status_code == 200:
             data = resp.json()
