@@ -168,33 +168,44 @@ def run_tests():
             )
 
         # ── Step 3: Sign in via Supabase to get a fresh token ──────────
-        test_email = f"test_{int(time.time())}@lynks-test.com"
+        # IMPORTANT: Try sign-IN first (existing user). Only sign-UP if user doesn't exist.
+        # This ensures the token is for the SAME Supabase project the backend verifies against.
         test_password = "TestPassword123!"
+        test_email = None
+        resp = None
 
-        # Try signup first
-        resp = httpx.post(
-            f"{SUPABASE_URL}/auth/v1/signup",
-            headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
-            json={"email": test_email, "password": test_password},
-            timeout=HTTP_TIMEOUT,
-        )
-
-        # If signup fails (user already exists), try sign in
-        if resp.status_code != 200:
-            # Try common test credentials
-            for email, password in [
-                ("test@lynks.com", "TestPassword123!"),
-                ("test@example.com", "TestPassword123!"),
-            ]:
-                resp = httpx.post(
+        # Try sign-in with known test emails first
+        for email in [
+            "test@lynks.com",
+            "test@example.com",
+            f"test_{int(time.time())}@lynks-test.com",
+        ]:
+            try:
+                sign_in_resp = httpx.post(
                     f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
                     headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
-                    json={"email": email, "password": password},
+                    json={"email": email, "password": test_password},
                     timeout=HTTP_TIMEOUT,
                 )
-                if resp.status_code == 200:
+                if sign_in_resp.status_code == 200:
+                    resp = sign_in_resp
                     test_email = email
                     break
+            except Exception:
+                continue
+
+        # If sign-in failed for all emails, create a new user
+        if resp is None or resp.status_code != 200:
+            test_email = f"test_{int(time.time())}@lynks-test.com"
+            try:
+                resp = httpx.post(
+                    f"{SUPABASE_URL}/auth/v1/signup",
+                    headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+                    json={"email": test_email, "password": test_password},
+                    timeout=HTTP_TIMEOUT,
+                )
+            except Exception:
+                pass
 
         if resp.status_code == 200:
             token = resp.json().get("access_token", "")
