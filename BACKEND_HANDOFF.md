@@ -33,6 +33,7 @@ Lynks is an **AI-powered career accelerator for Caribbean youth**. The backend i
 | `portfolio.py` | `/` | `POST /tasks/{task_id}/evidence`, `GET /portfolio` |
 | `opportunities.py` | `/opportunities` | `GET /?category=...` |
 | `chat.py` | `/chat` | `POST /message`, `GET /history`, `DELETE /history` |
+| `notifications.py` | `/notifications` | `GET /`, `GET /unread/count`, `GET /{id}`, `POST /`, `PATCH /{id}/read`, `POST /read-all` |
 
 ### Infrastructure
 
@@ -46,14 +47,14 @@ Lynks is an **AI-powered career accelerator for Caribbean youth**. The backend i
 | `models/schemas.py` | Pydantic request/response schemas |
 | `services/common.py` | Shared helpers (get_user_or_404, compute_step_status) |
 | `services/storage.py` | Supabase Storage file upload/delete |
+| `services/notifications.py` | Notification CRUD + trigger functions (opportunity, task, reminder, badge) |
 
 ### Tests
 
 | File | What it does |
 |------|-------------|
-| `tests/test_endpoints.py` | 16 endpoint tests (health, auth, roadmap, portfolio, opportunities, chat, error handling) |
-| `tests/check_env.py` | Checks all env vars load, tests DB connection, tests LLM connection |
-| `tests/test_db_conn.py` | Raw socket connection test to Supabase |
+| `tests/test_endpoints.py` | 29 endpoint tests (health, auth, roadmap, portfolio, opportunities, chat, notifications, error handling) |
+| `tests/get_token.ps1` | PowerShell script to generate a fresh JWT token from Supabase |
 
 ---
 
@@ -104,7 +105,7 @@ With a valid JWT token, the test results were:
 
 | Item | Status |
 |------|--------|
-| Notification system | Not built — needs to match new opportunities to user profiles and alert them |
+| Notification system | ✅ Built — endpoints, service, triggers, and tests complete |
 | Resume builder | Schema exists (`resumes` table) but no agent or routes |
 | Opportunity scraper scheduling | Needs cron job or background worker for periodic execution |
 | Supabase Storage bucket | Needs `evidence` bucket created as public in Supabase Dashboard |
@@ -152,7 +153,7 @@ python tests/test_endpoints.py
 
 1. **Fix the database connection** — test on unrestricted network, resolve IPv6 issue
 2. **Run the full test suite** — get all 16 tests passing
-3. **Build the notification system** — match opportunities to users, create notification records
+3. ~~Build the notification system~~ — ✅ Done. See `services/notifications.py` and `api/routes/notifications.py`
 4. **Build the resume builder** — agent + routes for the `resumes` table
 5. **Set up opportunity scraper scheduling** — cron job or Supabase Edge Function
 6. **Create the `evidence` bucket** in Supabase Storage

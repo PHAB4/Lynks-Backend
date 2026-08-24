@@ -20,7 +20,7 @@ Lynks is a **Caribbean-focused career mentorship platform** for young people. Us
 
 ---
 
-## What's Working (All 18 Core Tests Passing ✅)
+## What's Working (All 29 Tests Passing ✅)
 
 | Endpoint | Method | Status | Notes |
 |----------|--------|--------|-------|

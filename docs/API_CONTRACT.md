@@ -427,3 +427,137 @@ Success response (200):
 
 Errors:
 - 401 — `unauthorized`
+
+---
+
+## Notifications
+
+### GET /notifications
+Auth required: Yes
+
+Query params (optional): `type`, `is_read`, `limit` (default 50), `offset` (default 0)
+
+Success response (200):
+```json
+{
+  "notifications": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "title": "New opportunity: Caribbean Tech Hackathon",
+      "body": "A new opportunity matching your profile has been found.",
+      "type": "opportunity",
+      "link": { "type": "opportunity", "id": "some-id" },
+      "is_read": false,
+      "created_at": "datetime"
+    }
+  ],
+  "unread_count": 3
+}
+```
+
+Errors:
+- 401 — `unauthorized`
+
+---
+
+### GET /notifications/unread/count
+Auth required: Yes
+
+Request body: none
+
+Success response (200):
+```json
+{ "unread_count": 3 }
+```
+
+Errors:
+- 401 — `unauthorized`
+
+---
+
+### GET /notifications/{notification_id}
+Auth required: Yes
+
+Request body: none
+
+Success response (200):
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "title": "string",
+  "body": "string",
+  "type": "opportunity",
+  "link": { "type": "opportunity", "id": "some-id" },
+  "is_read": false,
+  "created_at": "datetime"
+}
+```
+
+Errors:
+- 404 — `notification_not_found`
+- 401 — `unauthorized`
+
+---
+
+### POST /notifications
+Auth required: Yes
+
+Request body:
+```json
+{
+  "title": "string",
+  "body": "string (optional)",
+  "type": "opportunity | task | reminder | badge",
+  "link": { "type": "string", "id": "string" }
+}
+```
+
+Success response (201): same shape as `GET /notifications/{notification_id}`
+
+Errors:
+- 401 — `unauthorized`
+
+---
+
+### PATCH /notifications/{notification_id}/read
+Auth required: Yes
+
+Request body: none
+
+Success response (200):
+```json
+{ "status": "ok", "message": "Notification marked as read" }
+```
+
+Errors:
+- 404 — `notification_not_found`
+- 401 — `unauthorized`
+
+---
+
+### POST /notifications/read-all
+Auth required: Yes
+
+Request body: none
+
+Success response (200):
+```json
+{ "status": "ok", "message": "Marked 5 notifications as read" }
+```
+
+Errors:
+- 401 — `unauthorized`
+
+---
+
+## Profile — Additional Fields
+
+### PATCH /profile (employment_status)
+
+In addition to the fields listed in the main `PATCH /profile` section above, the following field is also editable:
+
+```json
+{ "employment_status": "unemployed | seeking | employed | freelance | student" }
+```
+
+This field is persisted in the `users` table and returned in `GET /profile`.
