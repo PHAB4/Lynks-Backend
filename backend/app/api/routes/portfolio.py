@@ -23,7 +23,7 @@ async def post_task_evidence(task_id: str, file_type: str = Form(...), file: Upl
     if len(file_bytes) > MAX_FILE_SIZE_MB * 1024 * 1024:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": {"code": "file_too_large", "message": f"Max {MAX_FILE_SIZE_MB}MB"}})
     try:
-        file_url = upload_evidence_file(file_bytes, file.filename, file_type)
+        file_url = await upload_evidence_file(file_bytes, file.filename, file_type)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": {"code": "storage_error", "message": str(e)}})
     try:
