@@ -43,3 +43,69 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
   background: #6B26EA;
 }
+
+/* ===== Landing page animations ===== */
+
+/* Scroll-triggered fade-up */
+.scroll-animate {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scroll-animate.animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Mouse-tracking glow */
+.mouse-glow {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(107,38,234,0.12) 0%, rgba(107,38,234,0.04) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  will-change: left, top;
+}
+
+/* Halftone dot pattern next to hero */
+.halftone-pattern {
+  background-image: radial-gradient(circle, #6B26EA 1px, transparent 1px);
+  background-size: 8px 8px;
+  opacity: 0.25;
+}
+
+/* Rotating dashed orbit ring around feature images */
+.feature-image-ring {
+  position: relative;
+}
+.feature-image-ring::before {
+  content: '';
+  position: absolute;
+  inset: -24px;
+  border-radius: 50%;
+  border: 1px dashed rgba(107,38,234,0.25);
+  animation: orbit-spin 30s linear infinite;
+}
+.feature-image-ring::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6B26EA;
+  top: -4px;
+  right: 25%;
+}
+@keyframes orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Nav subtle shadow */
+.nav-shadow {
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+}
