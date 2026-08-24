@@ -14,6 +14,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
+
 from app.api.routes.chat import router as chat_router
 from app.api.routes.opportunities import router as opportunities_router
 from app.api.routes.portfolio import router as portfolio_router
@@ -49,6 +51,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security headers — add before rate limiting so they apply to all responses
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Rate limiting — LLM endpoints: 10/min, auth: 20/min, default: 60/min
+app.add_middleware(RateLimitMiddleware)
 
 # ── Register routers ───────────────────────────────────────────────────────
 # Each router handles one feature area (see API_CONTRACT.md for endpoints).
