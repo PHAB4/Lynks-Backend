@@ -97,11 +97,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
             {!collapsed && (
               <div className="flex items-center gap-1">
-                <Link href="/settings" className="flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-[#6B26EA] hover:bg-[#F7F3FE] transition-colors">
+                <Link href="/settings" className="relative group flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-[#6B26EA] hover:bg-[#F7F3FE] transition-colors">
                   <Settings size={14} />
+                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[#0D0026] text-white text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Settings</span>
                 </Link>
-                <button onClick={handleLogout} className="flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-red-500 hover:bg-red-50 transition-colors">
+                <button onClick={handleLogout} className="relative group flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-red-500 hover:bg-red-50 transition-colors">
                   <LogOut size={14} />
+                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[#0D0026] text-white text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Sign out</span>
                 </button>
               </div>
             )}
