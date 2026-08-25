@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Home, Briefcase, MessageSquare, Map, FileText,
   ChevronLeft, ChevronRight, LogOut, Settings, User,
-  ListChecks, Loader2,
+  ListChecks, Loader2, Maximize2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
@@ -19,6 +19,12 @@ const PANEL_ICONS: { id: PanelId; icon: typeof MessageSquare; label: string }[] 
   { id: 'chat', icon: MessageSquare, label: 'Chat' },
   { id: 'resume', icon: FileText, label: 'Resume' },
 ]
+
+const PANEL_ROUTES: Partial<Record<PanelId, string>> = {
+  roadmap: '/roadmap',
+  chat: '/chat',
+  resume: '/resume',
+}
 
 export type PanelSide = 'left' | 'right'
 
@@ -75,6 +81,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [])
 
   const togglePanel = useCallback((id: PanelId) => {
+    const panelRoute = PANEL_ROUTES[id]
+    if (panelRoute && pathname.startsWith(panelRoute)) {
+      setOpenPanels([])
+      return
+    }
     setOpenPanels(prev => {
       if (prev.includes(id)) {
         return prev.filter(p => p !== id)
@@ -93,7 +104,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     })
     startLoading(id)
     setSidebarExpanded(false)
-  }, [startLoading])
+  }, [startLoading, pathname])
 
   const openPanel = useCallback((id: PanelId) => {
     setOpenPanels(prev => {
@@ -109,6 +120,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const closePanel = useCallback((id: PanelId) => {
     setOpenPanels(prev => prev.filter(p => p !== id))
   }, [])
+
+  const closeAllPanels = useCallback(() => {
+    setOpenPanels([])
+  }, [])
+
+  const expandPanel = useCallback((id: PanelId) => {
+    const route = PANEL_ROUTES[id]
+    setOpenPanels([])
+    if (route) {
+      router.push(route)
+    }
+  }, [router])
 
   const handleSidebarExpand = useCallback(() => {
     setSidebarExpanded(prev => {
@@ -292,7 +315,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <>
               {leftPanels.map(id => (
                 <div key={id} className="hidden md:flex flex-col flex-1 border-r border-[#EDE3FF] bg-white h-full overflow-hidden min-w-0">
-                  <PanelHeader panelId={id} onClose={() => closePanel(id)} />
+                  <PanelHeader panelId={id} onClose={() => closePanel(id)} onExpand={() => expandPanel(id)} />
                   <div className="flex-1 overflow-y-auto">
                     {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
                   </div>
@@ -300,7 +323,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               ))}
               {rightPanels.map(id => (
                 <div key={id} className="hidden md:flex flex-col flex-1 border-l border-[#EDE3FF] bg-white h-full overflow-hidden min-w-0">
-                  <PanelHeader panelId={id} onClose={() => closePanel(id)} />
+                  <PanelHeader panelId={id} onClose={() => closePanel(id)} onExpand={() => expandPanel(id)} />
                   <div className="flex-1 overflow-y-auto">
                     {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
                   </div>
@@ -311,7 +334,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <>
               {leftPanels.map(id => (
                 <div key={id} className="hidden md:flex flex-col w-[420px] shrink-0 border-r border-[#EDE3FF] bg-white h-full overflow-hidden">
-                  <PanelHeader panelId={id} onClose={() => closePanel(id)} />
+                  <PanelHeader panelId={id} onClose={() => closePanel(id)} onExpand={() => expandPanel(id)} />
                   <div className="flex-1 overflow-y-auto">
                     {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
                   </div>
@@ -322,7 +345,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               {rightPanels.map(id => (
                 <div key={id} className="hidden md:flex flex-col w-[420px] shrink-0 border-l border-[#EDE3FF] bg-white h-full overflow-hidden">
-                  <PanelHeader panelId={id} onClose={() => closePanel(id)} />
+                  <PanelHeader panelId={id} onClose={() => closePanel(id)} onExpand={() => expandPanel(id)} />
                   <div className="flex-1 overflow-y-auto">
                     {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
                   </div>
@@ -366,22 +389,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
-function PanelHeader({ panelId, onClose }: { panelId: PanelId; onClose: () => void }) {
+function PanelHeader({ panelId, onClose, onExpand }: { panelId: PanelId; onClose: () => void; onExpand: () => void }) {
   const titles: Record<PanelId, string> = {
     chat: 'Chat with LYNKS',
     steps: 'Steps',
     resume: 'Resume',
     roadmap: 'Roadmap',
   }
+  const route = PANEL_ROUTES[panelId]
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-[#EDE3FF] shrink-0">
       <p className="text-[13px] font-semibold text-[#0D0026]">{titles[panelId]}</p>
-      <button
-        onClick={onClose}
-        className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-[#F7F3FE] transition-colors text-[#A8A8A8] hover:text-[#0D0026]"
-      >
-        <ChevronRight size={14} />
-      </button>
+      <div className="flex items-center gap-1">
+        {route && (
+          <button
+            onClick={onExpand}
+            className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-[#F7F3FE] transition-colors text-[#A8A8A8] hover:text-[#6B26EA]"
+            title="Expand to full page"
+          >
+            <Maximize2 size={13} />
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-[#F7F3FE] transition-colors text-[#A8A8A8] hover:text-[#0D0026]"
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
     </div>
   )
 }
