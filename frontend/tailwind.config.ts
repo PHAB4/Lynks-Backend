@@ -11,8 +11,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        heading: ["Bricolage Grotesque", "\"Google Sans Flex\"", "Inter", "system-ui", "sans-serif"],
-        googleSansFlex: ["var(--font-google-sans-flex)", "\"Google Sans Flex\"", "sans-serif"],
+        heading: ["Bricolage Grotesque", "\"DM Sans\"", "Inter", "system-ui", "sans-serif"],
+        googleSansFlex: ["var(--font-google-sans-flex)", "\"DM Sans\"", "sans-serif"],
         inter: ["var(--font-inter)", "sans-serif"],
       },
     },

@@ -124,7 +124,7 @@ export default function RoadmapPage() {
         {/* Steps sidebar */}
         <div className="hidden lg:flex flex-col w-[300px] bg-[#F0EFF2] shrink-0 p-4">
           <div className="flex justify-between items-center mb-4">
-            <p className="text-lg font-semibold text-[#000]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>Steps</p>
+            <p className="text-lg font-semibold text-[#000]" style={{ fontFamily: "'DM Sans', sans-serif" }}>Steps</p>
             <div className="py-0.5 px-2 rounded bg-[rgba(139,92,246,0.13)]">
               <p className="text-[#8B5CF6] text-[9px] font-bold">{completedSteps.size}/{totalSteps} DONE</p>
             </div>

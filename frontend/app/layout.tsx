@@ -1,14 +1,14 @@
-import { Inter, Google_Sans_Flex } from 'next/font/google'
+import { Inter, DM_Sans } from 'next/font/google'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-inter' })
-const googleSansFlex = Google_Sans_Flex({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-google-sans-flex' })
+const dmSans = DM_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-dm-sans' })
 
 export const metadata = { title: 'LYNKS', description: 'AI-powered career accelerator for Caribbean youth' }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${googleSansFlex.variable}`}>
+    <html lang="en" className={`${inter.variable} ${dmSans.variable}`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

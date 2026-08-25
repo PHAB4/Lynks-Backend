@@ -43,15 +43,15 @@ export default function LandingPage() {
           <span className="text-[#6B26EA] text-lg font-bold">&raquo;</span>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-[#8B898E] text-sm hover:text-[#0D0026] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>Login</Link>
-          <Link href="/signup" className="bg-[#6B26EA] text-white text-sm px-6 py-2 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>Sign up</Link>
+          <Link href="/login" className="text-[#8B898E] text-sm hover:text-[#0D0026] transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>Login</Link>
+          <Link href="/signup" className="bg-[#6B26EA] text-white text-sm px-6 py-2 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>Sign up</Link>
         </div>
       </nav>
 
       <ScrollReveal className="flex flex-col items-center justify-center flex-1 w-full max-w-[1200px] mx-auto px-5 py-12">
         <div className="relative">
           <p className="text-[128px] leading-[55px] text-[#6B26EA] mb-2" style={{ fontFamily: "'Birthstone', cursive" }}>Let&apos;s</p>
-          <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Lynk</h1>
+          <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Lynk</h1>
           <div className="halftone-pattern absolute -right-20 top-0 w-[180px] h-[140px] rounded-full" />
         </div>
         <Link id="hero-get-started" href="/signup" className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-all duration-300" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
@@ -60,7 +60,7 @@ export default function LandingPage() {
       </ScrollReveal>
 
       <ScrollReveal className="w-full bg-[#6B26EA] py-10 px-12">
-        <h2 className="text-white text-[29px] font-medium leading-[130%] text-center max-w-[800px] mx-auto" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 500 }}>
+        <h2 className="text-white text-[29px] font-medium leading-[130%] text-center max-w-[800px] mx-auto" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
           Get connected, get informed and receive guidance. Make your career journey easier than its ever been
         </h2>
       </ScrollReveal>
@@ -68,9 +68,9 @@ export default function LandingPage() {
       {features.map((feature, i) => (
         <div key={i} className={`w-full max-w-[1200px] mx-auto px-[60px] py-16 flex items-center gap-14 ${feature.reverse ? 'flex-row-reverse' : ''}`}>
           <ScrollReveal delay={0} className={`flex-1 flex flex-col gap-6 ${feature.reverse ? 'items-end text-right' : 'items-start text-left'}`}>
-            <span className="text-[#6B26EA] text-xs font-semibold tracking-[0.15em] uppercase" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>{feature.label}</span>
-            <h3 className="text-[25px] font-bold leading-[40px] text-[#0D0026]" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>{feature.title}</h3>
-            <p className="text-[16px] leading-[28px] text-[rgba(0,0,0,0.6)]" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>{feature.description}</p>
+            <span className="text-[#6B26EA] text-xs font-semibold tracking-[0.15em] uppercase" style={{ fontFamily: "'DM Sans', sans-serif" }}>{feature.label}</span>
+            <h3 className="text-[25px] font-bold leading-[40px] text-[#0D0026]" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}>{feature.title}</h3>
+            <p className="text-[16px] leading-[28px] text-[rgba(0,0,0,0.6)]" style={{ fontFamily: "'DM Sans', sans-serif" }}>{feature.description}</p>
           </ScrollReveal>
           <ScrollReveal delay={150} className="flex-1 flex justify-center">
             <div className="feature-image-ring relative w-[380px] h-[380px]">
@@ -83,7 +83,7 @@ export default function LandingPage() {
       {/* Ready to start CTA */}
       <ScrollReveal className="w-full bg-[#F9F5FF] py-20 px-5 text-center">
         <h2 className="text-[36px] font-bold text-[#0D0026] mb-4" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Ready to start?</h2>
-        <p className="text-[16px] text-[rgba(0,0,0,0.6)] mb-8 max-w-md mx-auto" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
+        <p className="text-[16px] text-[rgba(0,0,0,0.6)] mb-8 max-w-md mx-auto" style={{ fontFamily: "'DM Sans', sans-serif" }}>
           Join LYNKS today and take the first step towards your career journey.
         </p>
         <button
@@ -98,7 +98,7 @@ export default function LandingPage() {
             }, 600)
           }}
           className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-all duration-300"
-          style={{ fontFamily: "'Google Sans Flex', sans-serif" }}
+          style={{ fontFamily: "'DM Sans', sans-serif" }}
         >
           Get started
         </button>
