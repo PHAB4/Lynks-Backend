@@ -53,7 +53,7 @@ class User(Base):
     resumes: Mapped[list["Resume"]] = relationship(back_populates="user")
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="user")
     evidence_items: Mapped[list["Evidence"]] = relationship(back_populates="user")
-    notifications: Mapped[list["Notification"]] = relationship(back_populates="user")
+    memories: Mapped[list["UserMemory"]] = relationship(back_populates="user")
 
 
 # ── Roadmap ────────────────────────────────────────────────────────────────
@@ -194,6 +194,8 @@ class Conversation(Base):
         DateTime(timezone=True), server_default=func.now()
     )
 
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     user: Mapped["User"] = relationship(back_populates="conversations")
     messages: Mapped[list["Message"]] = relationship(
         back_populates="conversation",
@@ -224,10 +226,11 @@ class Message(Base):
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
 
 
-# ── Notification ──────────────────────────────────────────────────────────
+# ── User Memory (long-term facts) ─────────────────────────────────────────
 
-class Notification(Base):
-    __tablename__ = "notifications"
+
+class UserMemory(Base):
+    __tablename__ = "user_memories"
 
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4())
@@ -235,13 +238,15 @@ class Notification(Base):
     user_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id"), nullable=False
     )
-    title: Mapped[str] = mapped_column(Text, nullable=False)
-    body: Mapped[str | None] = mapped_column(Text, nullable=True)
-    type: Mapped[str] = mapped_column(Text, nullable=False, default="reminder")
-    link: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    fact: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(
+        Text, nullable=False, default="general"
+    )  # preference | goal | context | milestone | personality
+    source: Mapped[str] = mapped_column(
+        Text, nullable=False, default="conversation"
+    )  # conversation | profile | manual
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
-    user: Mapped["User"] = relationship(back_populates="notifications")
+    user: Mapped["User"] = relationship(back_populates="memories")
