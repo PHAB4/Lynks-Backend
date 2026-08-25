@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,800&family=DM+Sans:wght@400;500;600&family=Birthstone&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -26,7 +24,6 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -61,48 +58,7 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateY(0);
 }
 
-/* Letter-by-letter hero text animation */
-.hero-letter {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: letterReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-@keyframes letterReveal {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Blind text reveal (wipe from left) */
-.blind-reveal {
-  position: relative;
-  overflow: hidden;
-}
-.blind-reveal::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 101%;
-  height: 100%;
-  background: #f9f5ff;
-  transform-origin: right center;
-  animation: blindWipe 1.2s cubic-bezier(0.65, 0, 0.35, 1) 0.3s forwards;
-}
-@keyframes blindWipe {
-  to { transform: translateX(101%); }
-}
-
-/* Staggered fade-up for feature cards */
-.stagger-child {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.stagger-child.animate-in {
-  opacity: 1;
-  transform: translateY(0);
-}
+/* Mouse-tracking glow */
 
 /* Halftone dot pattern next to hero */
 .halftone-pattern {
