@@ -295,10 +295,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           ))}
 
-          {/* Page content */}
+          {/* Page content — hidden when 2 panels are open */}
+          {openPanels.length < 2 && (
           <div className="flex-1 overflow-y-auto min-w-0 pb-16 md:pb-0">
             {children}
           </div>
+          )}
 
           {/* Right panels */}
           {rightPanels.map(id => (
