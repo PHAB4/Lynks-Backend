@@ -27,12 +27,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!session?.user) {
         router.push('/login')
         return
       }
+      const user = session.user
       const { data } = await supabase.from('users').select('*').eq('id', user.id).single()
       if (data) {
         setProfile({
@@ -46,8 +46,9 @@ export default function DashboardPage() {
         setProfile({ name: user.email?.split('@')[0] || 'there', email: user.email || '', interests: [], employment_status: '', phone: '' })
       }
       setLoading(false)
-    }
-    load()
+    })
+
+    return () => subscription.unsubscribe()
   }, [router])
 
   if (loading) {
@@ -73,8 +74,6 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="min-h-screen bg-[#F7F3FE] overflow-y-auto">
         <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-8 md:py-12">
-
-          {/* Welcome Header */}
           <div className="mb-8">
             <p className="text-sm text-[#8B898E] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>{greeting}</p>
             <h1 className="text-[28px] md:text-[36px] font-semibold text-[#0D0026] leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
@@ -84,8 +83,6 @@ export default function DashboardPage() {
               Here&apos;s what&apos;s happening in your career journey.
             </p>
           </div>
-
-          {/* Quick Actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
             {[
               { icon: MessageSquare, label: 'Chat with LYNKS', desc: 'Ask anything', href: '/chat', color: 'bg-[#EADFFF] text-[#6B26EA]' },
@@ -109,13 +106,8 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {/* Left Column — Profile + Stats */}
             <div className="lg:col-span-1 space-y-4">
-
-              {/* Profile Card */}
               <div className="bg-white rounded-2xl border border-[#EDE3FF] p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
@@ -151,8 +143,6 @@ export default function DashboardPage() {
                   Edit Profile
                 </button>
               </div>
-
-              {/* Stats Card */}
               <div className="bg-white rounded-2xl border border-[#EDE3FF] p-5">
                 <p className="text-[13px] font-semibold text-[#0D0026] mb-4 flex items-center gap-2">
                   <TrendingUp size={14} className="text-[#6B26EA]" />
@@ -174,8 +164,6 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Notifications Card */}
               <div className="bg-white rounded-2xl border border-[#EDE3FF] p-5">
                 <p className="text-[13px] font-semibold text-[#0D0026] mb-3 flex items-center gap-2">
                   <Bell size={14} className="text-[#6B26EA]" />
@@ -190,11 +178,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-
-            {/* Right Column — Getting Started + Recent Opportunities */}
             <div className="lg:col-span-2 space-y-4">
-
-              {/* Getting Started Card */}
               <div className="bg-gradient-to-br from-[#6B26EA] to-[#4C1D95] rounded-2xl p-6 text-white">
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
@@ -223,8 +207,6 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Recent Opportunities */}
               <div className="bg-white rounded-2xl border border-[#EDE3FF] p-5">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-[13px] font-semibold text-[#0D0026] flex items-center gap-2">
@@ -256,8 +238,6 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Quick Tip */}
               <div className="bg-white rounded-2xl border border-[#EDE3FF] p-5">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-xl bg-[#EADFFF] flex items-center justify-center shrink-0">
@@ -271,7 +251,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
