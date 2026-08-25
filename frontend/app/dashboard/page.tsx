@@ -3,20 +3,22 @@
 import { useState, useEffect } from 'react'
 import { Send, Paperclip } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
+import { supabase } from '@/lib/supabase'
 
 export default function DashboardPage() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([])
-  const [userName, setUserName] = useState('Human')
+  const [userName, setUserName] = useState('')
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('lynks_user')
-      if (raw) {
-        const user = JSON.parse(raw)
-        if (user.name) setUserName(user.name.split(' ')[0])
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase.from('users').select('name').eq('id', user.id).single()
+        setUserName(data?.name || user.email?.split('@')[0] || 'there')
       }
-    } catch {}
+    }
+    load()
   }, [])
 
   const handleSend = () => { if (!message.trim()) return; setMessages(prev => [...prev, { role: 'user', content: message }]); setMessage('') }
