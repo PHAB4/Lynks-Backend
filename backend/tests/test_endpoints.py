@@ -597,6 +597,144 @@ def run_tests():
                 return False, f"Request {i+1} failed: {resp.status_code}"
         return True, "5 rapid requests all succeeded (middleware not breaking requests)"
 
+
+    # ── Notifications ───────────────────────────────────────────────────────
+
+    @test("POST /notifications — create")
+    def test_notification_create():
+        token = _state.get("token")
+        if not token:
+            return False, "no auth token"
+        payload = {
+            "title": "Test notification",
+            "body": "This is a test notification body",
+            "type": "reminder",
+        }
+        resp = httpx.post(
+            f"{BASE_URL}/notifications",
+            json=payload,
+            headers=headers(token),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code not in (200, 201):
+            return False, f"Expected 200/201, got {resp.status_code}: {resp.text[:200]}"
+        data = resp.json()
+        _state["notification_id"] = data.get("id")
+        if not data.get("id"):
+            return False, f"Missing notification id in response: {data}"
+        if data.get("title") != "Test notification":
+            return False, f"Title mismatch: {data.get('title')}"
+        if data.get("is_read") is not False:
+            return False, f"Expected is_read=False, got {data.get('is_read')}"
+        return True, f"created {data['id'][:8]}..."
+
+    @test("GET /notifications — list")
+    def test_notification_list():
+        token = _state.get("token")
+        if not token:
+            return False, "no auth token"
+        resp = httpx.get(
+            f"{BASE_URL}/notifications",
+            headers=headers(token),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return False, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        if "notifications" not in data:
+            return False, f"Missing 'notifications' key: {list(data.keys())}"
+        if "unread_count" not in data:
+            return False, f"Missing 'unread_count' key"
+        return True, f"{len(data['notifications'])} notifications, {data['unread_count']} unread"
+
+    @test("GET /notifications/{id} — get by ID")
+    def test_notification_get():
+        token = _state.get("token")
+        nid = _state.get("notification_id")
+        if not token:
+            return False, "no auth token"
+        if not nid:
+            return False, "no notification_id from create test"
+        resp = httpx.get(
+            f"{BASE_URL}/notifications/{nid}",
+            headers=headers(token),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return False, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        if data.get("id") != nid:
+            return False, f"ID mismatch: expected {nid}, got {data.get('id')}"
+        return True, f"retrieved '{data.get('title')}'"
+
+    @test("GET /notifications/unread/count — unread count")
+    def test_notification_unread():
+        token = _state.get("token")
+        if not token:
+            return False, "no auth token"
+        resp = httpx.get(
+            f"{BASE_URL}/notifications/unread/count",
+            headers=headers(token),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return False, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        if "unread_count" not in data:
+            return False, f"Missing 'unread_count': {data}"
+        return True, f"{data['unread_count']} unread"
+
+    @test("PATCH /notifications/{id}/read — mark read")
+    def test_notification_mark_read():
+        token = _state.get("token")
+        nid = _state.get("notification_id")
+        if not token:
+            return False, "no auth token"
+        if not nid:
+            return False, "no notification_id from create test"
+        resp = httpx.patch(
+            f"{BASE_URL}/notifications/{nid}/read",
+            headers=headers(token),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return False, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        if data.get("status") != "ok":
+            return False, f"Unexpected response: {data}"
+        return True, "marked as read"
+
+    @test("POST /notifications/read-all — mark all read")
+    def test_notification_read_all():
+        token = _state.get("token")
+        if not token:
+            return False, "no auth token"
+        resp = httpx.post(
+            f"{BASE_URL}/notifications/read-all",
+            headers=headers(token),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return False, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        if data.get("status") != "ok":
+            return False, f"Unexpected response: {data}"
+        return True, data.get("message", "all marked read")
+
+    @test("GET /notifications/invalid-id — 404")
+    def test_notification_404():
+        token = _state.get("token")
+        if not token:
+            return False, "no auth token"
+        resp = httpx.get(
+            f"{BASE_URL}/notifications/00000000-0000-0000-0000-000000000000",
+            headers=headers(token),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code != 404:
+            return False, f"Expected 404, got {resp.status_code}"
+        return True, "correct 404"
+
     # ════════════════════════════════════════════════════════════════════════
     #  RUN ALL TESTS
     # ════════════════════════════════════════════════════════════════════════
@@ -633,3 +771,4 @@ def run_tests():
 if __name__ == "__main__":
     success = run_tests()
     sys.exit(0 if success else 1)
+

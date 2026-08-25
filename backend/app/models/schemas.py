@@ -69,3 +69,24 @@ class ChatResponse(BaseModel):
     conversation_id: str
     response: str
     tool_calls: list[dict] | None = None
+
+# ── Notification Schemas ──────────────────────────────────────────────────
+
+class NotificationCreate(BaseModel):
+    title: str
+    body: str | None = None
+    type: str = "reminder"
+    link: dict | None = None
+
+class NotificationResponse(BaseModel):
+    id: str
+    title: str
+    body: str | None
+    type: str
+    link: dict | None
+    is_read: bool
+    created_at: datetime
+
+class NotificationListResponse(BaseModel):
+    notifications: list[NotificationResponse]
+    unread_count: int

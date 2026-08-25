@@ -14,6 +14,7 @@ users ──< roadmaps ──< steps ──< tasks ──< evidence
 users ──< resumes
 users ──< conversations ──< messages
 opportunities (standalone)
+users ──< notifications
 ```
 
 ---
@@ -152,3 +153,25 @@ opportunities (standalone)
 - Anyone can upload files
 - Anyone can read files
 - URL format: `https://qcyxyunngbkupttcwlbk.supabase.co/storage/v1/object/public/evidence/{filename}`
+
+---
+
+## notifications
+
+| Field | Type | Nullable | Default | Notes |
+|-------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_id | uuid | NO | gen_random_uuid() | FK → users.id |
+| title | text | NO | null | Notification title |
+| body | text | YES | null | Optional body text |
+| type | text | NO | null | "opportunity", "task", "reminder", "badge" |
+| link | jsonb | YES | null | Optional link to related content |
+| is_read | boolean | NO | false | Whether user has read it |
+| created_at | timestamptz | NO | now() | When created |
+
+**Indexes:**
+- `idx_notifications_user_id` — on user_id
+- `idx_notifications_created_at` — on created_at DESC
+- `idx_notifications_is_read` — on (user_id, is_read)
+
+**Note:** This table is new as of August 24, 2026. Created as part of the notifications system feature.

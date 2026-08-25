@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 
 from app.api.routes.chat import router as chat_router
+from app.api.routes.notifications import router as notifications_router
 from app.api.routes.opportunities import router as opportunities_router
 from app.api.routes.portfolio import router as portfolio_router
 from app.api.routes.profile import router as profile_router
@@ -78,6 +79,9 @@ app.include_router(resume_router)
 
 # Chat — Mentor-Orchestrator agent (has access to all other agents)
 app.include_router(chat_router)
+
+# Notifications
+app.include_router(notifications_router)
 
 
 # ── Health check ───────────────────────────────────────────────────────────
