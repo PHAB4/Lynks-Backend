@@ -172,24 +172,50 @@ All endpoints require a Supabase JWT token in the `Authorization: Bearer <token>
 | Page | Route | What it shows |
 |------|-------|--------------|
 | Landing | `/` | Hero section, CTA to sign up |
-| Login | `/login` | Email/password login (Supabase Auth) |
-| Onboarding | `/onboarding` | 3-step profile setup |
-| Dashboard | `/dashboard` | Overview — active roadmap, recent activity |
+| Login | `/login` | Email/password login (Supabase Auth) with password validation (uppercase, lowercase, number, special char, 8+ chars) |
+| Signup | `/signup` | Email/password signup with real-time password validation indicators |
+| Onboarding | `/onboarding` | 7-step profile setup (full name, country, age, education, career interest, employment, bio) |
+| Dashboard | `/dashboard` | Overview — welcome message, recent activity, quick actions |
 | Roadmap | `/roadmap` | Visual timeline of steps + tasks |
-| Opportunities | `/opportunities` | Two tabs: "For You" + "Browse All" with filters |
+| Opportunities | `/opportunities` | Two VIEW modes (Career/General), filter tabs (Personal/All), time filter, save, cards |
 | Portfolio | `/portfolio` | Verified achievements + evidence |
 | Chat | `/chat` | Mentor chatbot interface |
+| Resume | `/resume` | Resume preview with PDF/Word download, edit button |
+| Settings | `/settings` | Profile editor — name, email, phone, career interests |
+
+### Split-Screen System
+
+The app uses a split-screen layout with a collapsible sidebar and up to 2 simultaneous panels:
+
+**Sidebar:**
+- **Collapsed (75px):** LYNKS logo (expands), Home, Opportunities, Profile, avatar
+- **Expanded (305px):** Full nav with LYNKS title, back arrow, Home, Opportunities, Projects list, Profile/Settings/Logout
+- Clicking any panel icon auto-collapses the sidebar
+
+**Top Icon Bar (hidden on `/dashboard`):**
+- 4 icons: Steps, Roadmap, Chat, Resume — right-justified on all non-dashboard pages
+- Click icon → opens/closes corresponding panel
+
+**Panel Rules:**
+- Max 2 panels at a time
+- Chat/Roadmap → left side | Steps/Resume → right side
+- Clicking a same-side icon replaces that panel; clicking opposite side adds it
+- When 2 panels open → center page content hidden, panels fill full width
+- Loading spinner while panel content generates
 
 ---
 
 ## Key Design Decisions
 
-1. **Opportunities page** shows ALL opportunities, defaults to "For You" (relevance-scored), with a toggle to "Browse All" with filters (category, country, age, experience, price)
-2. **"Ask About This" button** on each opportunity card — opens the chatbot with a pre-filled message asking about that specific opportunity (no backend changes needed — just passes a string to POST /chat/message)
-3. **Mentor-Orchestrator** is ONE agent — it's a conversational assistant with access to all other agents (roadmap, portfolio, opportunities). It decides when to call an agent vs answer directly
+1. **Opportunities page** uses VIEW Mode (Career/General) with filter tabs (All Web-scraped / Personal matches), time filter (Today/Week/Month), save/bookmark, and Go to Source button
+2. **"Ask About This" button** on each opportunity card — opens the chatbot with a pre-filled message (no backend changes needed)
+3. **Mentor-Orchestrator** is ONE agent — conversational assistant with access to all other agents
 4. **Step status is computed**, not stored — a step is "complete" only when ALL its tasks are complete
-5. **Caribbean-specific** — all data, opportunities, and context are tailored to Caribbean youth (Jamaica, Trinidad, Barbados, etc.)
-6. **Evidence verification** is synchronous — user uploads a file, LLM checks it, returns verified/rejected immediately
+5. **Caribbean-specific** — all data, opportunities, and context are tailored to Caribbean youth
+6. **Evidence verification** is synchronous — user uploads, LLM checks, returns verified/rejected immediately
+7. **Split-screen system** — max 2 panels open at once; sidebar collapses when panels are active; center content hides when 2 panels fill the width
+8. **Password validation** — both login and signup require uppercase, lowercase, number, special character, and 8+ characters
+9. **Auth flow** — signup routes to `/onboarding` (7 steps), login routes to `/dashboard`
 
 ---
 
