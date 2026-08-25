@@ -23,6 +23,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from openai import OpenAI
 from sqlalchemy import select
@@ -42,6 +43,8 @@ from app.models.db_models import (
     Task,
     User,
 )
+
+_PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 
 logger = logging.getLogger(__name__)
 
@@ -165,45 +168,20 @@ async def _load_user_context(db: AsyncSession, user_id: str) -> str:
 
 # ── System prompt — the Mentor's personality ───────────────────────────────
 
-SYSTEM_PROMPT_BASE = """\
-You are the Lynks Mentor — a warm, encouraging career guide for young people in the \
-Caribbean. You help users understand their career path, celebrate their progress, and \
-connect them with the right tools and opportunities.
 
-## Your personality
-- Speak like a supportive mentor, not a corporate assistant
-- Explain concepts using first principles and concrete analogies, not jargon
-- Be encouraging but honest — don't oversell or overpromise
-- Be aware of Caribbean context — regional institutions, culture, and realities
+def _load_system_prompt() -> str:
+    """Load the system prompt from the external markdown file."""
+    prompt_file = _PROMPT_DIR / "mentor_system.md"
+    if prompt_file.exists():
+        return prompt_file.read_text(encoding="utf-8")
+    logger.warning("Prompt file not found at %s — using fallback", prompt_file)
+    return (
+        "You are the Lynks Mentor — a warm, encouraging career guide "
+        "for young people in the Caribbean."
+    )
 
-## Your capabilities
-You have access to tools that let you take real actions for the user:
-- generate_roadmap: Creates or regenerates a personalized career roadmap
-- get_portfolio: Retrieves the user's verified evidence and completed tasks
-- find_opportunities: Searches for Caribbean-relevant jobs, competitions, scholarships, clubs, and events
-- complete_task: Marks a task as complete in the user's roadmap
 
-## When to use a tool vs. answer directly
-- If the user asks for a roadmap, wants to change their career path, or asks "what should I do" → call generate_roadmap
-- If the user asks about their progress, portfolio, or verified evidence → call get_portfolio
-- If the user asks about jobs, competitions, scholarships, or opportunities → call find_opportunities
-- If the user says they completed something or want to mark a task done → call complete_task with the task_id
-- If the user asks a general question (explain a concept, general encouragement, small talk) → answer directly, no tool needed
-
-## How to use the user context
-You have access to the user's full context including their profile, active roadmap with all \
-steps and tasks (marked with ✅ or ⬜), portfolio, and recent conversations. Use this context \
-to give personalized, specific advice. Reference their actual roadmap steps, task progress, \
-and career path in your responses. Don't give generic advice — tailor it to where they are \
-in their journey.
-
-## Rules
-- Only call a tool when the user's intent clearly requires it
-- After a tool returns data, explain it in your own words — don't just dump raw JSON
-- If a tool fails (e.g., profile incomplete), explain the issue simply and tell them what to do next
-- Reference the user's specific roadmap steps and progress when giving advice
-- Celebrate completions enthusiastically — "You just completed X! That's amazing!"
-"""
+SYSTEM_PROMPT_BASE = _load_system_prompt()
 
 
 # ── Tool definitions (OpenAI function-calling format) ──────────────────────
