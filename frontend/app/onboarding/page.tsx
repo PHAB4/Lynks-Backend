@@ -62,7 +62,7 @@ export default function OnboardingPage() {
       {/* Logo */}
       <div className="px-6 py-5">
         <div className="flex items-center gap-1">
-          <img src="/lynks-logo.jpg" alt="LYNKS" className="h-7 object-contain" />
+          <img src="/lynks-logo.jpg" alt="LYNKS" className="h-6 w-auto object-contain" style={{ mixBlendMode: "screen" }} />
           <span className="text-[#6B26EA] text-lg font-bold">&raquo;</span>
         </div>
       </div>

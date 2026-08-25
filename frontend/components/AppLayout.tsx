@@ -173,7 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onClick={handleSidebarExpand}
             className="w-10 h-10 rounded-2xl bg-[#EADFFF] flex items-center justify-center mb-6 hover:bg-[#D4C4F7] transition-colors cursor-pointer"
           >
-            <img src="/lynks-icon.jpg" alt="LYNKS" className="w-6 h-6 object-contain" />
+            <img src="/lynks-logo.jpg" alt="LYNKS" className="w-8 h-8 object-cover" style={{ mixBlendMode: "multiply" }} />
           </button>
 
           <div className="flex flex-col items-center gap-0.5 flex-1 mt-2">
@@ -220,7 +220,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="hidden md:flex flex-col w-[305px] shrink-0 bg-[#F9F5FF] border-r border-[#EDE3FF] py-2.5 px-[11px] h-screen sticky top-0 z-20">
           <div className="flex items-center justify-between w-full h-10 mb-2.5 shrink-0">
             <Link href="/dashboard" onClick={() => setSidebarExpanded(false)}>
-              <img src="/lynks-logo.jpg" alt="LYNKS" className="h-7 object-contain" />
+              <img src="/lynks-logo.jpg" alt="LYNKS" className="h-6 w-auto object-contain" style={{ mixBlendMode: "multiply" }} />
             </Link>
             <button
               onClick={handleSidebarExpand}
