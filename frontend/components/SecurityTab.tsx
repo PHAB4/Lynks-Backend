@@ -7,7 +7,13 @@ import { cn } from '@/lib/cn'
 
 export default function SecurityTab() {
   const [email, setEmail] = useState('')
-  const [emailVerified, setEmailVerified] = useState<boolean | null>(null)
+  const [emailVerified, setEmailVerified] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('lynks_email_verified')
+      if (cached !== null) return cached === 'true'
+    }
+    return true
+  })
   const [resending, setResending] = useState(false)
   const [resent, setResent] = useState(false)
 
@@ -28,7 +34,9 @@ export default function SecurityTab() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setEmail(user.email || '')
-        setEmailVerified(!!user.email_confirmed_at)
+        const verified = !!user.email_confirmed_at
+        setEmailVerified(verified)
+        localStorage.setItem('lynks_email_verified', String(verified))
       }
     }
     load()
@@ -127,9 +135,7 @@ export default function SecurityTab() {
 
         <div className="flex items-center justify-between p-4 rounded-xl bg-[rgba(107,38,234,0.04)] border border-[rgba(107,38,234,0.10)]">
           <div className="flex items-center gap-3">
-            {emailVerified === null ? (
-              <Loader2 size={18} className="text-[rgba(30,30,30,0.30)] animate-spin" />
-            ) : emailVerified ? (
+            {emailVerified ? (
               <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
                 <Check size={16} className="text-green-600" />
               </div>
@@ -143,11 +149,7 @@ export default function SecurityTab() {
                 {email}
               </p>
               <p className="text-xs" style={{ fontFamily: "'Inter', sans-serif", color: emailVerified ? '#16a34a' : '#d97706' }}>
-                {emailVerified === null
-                  ? 'Checking status...'
-                  : emailVerified
-                    ? 'Verified'
-                    : 'Not verified'}
+                {emailVerified ? 'Verified' : 'Not verified'}
               </p>
             </div>
           </div>

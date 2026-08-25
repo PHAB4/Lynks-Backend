@@ -49,22 +49,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [loadingPanels, setLoadingPanels] = useState<Set<PanelId>>(new Set())
   const pathname = usePathname()
   const router = useRouter()
-  const [userName, setUserName] = useState('User')
+  const [userName, setUserName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('lynks_user')
+      if (cached) {
+        try { return JSON.parse(cached).name || 'User' } catch { /* ignore */ }
+      }
+    }
+    return 'User'
+  })
   const [recentProjects, setRecentProjects] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const { data } = await supabase.from('users').select('name').eq('id', user.id).single()
-          setUserName(data?.name || user.email?.split('@')[0] || 'User')
-        }
-      } catch {
-        // not logged in, keep default
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data } = await supabase.from('users').select('name').eq('id', session.user.id).single()
+        const name = data?.name || session.user.email?.split('@')[0] || 'User'
+        setUserName(name)
+        localStorage.setItem('lynks_user', JSON.stringify({ name }))
+      } else if (event === 'SIGNED_OUT') {
+        setUserName('User')
+        localStorage.removeItem('lynks_user')
       }
-    }
-    loadUser()
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   const initials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
