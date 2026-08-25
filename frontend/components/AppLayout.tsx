@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, LogOut, Settings
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { supabase } from '@/lib/supabase'
 
 const SidebarContext = createContext({ collapsed: false, setCollapsed: (v: boolean) => {} })
 export function useSidebar() { return useContext(SidebarContext) }
@@ -27,14 +28,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = useState('User')
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('lynks_user')
-      if (raw) {
-        const user = JSON.parse(raw)
-        if (user.name) setUserName(user.name)
-        else if (user.email) setUserName(user.email.split('@')[0])
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase.from('users').select('name').eq('id', user.id).single()
+        if (data?.name) {
+          setUserName(data.name)
+        } else {
+          setUserName(user.email?.split('@')[0] || 'User')
+        }
       }
-    } catch {}
+    }
+    loadUser()
   }, [])
 
   const initials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
