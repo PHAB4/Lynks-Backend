@@ -115,6 +115,10 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 
 **Personality:** Caribbean-aware, encouraging, uses first-principles explanations with concrete analogies. Avoids jargon. Understands local context (Caribbean institutions, job market, visa requirements).
 
+**Long-term Memory:** The Mentor remembers key facts about the user across sessions. After every 10 messages in a conversation, the AI extracts lasting facts (career interests, preferences, milestones, personality traits) and stores them in the `user_memories` table. On future conversations, these memories are loaded into the system prompt so the AI can reference them naturally — without the user having to repeat themselves. Users can view and delete their memories via `GET /memory` and `DELETE /memory/{id}`.
+
+**Conversation History:** Users can have multiple conversations with the Mentor. The sidebar shows all past conversations with titles and summaries. When a conversation exceeds 15 messages, older messages are summarized by the LLM to save tokens. The AI only sees the summary + last 10 messages, but the user can always scroll through the full history (stored permanently in the database). Cross-conversation context is maintained — the AI knows what was discussed in previous sessions.
+
 ### 4.7 Notifications (Phase 2)
 
 - When a new opportunity matches a user's profile, a notification is created
@@ -130,6 +134,7 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 | Portfolio Manager | Verifies task evidence, manages portfolio | Uploaded files (certificates, images) | Verification result (verified/rejected/pending) |
 | Job Scout | Sources Caribbean-relevant opportunities | Internet scraping + curated database | Matched opportunities list |
 | Mentor-Orchestrator | Conversational assistant + agent router | User chat messages | Natural language response (possibly agent-assisted) |
+| Memory Extractor | Extracts key user facts from conversations (runs after every 10 messages) | Conversation messages + existing memories | New user memories (up to 5 per extraction) |
 
 ## 6. Technical Constraints
 
@@ -140,6 +145,33 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 - **File Storage:** Supabase Storage (public `evidence` bucket)
 - **All UUIDs, all snake_case**
 - **Error shape:** `{"error": {"code": "...", "message": "..."}}`
+
+## 6.1 Security & Rate Limiting
+
+Implemented via FastAPI middleware in `app/middleware.py`:
+
+**Rate Limiting** (sliding window per IP):
+
+| Endpoint Group | Limit | Endpoints |
+|---|---|---|
+| LLM | 10 requests/min | `/chat/message`, `/roadmap/generate`, `/roadmap/regenerate`, `/opportunities` |
+| Auth | 20 requests/min | `/auth/*` |
+| Default | 60 requests/min | All other endpoints |
+
+Returns `429 Too Many Requests` with `Retry-After` header when exceeded. Health checks (`/health`) are exempt.
+
+**Security Headers** (on all responses):
+
+| Header | Value | Protects Against |
+|---|---|---|
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Protocol downgrade attacks |
+| `X-Content-Type-Options` | `nosniff` | MIME-type sniffing |
+| `X-Frame-Options` | `DENY` | Clickjacking |
+| `X-XSS-Protection` | `1; mode=block` | Cross-site scripting |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Referrer leakage |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Feature abuse |
+
+**CORS:** Configurable via `CORS_ORIGINS` environment variable. Defaults to `http://localhost:3000` for local development. Production must set this to the deployed frontend URL.
 
 ## 7. Open Questions
 
@@ -154,7 +186,9 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 
 ## 8. Deployment
 
-- Must be deployable and always-on (no local-only demos)
-- Free tier hosting options: Railway, Render, or Fly.io for backend
-- Supabase provides hosting for database, auth, and storage
-- Frontend hosted separately (teammate's responsibility)
+- **Backend:** Deployed on Railway at `https://lynks-backend-production.up.railway.app`
+- **Database, Auth, Storage:** Supabase (hosted)
+- **Frontend:** Deployed separately by frontend team (connects via `CORS_ORIGINS` env var)
+- **Monitoring:** Swagger UI available at `/docs` on the live backend
+- **Rate limiting:** Active — LLM endpoints limited to 10 requests/min per IP
+- **Security headers:** Active — HSTS, X-Content-Type-Options, X-Frame-Options on all responses
