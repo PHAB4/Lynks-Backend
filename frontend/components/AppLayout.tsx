@@ -91,7 +91,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const togglePanel = useCallback((id: PanelId) => {
     const panelRoute = PANEL_ROUTES[id]
     if (panelRoute && pathname.startsWith(panelRoute)) {
-      setOpenPanels([])
+      setOpenPanels(prev => {
+        if (prev.length <= 1) return []
+        return [prev[prev.length - 1]]
+      })
       return
     }
     setOpenPanels(prev => {
