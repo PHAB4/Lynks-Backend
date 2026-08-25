@@ -23,14 +23,13 @@ export default function OnboardingPage() {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        full_name: profile.name,
+      await supabase.from('users').update({
+        name: profile.name,
         country: profile.country,
         age: profile.age ? parseInt(profile.age) : null,
-        education: profile.education,
+        education_level: profile.education,
         interests: profile.interests,
-      }, { onConflict: 'id' })
+      }).eq('id', user.id)
     }
     localStorage.setItem('lynks_user', JSON.stringify({
       name: profile.name,
@@ -57,17 +56,12 @@ export default function OnboardingPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#F7F3FE] px-4">
       <div className="w-full max-w-lg">
-        {/* Progress bar */}
         <div className="flex items-center gap-1 mb-8">
           {Array.from({ length: totalSteps }).map((_, i) => (
-            <div key={i} className={cn(
-              'h-1.5 rounded-full transition-all duration-300 flex-1',
-              i === step ? 'bg-[#6B26EA]' : i < step ? 'bg-[#6B26EA]/40' : 'bg-[#EDE3FF]'
-            )} />
+            <div key={i} className={cn('h-1.5 rounded-full transition-all duration-300 flex-1', i === step ? 'bg-[#6B26EA]' : i < step ? 'bg-[#6B26EA]/40' : 'bg-[#EDE3FF]')} />
           ))}
         </div>
 
-        {/* Step 0: Welcome */}
         {step === 0 && (
           <>
             <div className="text-center mb-8">
@@ -75,15 +69,12 @@ export default function OnboardingPage() {
               <p className="text-sm text-[#8B898E]">Let&apos;s set up your profile to personalize your career journey.</p>
             </div>
             <div className="flex flex-col items-center gap-6 py-8">
-              <div className="w-24 h-24 rounded-full bg-[#6B26EA]/10 flex items-center justify-center">
-                <span className="text-4xl">🚀</span>
-              </div>
+              <div className="w-24 h-24 rounded-full bg-[#6B26EA]/10 flex items-center justify-center"><span className="text-4xl">🚀</span></div>
               <p className="text-center text-[#8B898E] max-w-sm">We&apos;ll ask you a few questions to understand your career goals and interests. This helps our AI match you with the best opportunities.</p>
             </div>
           </>
         )}
 
-        {/* Step 1: Name */}
         {step === 1 && (
           <>
             <div className="text-center mb-8">
@@ -96,7 +87,6 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {/* Step 2: Country */}
         {step === 2 && (
           <>
             <div className="text-center mb-8">
@@ -117,7 +107,6 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {/* Step 3: Age */}
         {step === 3 && (
           <>
             <div className="text-center mb-8">
@@ -130,7 +119,6 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {/* Step 4: Education */}
         {step === 4 && (
           <>
             <div className="text-center mb-8">
@@ -152,7 +140,6 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {/* Step 5: Interests */}
         {step === 5 && (
           <>
             <div className="text-center mb-8">
@@ -165,10 +152,7 @@ export default function OnboardingPage() {
                   const selected = profile.interests.includes(interest)
                   return (
                     <button key={interest} onClick={() => {
-                      setProfile(p => ({
-                        ...p,
-                        interests: selected ? p.interests.filter(i => i !== interest) : [...p.interests, interest],
-                      }))
+                      setProfile(p => ({ ...p, interests: selected ? p.interests.filter(i => i !== interest) : [...p.interests, interest] }))
                     }} className={cn('py-2 px-4 rounded-full text-sm border transition-colors', selected ? 'bg-[#6B26EA] text-white border-[#6B26EA]' : 'border-[#EDE3FF] bg-white text-[#0D0026] hover:border-[#6B26EA]')}>
                       {interest}
                     </button>
@@ -179,7 +163,6 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {/* Navigation */}
         <div className="flex justify-between items-center mt-8">
           <button onClick={() => setStep(s => s - 1)} disabled={step === 0} className="flex items-center gap-1 py-2 px-4 text-sm text-[#8B898E] hover:text-[#0D0026] disabled:opacity-30 transition-colors">
             <ChevronLeft size={16} /> Back
