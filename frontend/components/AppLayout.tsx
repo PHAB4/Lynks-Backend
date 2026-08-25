@@ -280,41 +280,49 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Panels + page content row */}
         <div className="flex-1 flex overflow-hidden min-h-0">
-
-          {/* Left panels */}
-          {leftPanels.map(id => (
-            <div key={id} className="hidden md:flex flex-col w-[420px] shrink-0 border-r border-[#EDE3FF] bg-white h-full overflow-hidden">
-              <PanelHeader panelId={id} onClose={() => closePanel(id)} />
-              <div className="flex-1 overflow-y-auto">
-                {loadingPanels.has(id) ? (
-                  <LoadingPanel />
-                ) : (
-                  <PanelContent panelId={id} openPanel={openPanel} />
-                )}
+          {openPanels.length >= 2 ? (
+            /* 2 panels open: fill full width, center them */
+            <>
+              {leftPanels.map(id => (
+                <div key={id} className="hidden md:flex flex-col flex-1 border-r border-[#EDE3FF] bg-white h-full overflow-hidden min-w-0">
+                  <PanelHeader panelId={id} onClose={() => closePanel(id)} />
+                  <div className="flex-1 overflow-y-auto">
+                    {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
+                  </div>
+                </div>
+              ))}
+              {rightPanels.map(id => (
+                <div key={id} className="hidden md:flex flex-col flex-1 border-l border-[#EDE3FF] bg-white h-full overflow-hidden min-w-0">
+                  <PanelHeader panelId={id} onClose={() => closePanel(id)} />
+                  <div className="flex-1 overflow-y-auto">
+                    {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              {leftPanels.map(id => (
+                <div key={id} className="hidden md:flex flex-col w-[420px] shrink-0 border-r border-[#EDE3FF] bg-white h-full overflow-hidden">
+                  <PanelHeader panelId={id} onClose={() => closePanel(id)} />
+                  <div className="flex-1 overflow-y-auto">
+                    {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
+                  </div>
+                </div>
+              ))}
+              <div className="flex-1 overflow-y-auto min-w-0 pb-16 md:pb-0">
+                {children}
               </div>
-            </div>
-          ))}
-
-          {/* Page content — hidden when 2 panels are open */}
-          {openPanels.length < 2 && (
-          <div className="flex-1 overflow-y-auto min-w-0 pb-16 md:pb-0">
-            {children}
-          </div>
+              {rightPanels.map(id => (
+                <div key={id} className="hidden md:flex flex-col w-[420px] shrink-0 border-l border-[#EDE3FF] bg-white h-full overflow-hidden">
+                  <PanelHeader panelId={id} onClose={() => closePanel(id)} />
+                  <div className="flex-1 overflow-y-auto">
+                    {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
+                  </div>
+                </div>
+              ))}
+            </>
           )}
-
-          {/* Right panels */}
-          {rightPanels.map(id => (
-            <div key={id} className="hidden md:flex flex-col w-[420px] shrink-0 border-l border-[#EDE3FF] bg-white h-full overflow-hidden">
-              <PanelHeader panelId={id} onClose={() => closePanel(id)} />
-              <div className="flex-1 overflow-y-auto">
-                {loadingPanels.has(id) ? (
-                  <LoadingPanel />
-                ) : (
-                  <PanelContent panelId={id} openPanel={openPanel} />
-                )}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
