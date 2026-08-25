@@ -356,7 +356,12 @@ def run_tests():
             _state["evidence_id"] = data.get("id")
             return True, f"evidence_id={data.get('id', 'unknown')[:8]}... status={data.get('verification_status')}"
         else:
-            return False, f"Expected 201, got {resp.status_code}: {resp.text[:300]}"
+            # Show the actual error detail for debugging
+            try:
+                err_detail = resp.json()
+                return False, f"Expected 201, got {resp.status_code}: {json.dumps(err_detail, indent=2)[:500]}"
+            except Exception:
+                return False, f"Expected 201, got {resp.status_code}: {resp.text[:500]}"
 
     # ── 8. Portfolio ────────────────────────────────────────────────────────
 
@@ -431,7 +436,7 @@ def run_tests():
                 "message": "Are there any competitions I can join?",
                 "conversation_id": conversation_id,
             },
-            timeout=LLM_TIMEOUT,
+            timeout=LLM_TIMEOUT * 2,  # 120s — mentor + scout makes 2 sequential LLM calls
         )
         if resp.status_code == 200:
             data = resp.json()
