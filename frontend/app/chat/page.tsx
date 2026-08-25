@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send, Paperclip } from 'lucide-react'
+import { Send } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
 
@@ -43,7 +43,6 @@ export default function ChatPage() {
   return (
     <AppLayout>
       <div className="flex h-screen bg-[#F7F3FE]">
-        {/* Chat section */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 overflow-y-auto px-4 md:px-6 py-8">
             {messages.length === 0 ? (
@@ -78,7 +77,6 @@ export default function ChatPage() {
               </div>
             )}
           </div>
-          {/* Chat input */}
           <div className="px-4 md:px-6 pb-4 md:pb-6">
             <div className="flex items-center gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] shadow-[0_0_5px_rgba(0,0,0,0.05)]">
               <input
@@ -98,50 +96,6 @@ export default function ChatPage() {
                 <Send size={16} />
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Resume panel — right side */}
-        <div className="hidden lg:flex flex-col w-[420px] bg-[#F0EFF2] shrink-0">
-          <div className="flex-1 p-4 flex items-start justify-center pt-8">
-            <div className="bg-white rounded-lg shadow-sm w-[340px] min-h-[450px] p-6 border border-[#EDE3FF]">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-full bg-[#EADFFF] flex items-center justify-center">
-                  <span className="text-[#6B26EA] font-bold text-lg">{userName.charAt(0).toUpperCase()}</span>
-                </div>
-                <div>
-                  <p className="font-bold text-[#0D0026] text-base">{userName || 'Your Name'}</p>
-                  <p className="text-xs text-[#8B898E]">Career Profile</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-xs font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-2">EXPERIENCE</h4>
-                  <p className="text-xs text-[#A8A8A8]">No experience yet. Complete tasks on your roadmap to build your resume.</p>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-2">EDUCATION</h4>
-                  <p className="text-xs text-[#A8A8A8]">Add during onboarding.</p>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-2">SKILLS</h4>
-                  <p className="text-xs text-[#A8A8A8]">AI will suggest skills based on your career journey.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Export buttons */}
-          <div className="p-4 space-y-3">
-            <div className="h-px bg-[#918E8E]" />
-            <button className="w-full py-3 rounded-[10px] border border-[rgba(0,0,0,0.43)] bg-[#EADFFF] text-sm font-medium text-[#000] hover:bg-[#D4C4F7] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Word
-            </button>
-            <button className="w-full py-3 rounded-xl bg-[#6B26EA] text-sm font-semibold text-white hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }}>
-              PDF
-            </button>
-            <button className="w-full py-3 rounded-[10px] border border-[rgba(0,0,0,0.43)] bg-[#EADFFF] text-sm font-medium text-[#000] hover:bg-[#D4C4F7] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Edit resume
-            </button>
           </div>
         </div>
       </div>
