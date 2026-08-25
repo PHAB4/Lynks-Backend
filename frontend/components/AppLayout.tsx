@@ -13,11 +13,11 @@ import { supabase } from '@/lib/supabase'
 
 export type PanelId = 'chat' | 'steps' | 'resume' | 'roadmap'
 
-const PANEL_ICONS: { id: PanelId; icon: typeof MessageSquare; label: string }[] = [
+const PANEL_ICONS: { id: PanelId; icon: typeof MessageSquare; label: string; page?: string }[] = [
   { id: 'steps', icon: ListChecks, label: 'Steps' },
-  { id: 'roadmap', icon: Map, label: 'Roadmap' },
-  { id: 'chat', icon: MessageSquare, label: 'Chat' },
-  { id: 'resume', icon: FileText, label: 'Resume' },
+  { id: 'roadmap', icon: Map, label: 'Roadmap', page: '/roadmap' },
+  { id: 'chat', icon: MessageSquare, label: 'Chat', page: '/chat' },
+  { id: 'resume', icon: FileText, label: 'Resume', page: '/resume' },
 ]
 
 export type PanelSide = 'left' | 'right'
@@ -257,7 +257,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Top icon bar — 4 split-screen icons (hidden on dashboard) */}
         {pathname !== '/dashboard' && (
         <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0">
-          {PANEL_ICONS.map((item) => {
+          {PANEL_ICONS.filter(item => !item.page || !pathname.startsWith(item.page)).map((item) => {
             const isActive = openPanels.includes(item.id)
             return (
               <button
