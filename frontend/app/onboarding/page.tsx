@@ -78,11 +78,6 @@ export default function OnboardingPage() {
                 <h1 className="text-[32px] font-bold text-[#0D0026] mb-3 leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Welcome to LYNKS</h1>
                 <p className="text-[16px] text-[#0D0026] leading-relaxed">Tell LYNKS about yourself so it can give you the most appropriate guidance.</p>
               </div>
-              <div className="flex justify-center mb-8">
-                <div className="w-48 h-48 rounded-full overflow-hidden">
-                  <img src="/images/OxA7NlDbOxTaTU6TLtJ6Bf0vvI.png" alt="Welcome" className="w-full h-full object-cover" />
-                </div>
-              </div>
             </>
           )}
 

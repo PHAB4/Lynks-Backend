@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function ScrollReveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -36,6 +36,13 @@ function ScrollReveal({ children, className = '', delay = 0 }: { children: React
 }
 
 export default function LandingPage() {
+  const [showTop, setShowTop] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 600)
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
   const features = [
     {
       label: 'NOTIFICATIONS',
@@ -94,7 +101,7 @@ export default function LandingPage() {
           <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Lynk</h1>
           <div className="halftone-pattern absolute -right-20 top-0 w-[180px] h-[140px] rounded-full" />
         </div>
-        <Link href="/onboarding" className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
+        <Link href="/signup" className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
           Get started
         </Link>
       </ScrollReveal>
@@ -137,6 +144,14 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      {showTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 right-8 z-50 w-12 h-12 rounded-full bg-[#6B26EA] text-white shadow-lg hover:bg-[#5A1FD0] transition-all flex items-center justify-center text-lg"
+        >
+          ↑
+        </button>
+      )}
     </div>
   )
 }
