@@ -254,8 +254,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main area: top icon bar + panels + page content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-        {/* Top icon bar — the 4 split-screen icons */}
-        <div className="hidden md:flex items-center gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0">
+        {/* Top icon bar — 4 split-screen icons (hidden on dashboard) */}
+        {pathname !== '/dashboard' && (
+        <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0">
           {PANEL_ICONS.map((item) => {
             const isActive = openPanels.includes(item.id)
             return (
@@ -275,6 +276,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )
           })}
         </div>
+        )}
 
         {/* Panels + page content row */}
         <div className="flex-1 flex overflow-hidden min-h-0">
