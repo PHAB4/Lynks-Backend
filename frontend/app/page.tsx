@@ -156,7 +156,7 @@ export default function LandingPage() {
 
         {/* Hero */}
         <div className="flex flex-col items-center justify-center flex-1 w-full max-w-[1200px] mx-auto px-5 py-12 relative">
-          <div className="relative">
+          <div className="relative text-center">
             <p className="text-[128px] leading-[55px] text-[#6B26EA] mb-2" style={{ fontFamily: "'Birthstone', cursive" }}>Let&apos;s</p>
             <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Lynk</h1>
             <div className="halftone-pattern absolute -right-20 top-0 w-[180px] h-[140px] rounded-full" />
