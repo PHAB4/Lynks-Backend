@@ -79,8 +79,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (prev.includes(id)) {
         return prev.filter(p => p !== id)
       }
+      const side = getPanelSide(id)
+      const sameSide = prev.filter(p => getPanelSide(p) === side)
+      if (sameSide.length > 0) {
+        return prev.map(p => sameSide.includes(p) ? id : p)
+      }
       if (prev.length >= 2) {
-        return [prev[1], id]
+        const oppSide = side === 'left' ? 'right' : 'left'
+        const oppPanel = prev.find(p => getPanelSide(p) === oppSide)
+        return oppPanel ? [oppPanel, id] : [prev[0], id]
       }
       return [...prev, id]
     })
