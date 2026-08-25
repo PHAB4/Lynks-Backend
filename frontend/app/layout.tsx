@@ -17,9 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700&family=Birthstone&family=Google+Sans+Flex:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700&family=Birthstone&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-sans antialiased bg-[#f9f5ff] text-[#0d0026]">{children}</body>
+      <body className="font-sans antialiased bg-[#F7F3FE] text-[#0D0026]">{children}</body>
     </html>
   )
 }
