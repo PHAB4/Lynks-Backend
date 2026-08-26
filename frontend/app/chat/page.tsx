@@ -148,9 +148,8 @@ export default function ChatPage() {
       if (errorMsg === 'Not authenticated') {
         setError('Session expired. Please refresh the page.')
       } else {
-        setError(errorMsg)
+        setError(errorMsg || 'Something went wrong. Please try again.')
       }
-      setMessages(prev => prev.slice(0, -1))
     } finally {
       setSending(false)
     }

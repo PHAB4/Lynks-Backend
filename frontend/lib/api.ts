@@ -58,7 +58,11 @@ export async function fetchAPI<T = unknown>(
     let errorDetail = ''
     try {
       const errBody = await res.json()
-      errorDetail = errBody?.detail?.message || errBody?.detail || res.statusText
+      errorDetail =
+        errBody?.detail?.error?.message ||
+        errBody?.detail?.message ||
+        (typeof errBody?.detail === 'string' ? errBody.detail : '') ||
+        res.statusText
     } catch {
       errorDetail = res.statusText
     }
