@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -10,7 +9,6 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const router = useRouter()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,7 +17,7 @@ export default function LoginPage() {
     if (!form.password) newErrors.password = 'Password is required'
     setErrors(newErrors)
     if (Object.keys(newErrors).length === 0) {
-      router.push('/onboarding')
+      window.location.href = '/onboarding'
     }
   }
 

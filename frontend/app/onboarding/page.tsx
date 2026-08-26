@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -15,7 +14,6 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(0)
-  const router = useRouter()
   const current = STEPS[step]
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#F7F3FE] px-4">
@@ -25,7 +23,7 @@ export default function OnboardingPage() {
         {current.content}
         <div className="flex justify-between items-center mt-8">
           <button onClick={() => setStep(s => s - 1)} disabled={step === 0} className="flex items-center gap-1 py-2 px-4 text-sm text-[#8B898E] hover:text-[#0D0026] disabled:opacity-30 transition-colors"><ChevronLeft size={16} /> Back</button>
-          {step < STEPS.length - 1 ? (<button onClick={() => setStep(s => s + 1)} className="flex items-center gap-1 py-3 px-6 rounded-xl bg-[#6B26EA] text-white text-sm font-semibold hover:bg-[#5A1FD0] transition-colors">Continue <ChevronRight size={16} /></button>) : (<button onClick={() => router.push('/chat')} className="flex items-center gap-1 py-3 px-6 rounded-xl bg-[#6B26EA] text-white text-sm font-semibold hover:bg-[#5A1FD0] transition-colors">Get Started <ChevronRight size={16} /></button>)}
+          {step < STEPS.length - 1 ? (<button onClick={() => setStep(s => s + 1)} className="flex items-center gap-1 py-3 px-6 rounded-xl bg-[#6B26EA] text-white text-sm font-semibold hover:bg-[#5A1FD0] transition-colors">Continue <ChevronRight size={16} /></button>) : (<button onClick={() => window.location.href = '/chat'} className="flex items-center gap-1 py-3 px-6 rounded-xl bg-[#6B26EA] text-white text-sm font-semibold hover:bg-[#5A1FD0] transition-colors">Get Started <ChevronRight size={16} /></button>)}
         </div>
       </div>
     </div>
