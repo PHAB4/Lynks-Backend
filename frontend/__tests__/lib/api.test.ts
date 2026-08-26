@@ -1,332 +1,227 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { profile, roadmap, evidence, portfolio, opportunities, chat, health, LynksApiError } from '@/lib/api'
-import { supabase } from '@/lib/supabase'
 
-describe('Lynks API Client', () => {
+const mockGetSession = vi.fn()
+const mockRefreshSession = vi.fn()
+
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getSession: mockGetSession,
+      refreshSession: mockRefreshSession,
+    },
+  },
+}))
+
+const mockFetch = vi.fn()
+global.fetch = mockFetch
+
+const { fetchAPI } = await import('@/lib/api')
+
+describe('fetchAPI', () => {
   const mockToken = 'test-jwt-token-123'
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: mockToken } },
+    })
+    mockRefreshSession.mockResolvedValue({
+      data: { session: { access_token: 'refreshed-token' } },
+    })
   })
 
-  describe('request() — auth header injection', () => {
+  describe('auth header injection', () => {
     it('includes Authorization header when session exists', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ status: 'ok' }),
       })
 
-      await health.check()
+      await fetchAPI('/chat/conversations')
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/health',
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/chat/conversations'),
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: `Bearer ${mockToken}`,
           }),
-        })
+        }),
       )
     })
 
-    it('omits Authorization header when no session', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: null },
-      })
+    it('throws "Not authenticated" when no session', async () => {
+      mockGetSession.mockResolvedValue({ data: { session: null } })
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: 'ok' }),
-      })
-
-      await health.check()
-
-      const callHeaders = vi.mocked(global.fetch).mock.calls[0]?.[1]?.headers as Record<string, string>
-      expect(callHeaders?.Authorization).toBeUndefined()
+      await expect(fetchAPI('/chat/conversations')).rejects.toThrow('Not authenticated')
     })
 
-    it('does not set Content-Type for FormData bodies', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
+    it('sets Content-Type to application/json', async () => {
+      mockFetch.mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({ id: '1', file_url: 'test' }),
+        json: () => Promise.resolve({}),
       })
 
-      const fakeFile = new File(['test'], 'test.png', { type: 'image/png' })
-      await evidence.upload('task-123', fakeFile)
+      await fetchAPI('/chat/message', {
+        method: 'POST',
+        body: { message: 'hi' },
+      })
 
-      const callHeaders = vi.mocked(global.fetch).mock.calls[0]?.[1]?.headers as Record<string, string>
-      expect(callHeaders?.['Content-Type']).toBeUndefined()
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
+        }),
+      )
+    })
+  })
+
+  describe('request methods', () => {
+    it('defaults to GET', async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) })
+
+      await fetchAPI('/chat/conversations')
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ method: 'GET' }),
+      )
+    })
+
+    it('sends POST with JSON body', async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) })
+
+      await fetchAPI('/chat/message', {
+        method: 'POST',
+        body: { message: 'hello', conversation_id: 'conv-1' },
+      })
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/chat/message'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ message: 'hello', conversation_id: 'conv-1' }),
+        }),
+      )
+    })
+
+    it('sends DELETE with no body', async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ success: true }) })
+
+      await fetchAPI('/chat/history', { method: 'DELETE' })
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/chat/history'),
+        expect.objectContaining({ method: 'DELETE', body: undefined }),
+      )
+    })
+  })
+
+  describe('token refresh on 401', () => {
+    it('refreshes token and retries on 401', async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 401, json: () => Promise.resolve({ detail: 'Unauthorized' }) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ data: 'ok' }) })
+
+      const result = await fetchAPI('/chat/conversations')
+
+      expect(mockRefreshSession).toHaveBeenCalledTimes(1)
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(result).toEqual({ data: 'ok' })
+    })
+
+    it('throws error if refresh also fails', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ detail: 'Unauthorized' }),
+      })
+      mockRefreshSession.mockResolvedValue({ data: { session: null } })
+
+      await expect(fetchAPI('/chat/conversations')).rejects.toThrow()
     })
   })
 
   describe('error handling', () => {
-    it('throws LynksApiError on non-2xx response', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: null },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
+    it('throws error message from response detail', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
-        json: () => Promise.resolve({
-          detail: { error: { code: 'not_found', message: 'Profile not found' } },
-        }),
+        json: () => Promise.resolve({ detail: 'Conversation not found' }),
       })
 
-      await expect(profile.get()).rejects.toThrow(LynksApiError)
+      await expect(fetchAPI('/chat/conversations/nonexistent')).rejects.toThrow('Conversation not found')
     })
 
-    it('extracts error code from nested response', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: null },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
+    it('throws error from nested detail.message', async () => {
+      mockFetch.mockResolvedValue({
         ok: false,
-        status: 401,
-        json: () => Promise.resolve({
-          detail: { error: { code: 'unauthorized', message: 'Invalid token' } },
-        }),
+        status: 500,
+        json: () => Promise.resolve({ detail: { message: 'Agent failed', code: 'agent_error' } }),
       })
 
-      try {
-        await profile.get()
-      } catch (e) {
-        expect(e).toBeInstanceOf(LynksApiError)
-        expect((e as LynksApiError).code).toBe('unauthorized')
-      }
+      await expect(fetchAPI('/chat/message')).rejects.toThrow('Agent failed')
+    })
+
+    it('falls back to statusText when body parsing fails', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+        json: () => Promise.reject(new Error('parse error')),
+      })
+
+      await expect(fetchAPI('/chat/message')).rejects.toThrow('Bad Gateway')
+    })
+
+    it('falls back to generic message when detail is empty', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: () => Promise.resolve({}),
+      })
+
+      await expect(fetchAPI('/chat/message')).rejects.toThrow('Internal Server Error')
     })
   })
 
-  describe('profile API', () => {
-    it('GET /profile returns user data', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
+  describe('URL construction', () => {
+    it('uses NEXT_PUBLIC_BACKEND_URL env var', async () => {
+      const original = process.env.NEXT_PUBLIC_BACKEND_URL
+      process.env.NEXT_PUBLIC_BACKEND_URL = 'https://custom-backend.example.com'
 
-      const mockUser = { user_id: '1', name: 'Test User', email: 'test@test.com', interests: [] }
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockUser),
-      })
+      vi.resetModules()
+      mockGetSession.mockResolvedValue({ data: { session: { access_token: 'token' } } })
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) })
 
-      const result = await profile.get()
-      expect(result).toEqual(mockUser)
-      expect(global.fetch).toHaveBeenCalledWith('/api/profile', expect.any(Object))
-    })
+      const { fetchAPI: freshFetch } = await import('@/lib/api')
+      await freshFetch('/chat/message')
 
-    it('PATCH /profile sends correct body', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ user_id: '1', name: 'Updated' }),
-      })
-
-      await profile.update({ name: 'Updated' })
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/profile',
-        expect.objectContaining({
-          method: 'PATCH',
-          body: JSON.stringify({ name: 'Updated' }),
-        })
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://custom-backend.example.com/chat/message',
+        expect.any(Object),
       )
+
+      process.env.NEXT_PUBLIC_BACKEND_URL = original
+      vi.resetModules()
     })
 
-    it('PATCH /profile/career-path sends career_path', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
+    it('falls back to Railway URL when env var is not set', async () => {
+      const original = process.env.NEXT_PUBLIC_BACKEND_URL
+      delete process.env.NEXT_PUBLIC_BACKEND_URL
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ career_path: 'Software Engineering' }),
-      })
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) })
 
-      await profile.setCareerPath('Software Engineering')
+      await fetchAPI('/health')
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/profile/career-path',
-        expect.objectContaining({
-          method: 'PATCH',
-          body: JSON.stringify({ career_path: 'Software Engineering' }),
-        })
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://lynks-backend-production.up.railway.app/health',
+        expect.any(Object),
       )
-    })
-  })
 
-  describe('roadmap API', () => {
-    it('POST /roadmap/generate sends POST method', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ roadmap_id: 'rm-1', steps: [] }),
-      })
-
-      const result = await roadmap.generate()
-      expect(result.roadmap_id).toBe('rm-1')
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/roadmap/generate',
-        expect.objectContaining({ method: 'POST' })
-      )
-    })
-
-    it('GET /roadmap returns roadmap data', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      const mockRoadmap = { roadmap_id: 'rm-1', steps: [{ step_id: 's1', title: 'Step 1' }] }
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockRoadmap),
-      })
-
-      const result = await roadmap.get()
-      expect(result.steps).toHaveLength(1)
-    })
-  })
-
-  describe('opportunities API', () => {
-    it('GET /opportunities without filters', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([]),
-      })
-
-      await opportunities.list()
-      expect(global.fetch).toHaveBeenCalledWith('/api/opportunities', expect.any(Object))
-    })
-
-    it('GET /opportunities?category=competition with filter', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([]),
-      })
-
-      await opportunities.list({ category: 'competition' })
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/opportunities?category=competition',
-        expect.any(Object)
-      )
-    })
-  })
-
-  describe('chat API', () => {
-    it('POST /chat/message sends message and conversation_id', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ conversation_id: 'conv-1', response: 'Hello!' }),
-      })
-
-      const result = await chat.send('Hello!', 'conv-1')
-      expect(result.conversation_id).toBe('conv-1')
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/chat/message',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ conversation_id: 'conv-1', message: 'Hello!' }),
-        })
-      )
-    })
-
-    it('GET /chat/history with conversation_id', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ conversation_id: 'conv-1', messages: [] }),
-      })
-
-      await chat.history('conv-1')
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/chat/history?conversation_id=conv-1',
-        expect.any(Object)
-      )
-    })
-
-    it('DELETE /chat/history clears conversation', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      })
-
-      const result = await chat.clear()
-      expect(result.success).toBe(true)
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/chat/history',
-        expect.objectContaining({ method: 'DELETE' })
-      )
-    })
-  })
-
-  describe('evidence API', () => {
-    it('POST /tasks/{id}/evidence sends FormData', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: { access_token: mockToken } },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ id: 'ev-1', file_url: 'https://example.com/file.png' }),
-      })
-
-      const fakeFile = new File(['content'], 'evidence.png', { type: 'image/png' })
-      const result = await evidence.upload('task-123', fakeFile)
-
-      expect(result.file_url).toBe('https://example.com/file.png')
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/tasks/task-123/evidence',
-        expect.objectContaining({ method: 'POST' })
-      )
-    })
-  })
-
-  describe('health API', () => {
-    it('GET /health returns status ok', async () => {
-      supabase.auth.getSession = vi.fn().mockResolvedValue({
-        data: { session: null },
-      })
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: 'ok' }),
-      })
-
-      const result = await health.check()
-      expect(result.status).toBe('ok')
+      process.env.NEXT_PUBLIC_BACKEND_URL = original
     })
   })
 })
