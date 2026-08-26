@@ -14,7 +14,6 @@ users ──< roadmaps ──< steps ──< tasks ──< evidence
 users ──< resumes
 users ──< conversations ──< messages
 opportunities (standalone)
-users ──< notifications
 ```
 
 ---
@@ -112,6 +111,7 @@ users ──< notifications
 |-------|------|----------|---------|-------|
 | id | uuid | NO | gen_random_uuid() | PK |
 | user_id | uuid | NO | gen_random_uuid() | FK → users.id |
+| summary | text | YES | null | LLM-generated summary of conversation (set after 15+ messages) |
 | created_at | timestamptz | NO | now() | |
 
 ---
@@ -147,31 +147,45 @@ users ──< notifications
 
 ---
 
+## user_memories
+
+Long-term user facts extracted from conversations. Used to give the AI Mentor persistent memory across sessions.
+
+| Field | Type | Nullable | Default | Notes |
+|-------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_id | uuid | NO | gen_random_uuid() | FK → users.id, ON DELETE CASCADE |
+| fact | text | NO | null | The extracted fact (e.g. "Interested in web development, specifically React") |
+| category | text | NO | 'general' | One of: preference, goal, context, milestone, personality, general |
+| source | text | NO | 'conversation' | Where the fact came from: conversation, profile, manual |
+| created_at | timestamptz | NO | now() | When extracted |
+
+**RLS Policies:**
+- Users can read own memories
+- Users can delete own memories
+- Service role can manage all memories (for extraction)
+
+**Limits:** Max 30 memories per user (oldest auto-pruned when exceeded).
+
+**Extraction trigger:** After every 10 messages in a conversation, the `memory_extractor.py` agent runs an LLM call to extract up to 5 new facts.
+
+---
+
+## Updated Entity Relationship
+
+```
+users ──< roadmaps ──< steps ──< tasks ──< evidence
+users ──< resumes
+users ──< conversations ──< messages
+users ──< user_memories
+opportunities (standalone)
+```
+
+---
+
 ## Supabase Storage
 
 **Bucket:** `evidence` (public)
 - Anyone can upload files
 - Anyone can read files
 - URL format: `https://qcyxyunngbkupttcwlbk.supabase.co/storage/v1/object/public/evidence/{filename}`
-
----
-
-## notifications
-
-| Field | Type | Nullable | Default | Notes |
-|-------|------|----------|---------|-------|
-| id | uuid | NO | gen_random_uuid() | PK |
-| user_id | uuid | NO | gen_random_uuid() | FK → users.id |
-| title | text | NO | null | Notification title |
-| body | text | YES | null | Optional body text |
-| type | text | NO | null | "opportunity", "task", "reminder", "badge" |
-| link | jsonb | YES | null | Optional link to related content |
-| is_read | boolean | NO | false | Whether user has read it |
-| created_at | timestamptz | NO | now() | When created |
-
-**Indexes:**
-- `idx_notifications_user_id` — on user_id
-- `idx_notifications_created_at` — on created_at DESC
-- `idx_notifications_is_read` — on (user_id, is_read)
-
-**Note:** This table is new as of August 24, 2026. Created as part of the notifications system feature.
