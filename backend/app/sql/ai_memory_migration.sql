@@ -34,3 +34,8 @@ CREATE POLICY "Service role can manage memories"
 -- 4. Index for fast memory lookups
 CREATE INDEX IF NOT EXISTS idx_user_memories_user_id
     ON user_memories(user_id, created_at DESC);
+
+-- 5. Drop Conversations unique constraint on user_id
+-- Each user needs MULTIPLE conversations, but this constraint
+-- only allows ONE conversation per user.
+ALTER TABLE conversations DROP CONSTRAINT IF EXISTS "Conversations_user_id_key";
