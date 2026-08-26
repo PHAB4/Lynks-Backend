@@ -47,7 +47,7 @@ The system features 6 AI agents:
 | Morning | Researched how ChatGPT and Claude handle conversation history. Discovered the key insight: **Storage != Context** (all messages saved in DB, but only a subset sent to LLM per request). |
 | Morning | Defined the **Three-Layer Loading Architecture** (sidebar titles -> messages -> LLM context) and **Hybrid Summarization** strategy. |
 | Morning | Drafted the full AI Memory System Plan with 4 phases. |
-| Midday | Pushed plan to GitHub `docs/AI_MEMORY_SYSTEM_PLAN.md`. |
+| Midday | Pushed plan to GitHub `docs/plans/AI_MEMORY_SYSTEM_PLAN.md`. |
 | Afternoon | Created `feature/ai-memory-system` branch. |
 | Afternoon | **Phase 1:** Extracted system prompt from hardcoded Python string to external `mentor_system.md` file. |
 | Afternoon | **Phase 2:** Built long-term memory system — `UserMemory` model, `memory_extractor.py`, `memory.py` routes (GET/POST/PATCH/DELETE). |
@@ -274,7 +274,7 @@ created_at  TIMESTAMPTZ (default: now())
 | `app/sql/fix_conversations_unique_constraint.sql` | Standalone SQL to drop Conversations unique constraint |
 | `app/sql/notifications_migration.sql` | SQL migration: notifications table with RLS and indexes |
 | `tests/test_ai_memory.py` | AI Memory System test suite (15 tests with cleanup + summary output) |
-| `docs/AI_MEMORY_SYSTEM_PLAN.md` | Full implementation plan with research, architecture, and change tracker |
+| `docs/plans/AI_MEMORY_SYSTEM_PLAN.md` | Full implementation plan with research, architecture, and change tracker |
 
 ### Modified Files (8)
 | File | Changes |
@@ -284,21 +284,21 @@ created_at  TIMESTAMPTZ (default: now())
 | `app/models/schemas.py` | Added `MemoryResponse`, `MemoryCreateRequest`, `ConversationListItem`, `NotificationCreate`, `NotificationResponse`, `NotificationListResponse` |
 | `app/api/routes/chat.py` | Added `GET /chat/conversations`, `GET /chat/conversations/{id}` |
 | `app/main.py` | Registered `memory_router` and `notifications_router` |
-| `docs/SCHEMA.md` | Added user_memories table, conversations.summary, notifications table |
-| `docs/API_CONTRACT.md` | Added 6 new endpoints, updated POST /chat/message response |
-| `docs/PRD.md` | Added Long-term Memory and Conversation History features |
+| `docs/reference/SCHEMA.md` | Added user_memories table, conversations.summary, notifications table |
+| `docs/reference/API_CONTRACT.md` | Added 6 new endpoints, updated POST /chat/message response |
+| `docs/project/PRD.md` | Added Long-term Memory and Conversation History features |
 
 ---
 
 ## 9. What Changed in Each Document
 
-### docs/SCHEMA.md
+### docs/reference/SCHEMA.md
 - Added `user_memories` table definition with columns, RLS policies, and index
 - Added `notifications` table definition with columns, RLS policies, and indexes
 - Added `conversations.summary` field
 - Updated entity relationship diagram
 
-### docs/API_CONTRACT.md
+### docs/reference/API_CONTRACT.md
 Added 6 new endpoints:
 
 | Endpoint | Method | Purpose |
@@ -313,7 +313,7 @@ Added 6 new endpoints:
 Updated existing endpoint:
 - `POST /chat/message` — Added `summary_updated` field to response
 
-### docs/PRD.md
+### docs/project/PRD.md
 - Added Long-term Memory feature under AI Mentor section
 - Added Conversation History feature under AI Mentor section
 - Added Memory Extractor to agent summary table
