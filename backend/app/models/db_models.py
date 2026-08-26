@@ -43,6 +43,7 @@ class User(Base):
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="user")
     evidence_items: Mapped[list["Evidence"]] = relationship(back_populates="user")
     memories: Mapped[list["UserMemory"]] = relationship(back_populates="user")
+    notifications: Mapped[list["Notification"]] = relationship(back_populates="user")
 # ── Roadmap ────────────────────────────────────────────────────────────────
 class Roadmap(Base):
     __tablename__ = "roadmaps"
