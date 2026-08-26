@@ -196,3 +196,26 @@ class ConversationListItem(BaseModel):
 
 class ConversationListResponse(BaseModel):
     conversations: list[ConversationListItem]
+
+# ── Notifications ──────────────────────────────────────────────────────────
+
+class NotificationCreate(BaseModel):
+    title: str
+    body: str | None = None
+    type: str = "reminder"
+    link: dict | None = None
+
+
+class NotificationResponse(BaseModel):
+    id: str = Field(..., description="UUID")
+    title: str
+    body: str | None = None
+    type: str
+    link: dict | None = None
+    is_read: bool
+    created_at: datetime
+
+
+class NotificationListResponse(BaseModel):
+    notifications: list[NotificationResponse]
+    unread_count: int
