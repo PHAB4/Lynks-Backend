@@ -148,7 +148,7 @@ users ──< conversations ──< messages
 opportunities (standalone)
 ```
 
-### Tables (abbreviated — see docs/SCHEMA.md for full spec)
+### Tables (abbreviated — see docs/reference/SCHEMA.md for full spec)
 
 | Table | Key Fields | Notes |
 |-------|-----------|-------|
@@ -209,7 +209,7 @@ opportunities (standalone)
 8. **Notifications system** — NOT BUILT (see Section 8)
 
 ### Post-competition improvements
-- Real web scraping for live opportunity data (see `docs/SCRAPER_PLAN.md`)
+- Real web scraping for live opportunity data (see `docs/plans/SCRAPER_PLAN.md`)
 - Conversation summarization (instead of last-3 limit)
 - Vector database (pgvector) for embedding-based conversation search
 - Resume download as PDF
@@ -223,12 +223,12 @@ The repo contains detailed implementation plans in `docs/`. **Read these before 
 
 | File | What it covers | Status |
 |------|---------------|--------|
-| `docs/SCRAPER_PLAN.md` | Hybrid RSS + scraping architecture for live opportunities | Draft |
-| `docs/OPPORTUNITIES_UPGRADE_PLAN.md` | Smart filtering, category metadata, mentor prompt updates | Draft |
-| `docs/API_CONTRACT.md` | All endpoint shapes (request/response) — **read this before building routes** | Current |
-| `docs/SCHEMA.md` | Full database schema (matches Supabase exactly) | Current |
-| `docs/PRD.md` | Full product requirements document | Current |
-| `docs/TECH_STACK.md` | Stack choices and design decisions | Current |
+| `docs/plans/SCRAPER_PLAN.md` | Hybrid RSS + scraping architecture for live opportunities | Draft |
+| `docs/plans/OPPORTUNITIES_UPGRADE_PLAN.md` | Smart filtering, category metadata, mentor prompt updates | Draft |
+| `docs/reference/API_CONTRACT.md` | All endpoint shapes (request/response) — **read this before building routes** | Current |
+| `docs/reference/SCHEMA.md` | Full database schema (matches Supabase exactly) | Current |
+| `docs/project/PRD.md` | Full product requirements document | Current |
+| `docs/reference/TECH_STACK.md` | Stack choices and design decisions | Current |
 
 ### Notifications System (planned, not built)
 - Create `notifications` table: id, user_id, type, title, body, read (bool), created_at
@@ -237,13 +237,13 @@ The repo contains detailed implementation plans in `docs/`. **Read these before 
 - Trigger: roadmap milestone completed → congratulations notification
 - **This is a great task for a teammate** — fully independent, new code, no conflict with existing work
 
-### Opportunity Scraper Upgrade (see docs/SCRAPER_PLAN.md)
+### Opportunity Scraper Upgrade (see docs/plans/SCRAPER_PLAN.md)
 - **Phase 1:** RSS feeds from Caribbean news sites (Jamaica Gleaner, Loop Caribbean, Devpost, UWI)
 - **Phase 2:** Web scraping from job boards (CaribbeanJobs, JEF, ScholarshipScanada)
 - **Fallback:** Curated hardcoded list (always works)
 - **Strategy:** Try RSS first → if fail, try scraping → if fail, return curated list
 
-### Opportunity Smart Filtering (see docs/OPPORTUNITIES_UPGRADE_PLAN.md)
+### Opportunity Smart Filtering (see docs/plans/OPPORTUNITIES_UPGRADE_PLAN.md)
 - Pre-filter opportunities based on user's profile (career_path, country, age)
 - Return metadata: `available_categories`, `total_available`, `returned`
 - Update API contract to include `category` as user-facing filter
@@ -274,7 +274,7 @@ The repo contains detailed implementation plans in `docs/`. **Read these before 
 | POST | `/resume/generate` | Generate resume (LLM) | 5-15s |
 | GET | `/resume` | Get latest resume | — |
 
-**Full request/response shapes:** see `docs/API_CONTRACT.md`
+**Full request/response shapes:** see `docs/reference/API_CONTRACT.md`
 
 ---
 
