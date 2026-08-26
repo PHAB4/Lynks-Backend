@@ -9,12 +9,8 @@ SETUP:
   2. Fill in the CONFIG section below with your values
   3. Run: python tests/test_ai_memory.py
 
-WHAT IT TESTS:
-  - Memory CRUD (POST, GET, PATCH, DELETE /memory)
-  - Conversation list (GET /chat/conversations)
-  - Conversation messages (GET /chat/conversations/{id})
-  - Chat message with memory extraction trigger
-  - Conversation summary generation
+NOTE: Run the SQL fix first if you see "Conversations_user_id_key" errors:
+  backend/app/sql/fix_conversations_unique_constraint.sql
 """
 
 from __future__ import annotations
@@ -53,12 +49,14 @@ class Colors:
     YELLOW = "\033[93m"
     CYAN = "\033[96m"
     BOLD = "\033[1m"
+    DIM = "\033[2m"
     RESET = "\033[0m"
 
 
 _state = {
     "token": None,
     "memory_id": None,
+    "memory_ids_to_cleanup": [],
     "conversation_id": None,
     "test_conversation_id": None,
 }
@@ -78,15 +76,15 @@ def _run_test(name: str, fn):
         result = fn()
         if result is False:
             print(f"  {Colors.RED}X {name} — returned False{Colors.RESET}")
-            return False
+            return "skipped"
         print(f"  {Colors.GREEN}✓ {name}{Colors.RESET}")
-        return True
+        return "passed"
     except AssertionError as e:
         print(f"  {Colors.RED}X {name} — {e}{Colors.RESET}")
-        return False
+        return "failed"
     except Exception as e:
         print(f"  {Colors.RED}X {name} — EXCEPTION: {e}{Colors.RESET}")
-        return False
+        return "failed"
 
 
 def _get_token():
@@ -110,7 +108,6 @@ def _get_token():
     email = os.getenv("TEST_EMAIL", "test@lynks.com")
     password = os.getenv("TEST_PASSWORD", "TestPassword123!")
 
-    # Try sign-in first
     resp = httpx.post(
         f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
         json={"email": email, "password": password},
@@ -128,7 +125,6 @@ def _get_token():
             print(f"  {Colors.GREEN}Signed in as {email}{Colors.RESET}")
             return True
 
-    # Try sign-up
     print(f"  {Colors.YELLOW}Sign-in failed — creating user...{Colors.RESET}")
     resp = httpx.post(
         f"{SUPABASE_URL}/auth/v1/signup",
@@ -149,6 +145,56 @@ def _get_token():
 
     print(f"  {Colors.RED}Could not authenticate{Colors.RESET}")
     return False
+
+
+def _cleanup_test_data():
+    """Delete leftover test data so tests don't hit unique constraint errors."""
+    if not _state["token"]:
+        return
+
+    print(f"  {Colors.DIM}Cleaning up existing test data...{Colors.RESET}")
+
+    # Delete existing memories
+    try:
+        resp = httpx.get(
+            f"{BASE_URL}/memory",
+            headers=_headers(),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code == 200:
+            memories = resp.json().get("memories", [])
+            for m in memories:
+                httpx.delete(
+                    f"{BASE_URL}/memory/{m['id']}",
+                    headers=_headers(),
+                    timeout=HTTP_TIMEOUT,
+                )
+            if memories:
+                print(f"    {Colors.DIM}Deleted {len(memories)} existing memories{Colors.RESET}")
+    except Exception:
+        pass
+
+    # Delete existing conversations
+    try:
+        resp = httpx.get(
+            f"{BASE_URL}/chat/conversations",
+            headers=_headers(),
+            timeout=HTTP_TIMEOUT,
+        )
+        if resp.status_code == 200:
+            conversations = resp.json().get("conversations", [])
+            for conv in conversations:
+                cid = conv.get("conversation_id")
+                if cid:
+                    httpx.delete(
+                        f"{BASE_URL}/chat/history?conversation_id={cid}",
+                        headers=_headers(),
+                        timeout=HTTP_TIMEOUT,
+                    )
+            if conversations:
+                print(f"    {Colors.DIM}Deleted {len(conversations)} existing conversations{Colors.RESET}")
+    except Exception:
+        pass
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -182,6 +228,7 @@ def test_memory_post():
     assert data["category"] == "preference"
     assert data["source"] == "manual"
     _state["memory_id"] = data["id"]
+    _state["memory_ids_to_cleanup"].append(data["id"])
 
 
 def test_memory_get():
@@ -233,6 +280,7 @@ def test_memory_post_invalid_category():
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
     data = resp.json()
     assert data["category"] == "general", f"Invalid category should default to 'general', got '{data['category']}'"
+    _state["memory_ids_to_cleanup"].append(data["id"])
 
 
 def test_memory_delete():
@@ -249,6 +297,8 @@ def test_memory_delete():
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
     data = resp.json()
     assert data.get("success") is True
+    _state["memory_ids_to_cleanup"].remove(_state["memory_id"])
+    _state["memory_id"] = None
 
 
 def test_memory_delete_not_found():
@@ -393,6 +443,42 @@ def test_chat_history_with_conversation_id():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  CLEANUP
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _final_cleanup():
+    """Clean up all test data after tests complete."""
+    if not _state["token"]:
+        return
+
+    print(f"\n{Colors.DIM}Cleaning up test data...{Colors.RESET}")
+
+    # Clean up remaining memories
+    for mid in _state["memory_ids_to_cleanup"]:
+        try:
+            httpx.delete(
+                f"{BASE_URL}/memory/{mid}",
+                headers=_headers(),
+                timeout=HTTP_TIMEOUT,
+            )
+        except Exception:
+            pass
+
+    # Clean up test conversation
+    if _state["test_conversation_id"]:
+        try:
+            httpx.delete(
+                f"{BASE_URL}/chat/history?conversation_id={_state['test_conversation_id']}",
+                headers=_headers(),
+                timeout=HTTP_TIMEOUT,
+            )
+        except Exception:
+            pass
+
+    print(f"  {Colors.DIM}Done{Colors.RESET}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -402,61 +488,127 @@ def main():
     print(f"  Target: {BASE_URL}")
     print(f"{'=' * 70}{Colors.RESET}\n")
 
-    tests = [
-        ("Auth — authenticate", test_auth),
-        ("", None),
-        ("--- Memory CRUD ---", None),
-        ("POST /memory (create memory)", test_memory_post),
-        ("GET /memory (list memories)", test_memory_get),
-        ("PATCH /memory/{id} (update memory)", test_memory_patch),
-        ("POST /memory (invalid category defaults to general)", test_memory_post_invalid_category),
-        ("DELETE /memory/{id} (delete memory)", test_memory_delete),
-        ("DELETE /memory/{id} (404 for non-existent)", test_memory_delete_not_found),
-        ("", None),
-        ("--- Conversation History ---", None),
-        ("GET /chat/conversations (list — empty)", test_conversations_list_empty),
-        ("POST /chat/message (creates conversation)", test_chat_creates_conversation),
-        ("GET /chat/conversations (list — after chat)", test_conversations_list_after_chat),
-        ("GET /chat/conversations/{id} (messages)", test_conversation_messages),
-        ("GET /chat/conversations/{id} (404 for non-existent)", test_conversation_messages_not_found),
-        ("POST /chat/message (continues conversation)", test_chat_continues_conversation),
-        ("", None),
-        ("--- Backwards Compatibility ---", None),
-        ("GET /chat/history (still works)", test_chat_history),
-        ("GET /chat/history?conversation_id= (still works)", test_chat_history_with_conversation_id),
+    # ── Define test sections ────────────────────────────────────────────
+    sections = [
+        ("Authentication", [
+            ("Auth — authenticate", test_auth),
+        ]),
+        ("Memory CRUD", [
+            ("POST /memory (create memory)", test_memory_post),
+            ("GET /memory (list memories)", test_memory_get),
+            ("PATCH /memory/{id} (update memory)", test_memory_patch),
+            ("POST /memory (invalid category defaults to general)", test_memory_post_invalid_category),
+            ("DELETE /memory/{id} (delete memory)", test_memory_delete),
+            ("DELETE /memory/{id} (404 for non-existent)", test_memory_delete_not_found),
+        ]),
+        ("Conversation History", [
+            ("GET /chat/conversations (list — empty)", test_conversations_list_empty),
+            ("POST /chat/message (creates conversation)", test_chat_creates_conversation),
+            ("GET /chat/conversations (list — after chat)", test_conversations_list_after_chat),
+            ("GET /chat/conversations/{id} (messages)", test_conversation_messages),
+            ("GET /chat/conversations/{id} (404 for non-existent)", test_conversation_messages_not_found),
+            ("POST /chat/message (continues conversation)", test_chat_continues_conversation),
+        ]),
+        ("Backwards Compatibility", [
+            ("GET /chat/history (still works)", test_chat_history),
+            ("GET /chat/history?conversation_id= (still works)", test_chat_history_with_conversation_id),
+        ]),
     ]
 
-    passed = 0
-    failed = 0
-    skipped = 0
+    # ── Authenticate first ─────────────────────────────────────────────
+    auth_result = _run_test("Auth — authenticate", _get_token)
+    if auth_result != "passed":
+        print(f"\n  {Colors.RED}Cannot continue without authentication.{Colors.RESET}")
+        _print_summary([], [], [])
+        return
 
-    for name, fn in tests:
-        if fn is None:
-            if name:
-                print(f"\n{Colors.CYAN}{Colors.BOLD}{name}{Colors.RESET}")
-            continue
+    # Clean up leftover data from previous test runs
+    _cleanup_test_data()
 
-        result = _run_test(name, fn)
-        if result is True:
-            passed += 1
-        elif result is False:
-            skipped += 1
-        else:
-            failed += 1
+    # ── Run test sections ───────────────────────────────────────────────
+    all_results = []
+
+    for section_name, tests in sections:
+        print(f"\n{Colors.CYAN}{Colors.BOLD}--- {section_name} ---{Colors.RESET}")
+
+        for name, fn in tests:
+            result = _run_test(name, fn)
+            all_results.append((section_name, name, result))
+
+    # ── Backwards Compatibility section ─────────────────────────────────
+    # Already included in sections above
+
+    # ── Summary ─────────────────────────────────────────────────────────
+    _final_cleanup()
+    _print_summary(all_results)
+
+
+def _print_summary(results: list):
+    """Print a detailed summary organized by section."""
+    passed = [r for r in results if r[2] == "passed"]
+    failed = [r for r in results if r[2] == "failed"]
+    skipped = [r for r in results if r[2] == "skipped"]
+    total = len(results)
 
     print(f"\n{'=' * 70}")
-    total = passed + failed + skipped
-    if failed == 0 and skipped == 0:
-        print(f"  {Colors.GREEN}{Colors.BOLD}RESULTS: {passed}/{total} passed — ALL CLEAR{Colors.RESET}")
-    elif failed == 0:
-        print(f"  {Colors.YELLOW}{Colors.BOLD}RESULTS: {passed}/{total} passed, {skipped} skipped{Colors.RESET}")
+    print(f"  {Colors.BOLD}RESULTS: {len(passed)}/{total} passed, "
+          f"{len(failed)} failed, {len(skipped)} skipped{Colors.RESET}")
+    print(f"{'=' * 70}")
+
+    if total == 0:
+        print(f"\n  {Colors.YELLOW}No tests were run.{Colors.RESET}\n")
+        return
+
+    # ── Section breakdown ───────────────────────────────────────────────
+    sections = {}
+    for section, name, result in results:
+        if section not in sections:
+            sections[section] = []
+        sections[section].append((name, result))
+
+    print(f"\n  {Colors.BOLD}Section Breakdown:{Colors.RESET}")
+    for section, tests in sections.items():
+        p = sum(1 for _, r in tests if r == "passed")
+        f = sum(1 for _, r in tests if r == "failed")
+        s = sum(1 for _, r in tests if r == "skipped")
+        t = len(tests)
+
+        if f == 0 and s == 0:
+            status = f"{Colors.GREEN}ALL PASS{Colors.RESET}"
+        elif f == 0:
+            status = f"{Colors.YELLOW}PASS ({s} skipped){Colors.RESET}"
+        else:
+            status = f"{Colors.RED}{f} FAILED{Colors.RESET}"
+
+        print(f"    {section:<30} {p}/{t} passed  {status}")
+
+    # ── Failed tests detail ─────────────────────────────────────────────
+    if failed:
+        print(f"\n  {Colors.RED}{Colors.BOLD}Failed Tests:{Colors.RESET}")
+        for _, name, _ in failed:
+            print(f"    {Colors.RED}✗ {name}{Colors.RESET}")
+
+    # ── Skipped tests detail ────────────────────────────────────────────
+    if skipped:
+        print(f"\n  {Colors.YELLOW}{Colors.BOLD}Skipped Tests:{Colors.RESET}")
+        for _, name, _ in skipped:
+            print(f"    {Colors.YELLOW}○ {name}{Colors.RESET}")
+
+    # ── Overall verdict ─────────────────────────────────────────────────
+    print(f"\n{'=' * 70}")
+    if len(failed) == 0 and len(skipped) == 0:
+        print(f"  {Colors.GREEN}{Colors.BOLD}✓ ALL TESTS PASSED — AI Memory System is functional!{Colors.RESET}")
+    elif len(failed) == 0:
+        print(f"  {Colors.YELLOW}{Colors.BOLD}✓ ALL TESTS PASSED ({len(skipped)} skipped — dependent on earlier tests){Colors.RESET}")
     else:
-        print(f"  {Colors.RED}{Colors.BOLD}RESULTS: {passed} passed, {failed} FAILED, {skipped} skipped{Colors.RESET}")
+        print(f"  {Colors.RED}{Colors.BOLD}✗ {len(failed)} test(s) failed — see details above{Colors.RESET}")
+        if any("Conversations_user_id_key" in str(r) for _, _, _ in failed for _, _, r in []):
+            print(f"\n  {Colors.YELLOW}Hint: Run the SQL fix first:")
+            print(f"  backend/app/sql/fix_conversations_unique_constraint.sql{Colors.RESET}")
     print(f"{'=' * 70}\n")
 
-    if failed > 0:
-        print(f"{Colors.RED}Failed tests:{Colors.RESET}")
-        sys.exit(1)
+    # ── Exit code ───────────────────────────────────────────────────────
+    sys.exit(1 if failed else 0)
 
 
 if __name__ == "__main__":
