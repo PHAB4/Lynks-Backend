@@ -213,3 +213,5 @@ class Notification(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+    user: Mapped["User"] = relationship(back_populates="notifications")
