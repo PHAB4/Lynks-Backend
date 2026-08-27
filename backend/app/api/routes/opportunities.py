@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.scout import discover_opportunities, get_new_count, get_saved_opportunity_ids
@@ -123,12 +124,12 @@ async def refresh_opportunities(
             "sources": list(set(o.get("source_name", "unknown") for o in opportunities)),
             "message": f"Scraped {len(opportunities)} opportunities",
         }
-    except Exception as e:
+    except (OSError, ValueError) as e:
         return {
             "status": "partial",
             "count": 0,
             "sources": [],
-            "message": f"Scrape failed: {str(e)}",
+            "message": f"Scrape failed: {e!s}",
         }
 
 
@@ -231,7 +232,7 @@ async def save_opportunity(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError as e:
         # Table may not exist yet — return helpful error
         if "saved_opportunities" in str(e) and "does not exist" in str(e).lower():
             raise HTTPException(
@@ -280,7 +281,7 @@ async def unsave_opportunity(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError as e:
         if "saved_opportunities" in str(e) and "does not exist" in str(e).lower():
             raise HTTPException(
                 status_code=status.HTTP_501_NOT_IMPLEMENTED,
