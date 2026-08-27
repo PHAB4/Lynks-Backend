@@ -109,6 +109,30 @@ async def list_opportunities(
 
 
 @router.get("/new-count")
+@router.post("/refresh")
+async def refresh_opportunities(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger a manual refresh of the opportunity database."""
+    try:
+        from app.agents.opportunity_scraper import scrape_opportunities
+        opportunities = await scrape_opportunities()
+        return {
+            "status": "ok",
+            "count": len(opportunities),
+            "sources": list(set(o.get("source_name", "unknown") for o in opportunities)),
+            "message": f"Scraped {len(opportunities)} opportunities",
+        }
+    except Exception as e:
+        return {
+            "status": "partial",
+            "count": 0,
+            "sources": [],
+            "message": f"Scrape failed: {str(e)}",
+        }
+
+
 async def new_opportunity_count(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
@@ -193,7 +217,7 @@ async def save_opportunity(
             )
 
         # Insert the save
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc)
         await db.execute(
             text(
                 "INSERT INTO saved_opportunities (user_id, opportunity_id, saved_at) "
@@ -203,7 +227,7 @@ async def save_opportunity(
         )
         await db.commit()
 
-        return {"success": True, "saved_at": now}
+        return {"success": True, "saved_at": now.isoformat()}
 
     except HTTPException:
         raise
