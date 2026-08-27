@@ -239,5 +239,4 @@ These Terms, together with the Privacy Policy, constitute the entire agreement b
 
 For questions about these Terms:
 
-**Email:** [INSERT CONTACT EMAIL]  
-**Address:** [INSERT PHYSICAL ADDRESS — Trinidad and Tobago]
+**Email:** lynkstt@gmail.com
