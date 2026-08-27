@@ -1,0 +1,58 @@
+# Security scanning workflow
+# Runs weekly and on-demand to catch new vulnerabilities
+
+name: Security
+
+on:
+  schedule:
+    # Every Monday at 9am UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+      - name: Install audit tools
+        run: |
+          cd backend
+          pip install pip-audit safety
+      - name: pip-audit (GitHub Advisory DB)
+        run: |
+          cd backend
+          pip-audit -r requirements.txt --desc
+      - name: Safety check
+        run: |
+          cd backend
+          safety check -r requirements.txt --output json > safety-report.json || true
+        continue-on-error: true
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report
+          path: backend/safety-report.json
+          retention-days: 30
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

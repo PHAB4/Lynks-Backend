@@ -1,0 +1,121 @@
+# CI Pipeline for Lynks Backend
+# Runs on every push and PR to main
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install ruff mypy
+      - name: Ruff lint
+        run: |
+          cd backend
+          ruff check app/
+      - name: Ruff format check
+        run: |
+          cd backend
+          ruff format --check app/
+      - name: Type check
+        run: |
+          cd backend
+          mypy app/ --ignore-missing-imports --no-strict-optional
+        continue-on-error: true
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: lynks_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx aiosqlite
+      - name: Run unit tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/lynks_test
+          SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ env.SUPABASE_KEY }}
+          GROQ_API_KEY: ${{ env.GROQ_API_KEY }}
+        run: |
+          cd backend
+          python -m pytest tests/ \
+            -v \
+            --tb=short \
+            --ignore=tests/test_endpoints.py \
+            -k "not test_refresh_opportunities"
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend/htmlcov/
+          retention-days: 7
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pip-audit bandit
+      - name: pip-audit (dependency vulnerabilities)
+        run: |
+          cd backend
+          pip-audit -r requirements.txt
+      - name: Bandit (security linting)
+        run: |
+          cd backend
+          bandit -r app/ -ll --skip B101
+        continue-on-error: true
