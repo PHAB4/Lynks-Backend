@@ -293,7 +293,7 @@ def scrape_devpost_hackathons() -> list[Opportunity]:
         logger.info("Scraped %d hackathons from Devpost", len(opportunities))
         set_cached_opportunities("devpost_api", [o.to_dict() for o in opportunities])
         return opportunities
-    except Exception as e:
+    except (httpx.HTTPStatusError, httpx.RequestError, json.JSONDecodeError) as e:
         logger.warning("Failed to scrape Devpost: %s", e)
         return []
 
@@ -349,7 +349,7 @@ def scrape_eventbrite_caribbean() -> list[Opportunity]:
         logger.info("Scraped %d events from Eventbrite", len(opportunities))
         set_cached_opportunities("eventbrite_api", [o.to_dict() for o in opportunities])
         return opportunities
-    except Exception as e:
+    except (httpx.HTTPStatusError, httpx.RequestError, json.JSONDecodeError) as e:
         logger.warning("Failed to scrape Eventbrite: %s", e)
         return []
 
@@ -412,7 +412,7 @@ def _parse_rss_date(date_str: str | None) -> str | None:
             except ValueError:
                 continue
         return date_str
-    except Exception:
+    except (ValueError, AttributeError):
         return None
 
 
@@ -526,7 +526,7 @@ async def fetch_from_rss(feed_config: dict) -> list[Opportunity]:
         set_cached_opportunities(cache_key, [o.to_dict() for o in opportunities])
         return opportunities
 
-    except Exception as e:
+    except (httpx.HTTPStatusError, httpx.RequestError, ET.ParseError) as e:
         logger.warning("Failed to scrape RSS feed %s: %s", feed_url, e)
         return []
 
@@ -608,7 +608,7 @@ async def fetch_from_facebook(page_id: str) -> list[Opportunity]:
         logger.info("Scraped %d opportunities from Facebook: %s", len(opportunities), page_id)
         return opportunities
 
-    except Exception as e:
+    except (httpx.HTTPStatusError, httpx.RequestError, re.error) as e:
         logger.warning("Failed to scrape Facebook page %s: %s", page_id, e)
         return []
 
@@ -644,7 +644,7 @@ async def scrape_all_social_media() -> list[Opportunity]:
             try:
                 opps = await _fetch_from_instagram(username)
                 all_opps.extend(opps)
-            except Exception as e:
+            except (RuntimeError, ValueError, IOError) as e:
                 logger.warning("Instagram scrape failed for @%s: %s", username, e)
     except ImportError:
         logger.info("instaloader not installed — skipping Instagram scraping")
@@ -711,7 +711,7 @@ async def _fetch_from_instagram(username: str) -> list[Opportunity]:
         logger.info("Scraped %d opportunities from Instagram @%s", len(opportunities), username)
         return opportunities
 
-    except Exception as e:
+    except (RuntimeError, ValueError, IOError) as e:
         logger.warning("Failed to scrape Instagram @%s: %s", username, e)
         return []
 
@@ -1194,7 +1194,7 @@ def generate_opportunities_with_llm() -> list[Opportunity]:
         set_cached_opportunities(cache_key, [o.to_dict() for o in opportunities])
         return opportunities
 
-    except Exception as e:
+    except (openai.APIError, json.JSONDecodeError) as e:
         logger.warning("LLM opportunity generation failed: %s", e)
         return []
 
