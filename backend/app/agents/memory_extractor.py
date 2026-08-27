@@ -13,7 +13,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from openai import OpenAI
+from openai import APIError as OpenAIError, OpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -132,7 +132,7 @@ async def extract_and_save_memories(
     except json.JSONDecodeError as e:
         logger.error("Failed to parse extraction JSON: %s", e)
         return []
-    except Exception as e:
+    except (OpenAIError, OSError) as e:
         logger.error("Memory extraction failed: %s", e)
         return []
 
