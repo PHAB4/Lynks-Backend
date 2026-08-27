@@ -47,7 +47,7 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 - Sources Caribbean-specific opportunities: jobs, competitions, clubs, scholarships, events, volunteer roles
 - Opportunities are scraped from multiple sources (Devpost API, Eventbrite API, RSS feeds, curated list)
 - Cached in-memory with 1-hour TTL for fast responses
-- Structured salary data for jobs (salary_min, salary_max, salary_currency)
+- Structured salary data for jobs (salary_min, salary_max, salary_currency) with **priority-based currency detection** (22+ currencies, source-context-aware)
 - Category-based filtering, time-based filtering, relevance sorting
 - Users can save/bookmark opportunities for later
 - New-opportunity notification polling via `GET /opportunities/new-count`
@@ -79,7 +79,7 @@ The career opportunities page has two tabs:
 | Company/Organization | string | Hosting organization |
 | Category | string | Job, scholarship, competition, etc. |
 | Location | string | Physical location or "Remote" |
-| Salary | object | `{ min, max, currency }` for jobs; `null` for others |
+| Salary | object | `{ min, max, currency }` for jobs; `null` for others. Currency auto-detected (22+ ISO 4217 codes), source-context-aware. |
 | Description | string | Brief description |
 | Image | string (URL) | Thumbnail/preview image |
 | Posted At | datetime | When originally posted |
