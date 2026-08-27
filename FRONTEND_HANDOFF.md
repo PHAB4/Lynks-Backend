@@ -34,7 +34,7 @@ Authorization: Bearer <token>
       "description": "Build modern web apps...",
       "salary_min": 50000,
       "salary_max": 80000,
-      "salary_currency": "JMD",
+      "salary_currency": "JMD (auto-detected — 22+ currencies supported, source-context-aware)",
       "pay": "JMD $50,000-$80,000/month",
       "posted_at": "2026-08-20T10:00:00Z",
       "first_seen_at": "2026-08-27T14:00:00Z",
@@ -207,7 +207,7 @@ All errors follow this shape:
 ## Key Things to Know
 
 1. **`image_url` can be null** — always have a placeholder ready
-2. **`salary_min/max/currency` are only for jobs** — other categories will have these as null
+2. **`salary_min/max/currency` are only for jobs** — other categories will have these as null. Currency is auto-detected (22+ currencies) and source-context-aware (bare `$` from a Jamaican source → JMD, Trinidad → TTD, etc.)
 3. **`is_saved` is included in every opportunity** — no separate call needed to check
 4. **`url` is always present** — this is where "Go to Source" links to
 5. **Pagination is offset-based** — `page=1&limit=20`, increment page to load more
