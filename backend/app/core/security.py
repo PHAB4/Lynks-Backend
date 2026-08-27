@@ -6,8 +6,10 @@ Does NOT issue tokens or hash passwords.
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client
+from supabase_auth.errors import AuthApiError
 
 from app.core.config import settings
+
 
 security = HTTPBearer()
 
@@ -39,7 +41,7 @@ async def get_current_user_id(
 
     try:
         response = supabase.auth.get_user(token)
-    except Exception:
+    except (AuthApiError, ValueError, TypeError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": {"code": "unauthorized", "message": "Invalid or expired token"}},
