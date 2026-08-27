@@ -46,7 +46,7 @@ async def post_chat_message(
 
     try:
         result = await send_message(db, user_id, body.message, body.conversation_id)
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": {"code": "chat_error", "message": str(e)}},
