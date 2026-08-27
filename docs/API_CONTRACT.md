@@ -273,6 +273,120 @@ Response 200: { "success": true }
 
 ---
 
+## Notification Endpoints
+
+### GET /notifications
+Lists all notifications for the authenticated user.
+
+**Query Parameters:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| type | string | null | Filter by: opportunity, task, badge, reminder |
+| is_read | bool | null | Filter by read status |
+| limit | int | 50 | Results per page (max 100) |
+| offset | int | 0 | Pagination offset |
+
+```json
+Response 200: {
+  "notifications": [
+    {
+      "id": "uuid",
+      "title": "New opportunity: JS Hackathon",
+      "body": "A new opportunity matching your profile has been found.",
+      "type": "opportunity",
+      "link": { "type": "opportunity", "id": "abc123" },
+      "is_read": false,
+      "created_at": "2026-08-26T10:00:00Z"
+    }
+  ],
+  "unread_count": 5
+}
+```
+
+---
+
+### GET /notifications/unread/count
+Returns count of unread notifications. Frontend polls this for the bell badge.
+
+```json
+Response 200: {
+  "unread_count": 5
+}
+```
+
+---
+
+### GET /notifications/{notification_id}
+Returns a specific notification.
+
+```json
+Response 200: {
+  "id": "uuid",
+  "title": "New opportunity: JS Hackathon",
+  "body": "A new opportunity matching your profile has been found.",
+  "type": "opportunity",
+  "link": { "type": "opportunity", "id": "abc123" },
+  "is_read": false,
+  "created_at": "2026-08-26T10:00:00Z"
+}
+```
+
+**Errors:**
+- 404: `not_found` — notification doesn't exist or doesn't belong to user
+
+---
+
+### POST /notifications
+Creates a new notification. For admin/utility use (triggered by the system).
+
+```json
+Request: {
+  "title": "string (required)",
+  "body": "string (optional)",
+  "type": "reminder (default) | opportunity | task | badge",
+  "link": { "type": "opportunity", "id": "abc123" }  // optional
+}
+
+Response 201: {
+  "id": "uuid",
+  "title": "string",
+  "body": "string | null",
+  "type": "string",
+  "link": { ... } | null,
+  "is_read": false,
+  "created_at": "datetime"
+}
+```
+
+---
+
+### PATCH /notifications/{notification_id}/read
+Marks a single notification as read.
+
+```json
+Response 200: {
+  "status": "ok",
+  "message": "Notification marked as read"
+}
+```
+
+**Errors:**
+- 404: `not_found` — notification doesn't exist or doesn't belong to user
+
+---
+
+### POST /notifications/read-all
+Marks all of the user's notifications as read.
+
+```json
+Response 200: {
+  "status": "ok",
+  "message": "Marked 12 notifications as read"
+}
+```
+
+---
+
 ### POST /chat/message
 Sends a message to the Mentor agent. ⚠️ Takes 5-15 seconds.
 ```json
