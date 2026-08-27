@@ -184,7 +184,7 @@ Response 200: {
       "pay": "string",
       "salary_min": "number | null (jobs only)",
       "salary_max": "number | null (jobs only)",
-      "salary_currency": "USD|JMD|EUR|GBP | null",
+      "salary_currency": "JMD (auto-detected from 22+ ISO 4217 currencies, source-context-aware)",
       "age_requirement": "string | null",
       "experience_required": "string",
       "url": "string (Go to source link)",
