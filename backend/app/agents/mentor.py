@@ -25,7 +25,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from openai import OpenAI
+from openai import APIError as OpenAIError, OpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -522,7 +522,7 @@ Summary:"""
             logger.info("Generated summary for conversation %s", conversation.id)
             return summary.strip()
 
-    except Exception as e:
+    except (OpenAIError, OSError) as e:
         logger.warning("Failed to generate conversation summary: %s", e)
 
     return None
@@ -666,7 +666,7 @@ async def send_message(
     if await should_extract(user_id, conversation.id, db):
         try:
             await extract_and_save_memories(db, user_id, conversation.id)
-        except Exception as e:
+        except (OpenAIError, OSError, ValueError) as e:
             logger.warning("Memory extraction failed (non-fatal): %s", e)
 
     return {
