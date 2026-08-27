@@ -99,12 +99,12 @@ def _parse_salary(pay_text: str) -> tuple[float | None, float | None, str | None
 
     text = pay_text.lower()
 
-    # Detect currency
+    # Detect currency — check JMD before $ since JMD uses $ symbol too
     currency = None
-    if "$" in text or "usd" in text or "us " in text:
-        currency = "USD"
-    elif "jmd" in text or "jm " in text or ("$" in text and "jamaica" in text):
+    if "jmd" in text or "jm " in text or ("$" in text and "jamaica" in text):
         currency = "JMD"
+    elif "$" in text or "usd" in text or "us " in text:
+        currency = "USD"
     elif "eur" in text or "€" in text:
         currency = "EUR"
     elif "gbp" in text or "£" in text:
