@@ -1,6 +1,6 @@
 # Lynks Tech Stack
 
-> **Last updated:** August 22, 2026
+> **Last updated:** August 27, 2026
 
 ---
 
@@ -17,6 +17,8 @@
 | LLM SDK | OpenAI Python SDK |
 | File storage | Supabase Storage |
 | Validation | Pydantic v2 |
+| HTTP client | httpx (RSS feeds, social media scraping) |
+| Multipart forms | python-multipart (file uploads) |
 
 ## Database
 
@@ -45,6 +47,21 @@
 | Endpoint | https://api.groq.com/openai/v1 |
 | Response time | 5-15 seconds |
 
+## Scraper Sources
+
+| Source | Type | Auth Required | Notes |
+|--------|------|---------------|-------|
+| Devpost | API | No | Hackathons |
+| Eventbrite | API | No | Caribbean tech events |
+| Jamaica Gleaner | RSS | No | Caribbean news/jobs |
+| Loop Caribbean | RSS | No | Caribbean news |
+| Devpost RSS | RSS | No | Hackathon feeds |
+| UWI News | RSS | No | University opportunities |
+| Facebook | Public scraping | No | Stretch goal |
+| Instagram | Public scraping | No | Stretch goal (fragile) |
+| Curated List | Hardcoded | No | Permanent fallback (17 Caribbean opportunities) |
+| LLM Generation | AI | Yes (Groq) | Generates opportunities from training data |
+
 ## Key Design Decisions
 
 1. UUID everywhere — every PK is UUID, not auto-increment
@@ -53,3 +70,7 @@
 4. Supabase for everything — Auth, Database, Storage
 5. LLM via OpenAI SDK — compatible with any OpenAI-format API
 6. No LangChain/CrewAI — agents are self-contained Python modules
+7. In-memory caching — 1-hour TTL for scraped opportunities, no Redis
+8. Offset pagination — simple page/limit, cursor pagination deferred post-competition
+9. Opportunities are curated + scraped — not stored in a dedicated DB table
+10. Graceful scraper failure — each source returns [] on error, curated list is permanent fallback
