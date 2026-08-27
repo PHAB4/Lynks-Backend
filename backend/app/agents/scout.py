@@ -3,9 +3,8 @@ Job Scout Agent — discovers Caribbean-relevant opportunities for users.
 
 Sources (all free, no API keys needed for most):
   1. Curated Caribbean opportunities database (local clubs, competitions, events)
-  2. Remotive / Himalaya / other free job APIs (remote work)
-  3. Scholarship and competition aggregators
-  4. LLM-powered recommendation from user profile
+  2. Opportunity scraper (Devpost, Eventbrite, RSS, social media)
+  3. LLM-powered recommendation from user profile
 
 Flow:
   1. Load user profile (career_path, age, country, education_level)
@@ -24,10 +23,11 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 from openai import OpenAI
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -36,7 +36,7 @@ from app.models.db_models import User
 logger = logging.getLogger(__name__)
 
 
-# ── Opportunity types ──────────────────────────────────────────────────────
+# ── Opportunity dataclass ──────────────────────────────────────────────────
 
 
 @dataclass
@@ -50,14 +50,48 @@ class Opportunity:
     experience_required: str
     url: str
     category: str  # job, club, competition, scholarship, event, volunteer
-    source: str    # local_db, llm_generated
+    source: str    # local_db, llm_generated, devpost_api, etc.
+    # New fields
+    description: str = ""
+    salary_min: float | None = None
+    salary_max: float | None = None
+    salary_currency: str | None = None
+    posted_at: str | None = None
+    first_seen_at: str | None = None
+    source_name: str = "curated"
+    image_url: str | None = None
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────
+
+
+def get_timeframe_cutoff(timeframe: str) -> datetime:
+    """Return the cutoff datetime for a timeframe filter."""
+    now = datetime.now(timezone.utc)
+    match timeframe:
+        case "day":
+            return now - timedelta(days=1)
+        case "week":
+            return now - timedelta(weeks=1)
+        case "month":
+            return now - timedelta(days=30)
+        case "quarter":
+            return now - timedelta(days=90)
+        case "all" | _:
+            return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _parse_posted_at(posted_at: str | None) -> datetime | None:
+    """Parse an ISO date string to datetime for comparison."""
+    if not posted_at:
+        return None
+    try:
+        return datetime.fromisoformat(posted_at.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return None
 
 
 # ── Curated Caribbean opportunities database ───────────────────────────────
-# This is the "source of truth" for Caribbean-specific opportunities.
-# Add to this list as you discover new ones.
-# In a production system this would be a database table, but for the
-# buildathon a curated list is faster and more reliable.
 
 CARIBBEAN_OPPORTUNITIES: list[dict] = [
     # ── Competitions ───────────────────────────────────────────────────────
@@ -70,6 +104,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "None — open to all high school students",
         "url": "https://jamaicaletters.com",
         "category": "competition",
+        "description": "Annual science competition for Jamaican high school students.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Caribbean Computing Challenge (CCC)",
@@ -80,6 +118,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "None — introductory level problems provided",
         "url": "https://cxc.org",
         "category": "competition",
+        "description": "Programming competition for Caribbean high school students.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Digicel Foundation Bright Stars Challenge",
@@ -90,6 +132,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Social impact project idea",
         "url": "https://digicelfoundation.com",
         "category": "competition",
+        "description": "Youth entrepreneurship challenge supporting social impact projects.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Hackathon Caribbean",
@@ -100,6 +146,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Basic coding skills recommended",
         "url": "https://devpost.com",
         "category": "competition",
+        "description": "Regional hackathon bringing together Caribbean developers.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Jamaica Tech Hackathon",
@@ -110,6 +160,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Basic programming knowledge",
         "url": "https://devpost.com",
         "category": "competition",
+        "description": "Annual hackathon in Jamaica focused on local tech solutions.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Trinidad & Tobago Game Jam",
@@ -120,6 +174,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Interest in game development",
         "url": "https://itch.io/jams",
         "category": "competition",
+        "description": "Game development competition for T&T game creators.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Barbados Robotics Challenge",
@@ -130,6 +188,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Interest in robotics/engineering",
         "url": "",
         "category": "competition",
+        "description": "Robotics competition for young Barbadians.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     # ── Clubs & Organizations ─────────────────────────────────────────────
     {
@@ -141,6 +203,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "None",
         "url": "https://uwi.edu",
         "category": "club",
+        "description": "Student-led coding club at UWI.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Caribbean AI & Data Science Community",
@@ -151,6 +217,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Interest in AI/data science",
         "url": "https://www.linkedin.com/groups",
         "category": "club",
+        "description": "Online community for Caribbean AI/data science enthusiasts.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Girl Geek Dinner Caribbean",
@@ -161,6 +231,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "None",
         "url": "https://girlgeekdinner.com",
         "category": "club",
+        "description": "Networking events for women in Caribbean tech.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Jamaica Developers Community",
@@ -171,6 +245,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Interest in software development",
         "url": "https://www.meetup.com",
         "category": "club",
+        "description": "Developer meetup group for Jamaican software engineers.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Barbados Innovation Hub",
@@ -181,6 +259,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Interest in entrepreneurship",
         "url": "",
         "category": "club",
+        "description": "Innovation hub for young Barbadian entrepreneurs.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Trinidad Youth in Tech",
@@ -191,6 +273,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "None",
         "url": "https://www.mdt.gov.tt",
         "category": "club",
+        "description": "Government initiative connecting young Trinidadians with tech.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     # ── Scholarships ──────────────────────────────────────────────────────
     {
@@ -202,6 +288,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Strong CXC/CSEC results",
         "url": "https://cxc.org",
         "category": "scholarship",
+        "description": "Merit-based scholarships for Caribbean students.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Chevening Scholarship (Caribbean)",
@@ -212,6 +302,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Bachelor's degree, 2+ years work experience",
         "url": "https://chevening.org",
         "category": "scholarship",
+        "description": "UK government scholarship for Caribbean professionals.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "AASD Scholarship Program",
@@ -222,6 +316,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Bachelor's degree in STEM",
         "url": "https://aasciences.africa",
         "category": "scholarship",
+        "description": "STEM scholarship for graduate students.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "MIT OpenCourseWare Scholarship",
@@ -232,6 +330,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Self-motivated learners",
         "url": "https://ocw.mit.edu",
         "category": "scholarship",
+        "description": "Free access to MIT course materials.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Google Generation Scholarship (Caribbean)",
@@ -242,6 +344,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Enrolled in CS or related field",
         "url": "https://buildyourfuture.withgoogle.com/scholarships",
         "category": "scholarship",
+        "description": "Google scholarship for underrepresented CS students.",
+        "salary_min": 10000,
+        "salary_max": 10000,
+        "salary_currency": "USD",
     },
     {
         "title": "Coursera Financial Aid",
@@ -252,6 +358,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "None",
         "url": "https://www.coursera.org/financial-aid",
         "category": "scholarship",
+        "description": "Financial aid for Coursera courses.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     # ── Events & Workshops ────────────────────────────────────────────────
     {
@@ -263,6 +373,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Interest in technology",
         "url": "https://twitter.com/search?q=caribbean+tech+week",
         "category": "event",
+        "description": "Annual week of tech events and networking across the Caribbean.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "WIPO Hackathon for IP (Caribbean Edition)",
@@ -273,6 +387,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Innovation or business idea",
         "url": "https://wipo.int",
         "category": "event",
+        "description": "Global IP hackathon with Caribbean track.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Jamaica UX Design Workshop",
@@ -283,6 +401,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Interest in design",
         "url": "",
         "category": "event",
+        "description": "Hands-on UX design workshop in Jamaica.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Caribbean Data Science Bootcamp",
@@ -293,6 +415,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Basic Python knowledge",
         "url": "",
         "category": "event",
+        "description": "Intensive data science bootcamp for Caribbean participants.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Barbados Fintech Summit",
@@ -303,6 +429,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Interest in fintech",
         "url": "",
         "category": "event",
+        "description": "Annual fintech summit in Barbados.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     # ── Volunteer / Internship ────────────────────────────────────────────
     {
@@ -314,6 +444,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Skills-based volunteering available",
         "url": "https://onlinevolunteering.org",
         "category": "volunteer",
+        "description": "Online volunteering with UN agencies.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Code for the Caribbean Fellowship",
@@ -324,6 +458,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Basic coding skills",
         "url": "https://codeforthecaribbean.org",
         "category": "volunteer",
+        "description": "Fellowship placing developers with Caribbean government agencies.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Teach For Jamaica",
@@ -334,6 +472,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Bachelor's degree",
         "url": "https://teachforall.org",
         "category": "volunteer",
+        "description": "Teaching fellowship in underserved Jamaican schools.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Peace Corps Caribbean",
@@ -344,6 +486,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Bachelor's degree preferred",
         "url": "https://peacecorps.gov",
         "category": "volunteer",
+        "description": "Peace Corps service in Caribbean countries.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Caribbean Red Cross Youth Volunteer",
@@ -354,6 +500,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "None",
         "url": "https://icrc.org",
         "category": "volunteer",
+        "description": "Youth volunteering with Red Cross societies across the Caribbean.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
     {
         "title": "Digital Jobs Africa (Caribbean Remote)",
@@ -364,6 +514,10 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "experience_required": "Digital skills (design, dev, content)",
         "url": "",
         "category": "job",
+        "description": "Remote digital work opportunities for Caribbean youth.",
+        "salary_min": None,
+        "salary_max": None,
+        "salary_currency": None,
     },
 ]
 
@@ -401,15 +555,13 @@ def match_opportunities_with_llm(
     Falls back to returning the first N opportunities directly if the LLM
     call fails or times out, so the endpoint never hangs.
     """
-    # Cap the prompt size — send at most 15 opportunities to the LLM
-    # to keep response times reasonable
     prompt_pool = opportunities[:15]
 
     try:
         client = OpenAI(
             api_key=settings.LLM_API_KEY,
             base_url=settings.LLM_API_BASE_URL,
-            timeout=15.0,  # hard timeout per API call
+            timeout=15.0,
         )
 
         user_message = (
@@ -451,6 +603,50 @@ def match_opportunities_with_llm(
         return opportunities[:8]
 
 
+# ── Saved opportunities helpers ───────────────────────────────────────────
+
+
+async def get_saved_opportunity_ids(db: AsyncSession, user_id: str) -> set[str]:
+    """Get the set of opportunity IDs that a user has saved."""
+    try:
+        from sqlalchemy import text
+        result = await db.execute(
+            text("SELECT opportunity_id FROM saved_opportunities WHERE user_id = :uid"),
+            {"uid": user_id},
+        )
+        return {row[0] for row in result.fetchall()}
+    except Exception as e:
+        logger.warning("Could not query saved_opportunities: %s (table may not exist yet)", e)
+        return set()
+
+
+async def get_available_categories(db: AsyncSession) -> list[str]:
+    """Get all unique categories from the curated list."""
+    categories = set()
+    for opp in CARIBBEAN_OPPORTUNITIES:
+        categories.add(opp.get("category", "event"))
+    return sorted(categories)
+
+
+# ── New count helper ──────────────────────────────────────────────────────
+
+
+async def get_new_count(db: AsyncSession) -> dict:
+    """Count opportunities first seen in the last 24 hours.
+
+    For now, counts from the curated list (which uses a static timestamp).
+    In production, this would query the opportunities table.
+    """
+    # Since we're using a curated list (not a DB table), we return 0
+    # Once the opportunities table is populated by the scraper,
+    # this will query first_seen_at >= cutoff
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    return {
+        "new_count": 0,
+        "new_since": cutoff.isoformat(),
+    }
+
+
 # ── Public API ──────────────────────────────────────────────────────────────
 
 
@@ -458,14 +654,20 @@ async def discover_opportunities(
     db: AsyncSession,
     user_id: str,
     category: str | None = None,
-) -> list[dict]:
+    timeframe: str | None = None,
+    sort: str = "relevance",
+    page: int = 1,
+    limit: int = 20,
+) -> dict:
     """
-    Discover opportunities for a user.
-    
+    Discover opportunities for a user with filtering, sorting, and pagination.
+
     1. Load user profile
-    2. Filter curated database by category (if specified)
-    3. Use LLM to rank and select the most relevant ones
-    4. Return structured opportunity objects
+    2. Filter curated database by category and timeframe
+    3. Use LLM to rank and select the most relevant ones (if sort=relevance)
+    4. Apply sort and pagination
+    5. Attach is_saved flags
+    6. Return results with metadata
     """
     user = await db.get(User, user_id)
     if not user:
@@ -480,27 +682,88 @@ async def discover_opportunities(
         "interests": user.interests or [],
     }
 
-    # Filter opportunities by category if specified
-    pool = CARIBBEAN_OPPORTUNITIES
+    # Start with curated opportunities
+    pool = list(CARIBBEAN_OPPORTUNITIES)
+
+    # Filter by category if specified
     if category:
         pool = [o for o in pool if o["category"] == category]
 
-    # Use LLM to match and rank
-    matched = match_opportunities_with_llm(profile, pool)
+    # Filter by timeframe if specified
+    if timeframe:
+        cutoff = get_timeframe_cutoff(timeframe)
+        filtered = []
+        for o in pool:
+            posted = _parse_posted_at(o.get("posted_at"))
+            if posted is None or posted >= cutoff:
+                filtered.append(o)
+        pool = filtered
 
-    # Add IDs and source tags
+    # Apply sorting
+    if sort == "recent":
+        pool.sort(key=lambda o: _parse_posted_at(o.get("posted_at")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    elif sort == "salary":
+        pool.sort(key=lambda o: o.get("salary_max") or 0, reverse=True)
+    else:
+        # relevance — use LLM to rank
+        matched = match_opportunities_with_llm(profile, pool)
+        pool = matched
+
+    # Get total before pagination
+    total_available = len(pool)
+
+    # Apply offset pagination
+    start = (page - 1) * limit
+    end = start + limit
+    paginated = pool[start:end]
+
+    # Get user's saved opportunity IDs
+    saved_ids = await get_saved_opportunity_ids(db, user_id)
+
+    # Build results with is_saved flag
+    # Generate deterministic IDs based on title hash
+    import hashlib
+
     results = []
-    for opp in matched:
+    for opp in paginated:
+        opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
         results.append({
-            "id": str(uuid.uuid4()),
+            "id": opp_id,
             "title": opp.get("title", "Unknown"),
             "company": opp.get("company", "Unknown"),
             "location": opp.get("location", "Caribbean"),
             "pay": opp.get("pay", "Varies"),
+            "salary_min": opp.get("salary_min"),
+            "salary_max": opp.get("salary_max"),
+            "salary_currency": opp.get("salary_currency"),
             "age_requirement": opp.get("age_requirement"),
             "experience_required": opp.get("experience_required", "None"),
             "url": opp.get("url", ""),
-            "category": opp.get("category", "unknown"),
+            "category": opp.get("category", "event"),
+            "description": opp.get("description", ""),
+            "posted_at": opp.get("posted_at"),
+            "first_seen_at": opp.get("first_seen_at"),
+            "source_name": opp.get("source_name", "curated"),
+            "image_url": opp.get("image_url"),
+            "is_saved": opp_id in saved_ids,
+            "relevance_score": opp.get("relevance_score"),
         })
 
-    return results
+    available_categories = await get_available_categories(db)
+
+    return {
+        "opportunities": results,
+        "metadata": {
+            "total_available": total_available,
+            "returned": len(results),
+            "page": page,
+            "limit": limit,
+            "has_more": end < total_available,
+            "available_categories": available_categories,
+            "filters_applied": {
+                "category": category,
+                "timeframe": timeframe,
+                "sort": sort,
+            },
+        },
+    }

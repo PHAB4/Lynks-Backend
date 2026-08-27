@@ -1,5 +1,7 @@
 # Lynks — Product Requirement Document
 
+**Last updated:** August 27, 2026
+
 ## 1. Problem Statement
 
 Young, ambitious people often can't access career opportunities they're qualified for because informal networks — not merit — decide who gets in. There's no reliable way for someone starting from zero to know what steps actually lead to a goal, or to prove to an employer they've done the work.
@@ -43,11 +45,13 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 ### 4.4 Career Opportunities (Job Scout Agent)
 
 - Sources Caribbean-specific opportunities: jobs, competitions, clubs, scholarships, events, volunteer roles
-- Opportunities are scraped periodically and stored in the database
-- Two browse modes:
-  - **"For You"** (default): opportunities matched to the user's profile, sorted by relevance
-  - **"Browse All"**: full catalog, filterable by category, country, age, experience level, price
-- Users can be notified when relevant new opportunities appear
+- Opportunities are scraped from multiple sources (Devpost API, Eventbrite API, RSS feeds, curated list)
+- Cached in-memory with 1-hour TTL for fast responses
+- Structured salary data for jobs (salary_min, salary_max, salary_currency) with **priority-based currency detection** (22+ currencies, source-context-aware)
+- Category-based filtering, time-based filtering, relevance sorting
+- Users can save/bookmark opportunities for later
+- New-opportunity notification polling via `GET /opportunities/new-count`
+- Social media scraping (Facebook, Instagram) — stretch goal
 
 ### 4.5 Career Opportunities Page — UX Pattern
 
@@ -58,16 +62,30 @@ The career opportunities page has two tabs:
 | **For You** (default) | Opportunities matched to the user's profile, sorted by relevance. Uses rule-based matching against career path, country, age, education level. No AI required. |
 | **Browse All** | Full catalog of all opportunities with filters. |
 
-**Filters available on Browse All:**
+**Filters available:**
 
 | Filter | Options |
 |---|---|
 | Category | Job, Competition, Club, Scholarship, Event, Volunteer |
-| Experience Level | None, Beginner, Intermediate, Advanced |
-| Age Range | Under 16, 16–18, 18–21, 21+ |
-| Country | Jamaica, Trinidad, Barbados, Bahamas, etc. + "Remote" / "Caribbean Regional" |
-| Price | Free, Paid |
-| Status | Open, Closing Soon, Closed |
+| Timeframe | Within Week, Within Month, Within Quarter, All Time |
+| Sort | Relevance, Recent, Salary |
+| Page | Offset pagination (default 20 per page, max 50) |
+
+**Opportunity Card Fields:**
+
+| Field | Type | Notes |
+|---|---|---|
+| Title | string | Opportunity name |
+| Company/Organization | string | Hosting organization |
+| Category | string | Job, scholarship, competition, etc. |
+| Location | string | Physical location or "Remote" |
+| Salary | object | `{ min, max, currency }` for jobs; `null` for others. Currency auto-detected (22+ ISO 4217 codes), source-context-aware. |
+| Description | string | Brief description |
+| Image | string (URL) | Thumbnail/preview image |
+| Posted At | datetime | When originally posted |
+| Source | string | Where it was scraped from (devpost, eventbrite, curated, etc.) |
+| Go To Source | link | URL to the original opportunity page |
+| Save/Unsave | button | Bookmark for later |
 
 **"Ask About This" Button:**
 
@@ -76,16 +94,6 @@ Each opportunity card has a "💬 Ask the Mentor" button. When clicked:
 2. The message input is pre-filled with a contextual message including the opportunity name and details
 3. The user can edit the message or hit Send
 4. The Mentor-Orchestrator responds with detailed information about the specific opportunity
-
-This is implemented purely on the frontend — no backend changes required. The pre-filled message contains enough context (opportunity name, category, location, requirements) for the LLM to respond accurately. The existing `POST /chat/message` endpoint handles this without modification.
-
-**Optional Enhancement (Phase 2):** Pass an `opportunity_id` as a context object alongside the message in `POST /chat/message`. The backend then fetches the full opportunity details before sending to the LLM, improving reliability for opportunities with long or ambiguous names.
-
-**Connection to the Chatbot:**
-- The opportunities page and chatbot share the same database (same `opportunities` table)
-- The chatbot can recommend opportunities via the Job Scout agent
-- The "Ask About This" button creates a seamless link from the page to the chatbot
-- Both views are complementary — one visual, one conversational
 
 ### 4.6 Mentor Chatbot (Mentor-Orchestrator Agent)
 
@@ -96,35 +104,24 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 2. Agent access — can call Career Architect, Portfolio Manager, and Job Scout agents
 3. Intent inference — detects when a user's message requires an agent and calls it automatically
 
-**How it works:**
-- Uses OpenAI SDK tool-calling format with 3 tools: `generate_roadmap`, `get_portfolio`, `find_opportunities`
-- When a user message matches an agent's purpose, the LLM triggers the appropriate tool
-- The tool executes and returns structured data to the LLM
-- The LLM formats the data into a natural conversational response
-- Conversation history is persisted in `conversations` + `messages` tables
+**Long-term Memory:** The Mentor remembers key facts about the user across sessions. After every 10 messages in a conversation, the AI extracts lasting facts (career interests, preferences, milestones, personality traits) and stores them in the `user_memories` table.
 
-**Example flows:**
+**Conversation History:** Users can have multiple conversations with the Mentor. When a conversation exceeds 15 messages, older messages are summarized by the LLM.
 
-| User says | What happens |
-|---|---|
-| "What's a variable?" | Answered directly — no agent needed |
-| "Give me a roadmap" | Career Architect agent called |
-| "What competitions are coming up?" | Job Scout agent called |
-| "I uploaded my certificate" | Portfolio Manager agent called |
-| "Tell me about the Jamaica Science Olympiad" | Job Scout agent called (from "Ask About This" button) |
+### 4.7 Notifications
 
-**Personality:** Caribbean-aware, encouraging, uses first-principles explanations with concrete analogies. Avoids jargon. Understands local context (Caribbean institutions, job market, visa requirements).
+- In-app notification center with bell icon and unread count badge
+- Notifications created for: new matching opportunities, task milestones, badges, reminders
+- Frontend polls `GET /notifications/unread/count` for badge indicator
+- Users can mark individual or all notifications as read
+- Notification types: `opportunity`, `task`, `badge`, `reminder`
+- Notifications include deep-link data for navigation
 
-**Long-term Memory:** The Mentor remembers key facts about the user across sessions. After every 10 messages in a conversation, the AI extracts lasting facts (career interests, preferences, milestones, personality traits) and stores them in the `user_memories` table. On future conversations, these memories are loaded into the system prompt so the AI can reference them naturally — without the user having to repeat themselves. Users can view and delete their memories via `GET /memory` and `DELETE /memory/{id}`.
+### 4.8 Resume Builder
 
-**Conversation History:** Users can have multiple conversations with the Mentor. The sidebar shows all past conversations with titles and summaries. When a conversation exceeds 15 messages, older messages are summarized by the LLM to save tokens. The AI only sees the summary + last 10 messages, but the user can always scroll through the full history (stored permanently in the database). Cross-conversation context is maintained — the AI knows what was discussed in previous sessions.
-
-### 4.7 Notifications (Phase 2)
-
-- When a new opportunity matches a user's profile, a notification is created
-- Frontend shows "New opportunity for you!" badge
-- Notifications are stored in the `notifications` table
-- Users can mark notifications as read
+- AI generates a resume from the user's profile, roadmap, and evidence
+- Available via `POST /resume/generate` and `GET /resume`
+- Resume stored as structured JSON in the database
 
 ## 5. AI Agents Summary
 
@@ -134,14 +131,15 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 | Portfolio Manager | Verifies task evidence, manages portfolio | Uploaded files (certificates, images) | Verification result (verified/rejected/pending) |
 | Job Scout | Sources Caribbean-relevant opportunities | Internet scraping + curated database | Matched opportunities list |
 | Mentor-Orchestrator | Conversational assistant + agent router | User chat messages | Natural language response (possibly agent-assisted) |
-| Memory Extractor | Extracts key user facts from conversations (runs after every 10 messages) | Conversation messages + existing memories | New user memories (up to 5 per extraction) |
+| Memory Extractor | Extracts key user facts from conversations | Conversation messages + existing memories | New user memories (up to 5 per extraction) |
+| Opportunity Scraper | Scrapes opportunities from multiple sources | RSS feeds, APIs, social media, LLM generation | Structured opportunity data |
 
 ## 6. Technical Constraints
 
 - **Backend:** Python 3.11+, FastAPI, async/await
 - **Database:** PostgreSQL (via Supabase), SQLAlchemy ORM
 - **Auth:** Supabase Auth — backend only verifies JWTs, never issues them
-- **LLM:** OpenAI-compatible API (currently Groq free tier, migrating to Impala/Highrise compute)
+- **LLM:** OpenAI-compatible API (currently Groq free tier)
 - **File Storage:** Supabase Storage (public `evidence` bucket)
 - **All UUIDs, all snake_case**
 - **Error shape:** `{"error": {"code": "...", "message": "..."}}`
@@ -158,37 +156,22 @@ Implemented via FastAPI middleware in `app/middleware.py`:
 | Auth | 20 requests/min | `/auth/*` |
 | Default | 60 requests/min | All other endpoints |
 
-Returns `429 Too Many Requests` with `Retry-After` header when exceeded. Health checks (`/health`) are exempt.
-
-**Security Headers** (on all responses):
-
-| Header | Value | Protects Against |
-|---|---|---|
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Protocol downgrade attacks |
-| `X-Content-Type-Options` | `nosniff` | MIME-type sniffing |
-| `X-Frame-Options` | `DENY` | Clickjacking |
-| `X-XSS-Protection` | `1; mode=block` | Cross-site scripting |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Referrer leakage |
-| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Feature abuse |
-
-**CORS:** Configurable via `CORS_ORIGINS` environment variable. Defaults to `http://localhost:3000` for local development. Production must set this to the deployed frontend URL.
+**Security Headers** (on all responses): HSTS, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
 
 ## 7. Open Questions
 
 | # | Question | Status |
 |---|---|---|
-| 1 | Should the "Ask About This" button use pre-filled messages or context objects? | **Resolved** — pre-filled messages (Phase 1), context objects optional (Phase 2) |
-| 2 | How often should the Job Scout scrape for new opportunities? | **Proposed** — every 24 hours via scheduled cron job |
-| 3 | Should notifications be real-time or check-on-load? | **Open** — team to decide |
+| 1 | Should the "Ask About This" button use pre-filled messages or context objects? | **Resolved** — pre-filled messages (Phase 1) |
+| 2 | How often should the Job Scout scrape for new opportunities? | **Resolved** — in-memory cache with 1-hour TTL, on-demand refresh |
+| 3 | Should notifications be real-time or check-on-load? | **Resolved** — polling via `/opportunities/new-count` and `/notifications/unread/count` |
 | 4 | What LLM model to use for the Mentor chatbot? | **Resolved** — Groq (Llama 3 70B) for now |
 | 5 | How should evidence verification handle ambiguous uploads? | **Proposed** — status stays `pending`, doesn't block the upload |
-| 6 | Sync vs async evidence verification? | **Resolved** — synchronous (simpler, better UX for demo) |
+| 6 | Social media scraping feasibility? | **Open** — deferred post-competition, public page scraping as stretch goal |
 
 ## 8. Deployment
 
 - **Backend:** Deployed on Railway at `https://lynks-backend-production.up.railway.app`
 - **Database, Auth, Storage:** Supabase (hosted)
-- **Frontend:** Deployed separately by frontend team (connects via `CORS_ORIGINS` env var)
+- **Frontend:** Deployed separately by frontend team
 - **Monitoring:** Swagger UI available at `/docs` on the live backend
-- **Rate limiting:** Active — LLM endpoints limited to 10 requests/min per IP
-- **Security headers:** Active — HSTS, X-Content-Type-Options, X-Frame-Options on all responses

@@ -129,10 +129,76 @@ class OpportunityResponse(BaseModel):
     title: str
     company: str
     location: str
+    description: str = ""
+    category: str = "event"
     pay: str
+    salary_min: Optional[float] = None
+    salary_max: Optional[float] = None
+    salary_currency: Optional[str] = None
     age_requirement: Optional[str] = None
     experience_required: str
     url: str
+    posted_at: Optional[str] = None
+    first_seen_at: Optional[str] = None
+    source_name: str = "curated"
+    image_url: Optional[str] = None
+    is_saved: bool = False
+    relevance_score: Optional[float] = None
+
+
+class OpportunityMetadata(BaseModel):
+    total_available: int
+    returned: int
+    page: int
+    limit: int
+    has_more: bool
+    available_categories: list[str]
+    filters_applied: dict
+
+
+class OpportunityListResponse(BaseModel):
+    opportunities: list[OpportunityResponse]
+    metadata: OpportunityMetadata
+
+
+class NewCountResponse(BaseModel):
+    new_count: int
+    new_since: str
+
+
+class SaveOpportunityResponse(BaseModel):
+    success: bool
+    saved_at: Optional[str] = None
+
+
+class SavedOpportunitiesResponse(BaseModel):
+    saved: list[OpportunityResponse]
+    total: int
+
+
+# ── Notifications ──────────────────────────────────────────────────────────
+
+
+class NotificationCreate(BaseModel):
+    title: str
+    body: str
+    type: str = "info"
+    link: Optional[str] = None
+
+
+class NotificationResponse(BaseModel):
+    id: str = Field(..., description="UUID")
+    title: str
+    body: str
+    type: str
+    link: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime
+
+
+class NotificationListResponse(BaseModel):
+    notifications: list[NotificationResponse]
+    unread_count: int
 
 
 # ── Chat ───────────────────────────────────────────────────────────────────
@@ -196,26 +262,3 @@ class ConversationListItem(BaseModel):
 
 class ConversationListResponse(BaseModel):
     conversations: list[ConversationListItem]
-
-# ── Notifications ──────────────────────────────────────────────────────────
-
-class NotificationCreate(BaseModel):
-    title: str
-    body: str | None = None
-    type: str = "reminder"
-    link: dict | None = None
-
-
-class NotificationResponse(BaseModel):
-    id: str = Field(..., description="UUID")
-    title: str
-    body: str | None = None
-    type: str
-    link: dict | None = None
-    is_read: bool
-    created_at: datetime
-
-
-class NotificationListResponse(BaseModel):
-    notifications: list[NotificationResponse]
-    unread_count: int
