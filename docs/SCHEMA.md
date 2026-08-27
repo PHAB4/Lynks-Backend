@@ -143,7 +143,7 @@ opportunities (standalone)
 | pay | text | YES | null | Cost or stipend info |
 | salary_min | numeric | YES | null | Minimum salary (jobs only) |
 | salary_max | numeric | YES | null | Maximum salary (jobs only) |
-| salary_currency | text | YES | 'JMD' | Currency code (USD, JMD, EUR, GBP) |
+| salary_currency | text | YES | 'JMD' | Currency code — auto-detected from 22+ ISO 4217 currencies (JMD, TTD, BBD, USD, EUR, GBP, CAD, AUD, JPY, CNY, INR, BRL, MXN, etc.). Source-context-aware: bare `$` from a Jamaican source → JMD, from Trinidad → TTD. |
 | age_requirement | text | YES | null | Age range (e.g. "13-18") |
 | experience_required | text | YES | null | ✅ Typo fixed (was `expereince_required`) |
 | url | text | NO | null | Link to apply/learn more ("Go to source" button) |
