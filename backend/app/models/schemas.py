@@ -176,6 +176,31 @@ class SavedOpportunitiesResponse(BaseModel):
     total: int
 
 
+# ── Notifications ──────────────────────────────────────────────────────────
+
+
+class NotificationCreate(BaseModel):
+    title: str
+    body: str
+    type: str = "info"
+    link: Optional[str] = None
+
+
+class NotificationResponse(BaseModel):
+    id: str = Field(..., description="UUID")
+    title: str
+    body: str
+    type: str
+    link: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime
+
+
+class NotificationListResponse(BaseModel):
+    notifications: list[NotificationResponse]
+    unread_count: int
+
+
 # ── Chat ───────────────────────────────────────────────────────────────────
 
 
