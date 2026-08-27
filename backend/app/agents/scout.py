@@ -26,8 +26,9 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from openai import OpenAI
+from openai import APIError as OpenAIError, OpenAI
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -598,7 +599,7 @@ def match_opportunities_with_llm(
             return data["opportunities"]
         return opportunities[:8]
 
-    except Exception as e:
+    except (OpenAIError, json.JSONDecodeError) as e:
         logger.warning("LLM opportunity matching failed, returning curated list: %s", e)
         return opportunities[:8]
 
@@ -615,7 +616,7 @@ async def get_saved_opportunity_ids(db: AsyncSession, user_id: str) -> set[str]:
             {"uid": user_id},
         )
         return {row[0] for row in result.fetchall()}
-    except Exception as e:
+    except (SQLAlchemyError, AttributeError) as e:
         logger.warning("Could not query saved_opportunities: %s (table may not exist yet)", e)
         return set()
 
