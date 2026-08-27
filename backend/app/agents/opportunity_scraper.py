@@ -89,29 +89,87 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# Currency detection — ISO 4217 codes and symbols.
+# Order matters: specific 3-letter codes are checked FIRST because
+# multiple currencies share the same symbol (e.g. $ is used by USD,
+# JMD, TTD, BBD, BSD, AUD, CAD, NZD, etc.).
+# Pattern: (priority, code, triggers)
+# Lower priority number = checked first. Bare $ falls through to USD.
+_CURRENCY_TABLE: list[tuple[int, str, list[str]]] = [
+    # ── Caribbean currencies (highest priority for our users) ──────────
+    (1, "JMD", ["jmd", "jm "]),
+    (1, "TTD", ["ttd", "tt "]),
+    (1, "BBD", ["bbd", "bb "]),
+    (1, "BSD", ["bsd", "bahamas"]),
+    (1, "KYD", ["kyd", "cayman"]),
+    (1, "XCD", ["xcd", "east caribbean"]),
+    (1, "GYD", ["gyd", "gy "]),
+    (1, "SRD", ["srd", "surinamese"]),
+    (1, "HTG", ["htg", "gourde"]),
+    (1, "DOP", ["dop", "dominican"]),
+    # ── Major world currencies ─────────────────────────────────────────
+    (2, "USD", ["usd"]),
+    (2, "EUR", ["eur"]),
+    (2, "GBP", ["gbp"]),
+    (2, "CAD", ["cad", "canadian"]),
+    (2, "AUD", ["aud", "australian"]),
+    (2, "NZD", ["nzd", "new zealand"]),
+    (2, "CHF", ["chf", "swiss"]),
+    (2, "JPY", ["jpy", "yen"]),
+    (2, "CNY", ["cny", "rmb", "yuan", "chinese"]),
+    (2, "INR", ["inr", "rupee"]),
+    (2, "BRL", ["brl", "real"]),
+    (2, "MXN", ["mxn", "peso"]),
+    # ── Symbol-only fallbacks (checked last — ambiguous) ───────────────
+    (3, "EUR", ["€"]),
+    (3, "GBP", ["£"]),
+    (3, "JPY", ["¥"]),
+    (3, "INR", ["₹"]),
+    (3, "KRW", ["₩"]),
+    (3, "THB", ["฿"]),
+]
+
+# All unique symbols we know about — used to strip them from numeric parsing
+_ALL_SYMBOLS = r"\$€£¥₹₩฿"
+
+
+def _detect_currency(text: str) -> str | None:
+    """Detect currency from text using a priority-based lookup.
+
+    Specific 3-letter codes (JMD, TTD, etc.) are checked before ambiguous
+    symbols ($, €, etc.) to avoid misidentification.
+    Returns ISO 4217 code or None.
+    """
+    lower = text.lower()
+
+    for priority, code, triggers in sorted(_CURRENCY_TABLE):
+        for trigger in triggers:
+            if trigger in lower:
+                return code
+
+    # Bare $ without any other currency signal → USD
+    if "$" in text:
+        return "USD"
+
+    return None
+
+
 def _parse_salary(pay_text: str) -> tuple[float | None, float | None, str | None]:
     """Attempt to extract structured salary from pay text.
 
+    Handles any ISO 4217 currency — Caribbean, major world, and symbol-based.
     Returns (salary_min, salary_max, currency) or (None, None, None).
     """
     if not pay_text:
         return None, None, None
 
-    text = pay_text.lower()
-
-    # Detect currency — check JMD before $ since JMD uses $ symbol too
-    currency = None
-    if "jmd" in text or "jm " in text or ("$" in text and "jamaica" in text):
-        currency = "JMD"
-    elif "$" in text or "usd" in text or "us " in text:
-        currency = "USD"
-    elif "eur" in text or "€" in text:
-        currency = "EUR"
-    elif "gbp" in text or "£" in text:
-        currency = "GBP"
+    currency = _detect_currency(pay_text)
 
     # Try to find numeric ranges like "$50,000 - $75,000" or "50000-75000"
-    range_match = re.search(r'[\$€£]?\s*([\d,]+(?:\.\d+)?)\s*[-–to]+\s*[\$€£]?\s*([\d,]+(?:\.\d+)?)', text)
+    range_match = re.search(
+        rf'[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)\s*[-–to]+\s*[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)',
+        pay_text.lower(),
+    )
     if range_match:
         try:
             low = float(range_match.group(1).replace(",", ""))
@@ -121,7 +179,7 @@ def _parse_salary(pay_text: str) -> tuple[float | None, float | None, str | None
             pass
 
     # Try to find a single number like "$50,000/year" or "USD 60,000"
-    single_match = re.search(r'[\$€£]?\s*([\d,]+(?:\.\d+)?)', text)
+    single_match = re.search(rf'[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)', pay_text.lower())
     if single_match:
         try:
             val = float(single_match.group(1).replace(",", ""))
