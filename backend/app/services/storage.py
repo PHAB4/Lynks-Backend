@@ -16,6 +16,8 @@ import logging
 import uuid
 from pathlib import Path
 
+from storage3.utils import StorageException
+
 from app.core.config import supabase_admin
 
 logger = logging.getLogger(__name__)
@@ -42,7 +44,7 @@ def upload_evidence_file(file_bytes: bytes, filename: str, file_type: str) -> st
             file=file_bytes,
             file_options={"content-type": file_type},
         )
-    except Exception as e:
+    except (StorageException, ValueError, IOError) as e:
         logger.error("Storage upload failed: %s (type=%s)", e, type(e).__name__)
         raise
 
@@ -72,6 +74,6 @@ def delete_evidence_file(file_url: str) -> bool:
         supabase_admin.storage.from_(BUCKET_NAME).remove(file_path)
         logger.info("Deleted evidence file: %s", file_path)
         return True
-    except Exception as e:
+    except (StorageException, ValueError, IOError) as e:
         logger.error("Failed to delete evidence file: %s", e)
         return False
