@@ -108,7 +108,6 @@ async def list_opportunities(
     return result
 
 
-@router.get("/new-count")
 @router.post("/refresh")
 async def refresh_opportunities(
     user_id: str = Depends(get_current_user_id),
@@ -133,6 +132,7 @@ async def refresh_opportunities(
         }
 
 
+@router.get("/new-count")
 async def new_opportunity_count(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
