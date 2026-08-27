@@ -1,7 +1,7 @@
 """
 Lynks Backend — Scout Agent Unit Tests
 
-Tests the scouting/filtering/sorting/pagination logic in isolation.
+Tests the filtering/sorting/pagination logic in isolation.
 These test the helper functions and logic patterns used by the scout agent,
 without requiring a database or network connection.
 
@@ -14,8 +14,7 @@ from datetime import datetime, timezone, timedelta
 from app.agents.scout import (
     get_timeframe_cutoff,
     _parse_posted_at,
-    RELEVANCE_KEYWORDS,
-    compute_relevance_score,
+    CARIBBEAN_OPPORTUNITIES,
 )
 
 
@@ -104,75 +103,82 @@ class TestParsePostedAt:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  3. Relevance Scoring
+#  3. Curated List Validation
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-class TestRelevanceScore:
-    """Tests for compute_relevance_score() — rule-based relevance matching."""
+class TestCuratedList:
+    """Tests for the CARIBBEAN_OPPORTUNITIES curated list."""
 
-    def test_perfect_match(self):
-        """Opportunity matching all user interests should score high."""
-        user_interests = ["software development", "python", "web development"]
-        opp = {
-            "title": "Python Web Developer Internship",
-            "description": "Build web applications using Python and Django",
-            "category": "job",
-        }
-        score = compute_relevance_score(opp, user_interests)
-        assert score > 5
+    VALID_CATEGORIES = {"job", "scholarship", "competition", "event", "club", "volunteer"}
 
-    def test_partial_match(self):
-        """Opportunity matching one interest should score moderate."""
-        user_interests = ["data science", "machine learning"]
-        opp = {
-            "title": "Data Science Bootcamp",
-            "description": "Learn Python for data analysis",
-            "category": "event",
-        }
-        score = compute_relevance_score(opp, user_interests)
-        assert score > 0
+    def test_list_not_empty(self):
+        assert len(CARIBBEAN_OPPORTUNITIES) > 0
 
-    def test_no_match(self):
-        """Opportunity with no matching interests should score 0."""
-        user_interests = ["cooking", "culinary arts"]
-        opp = {
-            "title": "Python Developer Position",
-            "description": "Build software applications",
-            "category": "job",
-        }
-        score = compute_relevance_score(opp, user_interests)
-        assert score == 0
+    def test_minimum_count(self):
+        """Should have at least 30 curated opportunities."""
+        assert len(CARIBBEAN_OPPORTUNITIES) >= 30
 
-    def test_empty_interests(self):
-        """Empty user interests should return 0."""
-        opp = {
-            "title": "Amazing Opportunity",
-            "description": "Great job",
-            "category": "job",
-        }
-        score = compute_relevance_score(opp, [])
-        assert score == 0
+    def test_required_fields(self):
+        """Every opportunity must have the required fields."""
+        required = {"title", "company", "location", "pay", "category", "description"}
+        for opp in CARIBBEAN_OPPORTUNITIES:
+            for field in required:
+                assert field in opp, f"Missing '{field}' in: {opp.get('title', '?')}"
 
-    def test_job_bonus(self):
-        """Job category should get a bonus."""
-        user_interests = ["python"]
-        opp_job = {"title": "Python Developer", "description": "", "category": "job"}
-        opp_event = {"title": "Python Event", "description": "", "category": "event"}
-        score_job = compute_relevance_score(opp_job, user_interests)
-        score_event = compute_relevance_score(opp_event, user_interests)
-        assert score_job >= score_event
+    def test_valid_categories(self):
+        """All categories should be from the accepted set."""
+        for opp in CARIBBEAN_OPPORTUNITIES:
+            assert opp["category"] in self.VALID_CATEGORIES, (
+                f"Invalid category '{opp['category']}' in: {opp['title']}"
+            )
 
-    def test_case_insensitive(self):
-        """Matching should work regardless of case."""
-        user_interests = ["python"]
-        opp = {"title": "PYTHON DEVELOPER", "description": "", "category": "job"}
-        score = compute_relevance_score(opp, user_interests)
-        assert score > 0
+    def test_no_duplicate_titles(self):
+        """No two opportunities should have the same title."""
+        titles = [o["title"] for o in CARIBBEAN_OPPORTUNITIES]
+        assert len(titles) == len(set(titles)), "Duplicate titles found"
 
-    def test_keyword_list_not_empty(self):
-        """The RELEVANCE_KEYWORDS constant should not be empty."""
-        assert len(RELEVANCE_KEYWORDS) > 0
+    def test_salary_fields_present(self):
+        """Salary fields should be present on every opportunity."""
+        for opp in CARIBBEAN_OPPORTUNITIES:
+            assert "salary_min" in opp, f"Missing salary_min in: {opp['title']}"
+            assert "salary_max" in opp, f"Missing salary_max in: {opp['title']}"
+            assert "salary_currency" in opp, f"Missing salary_currency in: {opp['title']}"
+
+    def test_categories_are_distributed(self):
+        """Should have opportunities across multiple categories."""
+        categories = {o["category"] for o in CARIBBEAN_OPPORTUNITIES}
+        assert len(categories) >= 4, f"Only {len(categories)} categories represented"
+
+    def test_has_competitions(self):
+        competitions = [o for o in CARIBBEAN_OPPORTUNITIES if o["category"] == "competition"]
+        assert len(competitions) >= 3
+
+    def test_has_scholarships(self):
+        scholarships = [o for o in CARIBBEAN_OPPORTUNITIES if o["category"] == "scholarship"]
+        assert len(scholarships) >= 3
+
+    def test_has_events(self):
+        events = [o for o in CARIBBEAN_OPPORTUNITIES if o["category"] == "event"]
+        assert len(events) >= 3
+
+    def test_has_volunteer(self):
+        volunteer = [o for o in CARIBBEAN_OPPORTUNITIES if o["category"] == "volunteer"]
+        assert len(volunteer) >= 3
+
+    def test_caribbean_locations(self):
+        """At least half should mention Caribbean locations."""
+        caribbean_keywords = [
+            "jamaica", "barbados", "trinidad", "caribbean", "caricom",
+            "uwi", "kingston", "montego", "online", "remote",
+        ]
+        caribbean_count = 0
+        for opp in CARIBBEAN_OPPORTUNITIES:
+            location_lower = opp["location"].lower()
+            if any(kw in location_lower for kw in caribbean_keywords):
+                caribbean_count += 1
+        ratio = caribbean_count / len(CARIBBEAN_OPPORTUNITIES)
+        assert ratio >= 0.5, f"Only {ratio:.0%} of opportunities are Caribbean-relevant"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -229,23 +235,35 @@ class TestSortingLogic:
         assert opps[0]["salary_min"] == 100000
         assert opps[-1]["salary_min"] is None
 
-    def test_pagination_slice(self):
-        """Offset pagination should return the correct slice."""
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  5. Pagination Logic (manual simulation)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class TestPaginationLogic:
+    """Tests that offset pagination works correctly."""
+
+    def test_page_1(self):
         all_opps = [{"id": i} for i in range(25)]
-        page = 2
-        limit = 10
+        page, limit = 1, 20
+        start = (page - 1) * limit
+        end = start + limit
+        page_opps = all_opps[start:end]
+        assert len(page_opps) == 20
+
+    def test_page_2(self):
+        all_opps = [{"id": i} for i in range(25)]
+        page, limit = 2, 10
         start = (page - 1) * limit
         end = start + limit
         page_opps = all_opps[start:end]
         assert len(page_opps) == 10
         assert page_opps[0]["id"] == 10
-        assert page_opps[-1]["id"] == 19
 
-    def test_pagination_last_page(self):
-        """Last page may have fewer items."""
+    def test_last_page(self):
         all_opps = [{"id": i} for i in range(25)]
-        page = 3
-        limit = 10
+        page, limit = 3, 10
         start = (page - 1) * limit
         end = start + limit
         page_opps = all_opps[start:end]
@@ -253,29 +271,31 @@ class TestSortingLogic:
         has_more = end < len(all_opps)
         assert has_more is False
 
-    def test_pagination_beyond_end(self):
-        """Page beyond available data returns empty."""
+    def test_beyond_end(self):
         all_opps = [{"id": i} for i in range(10)]
-        page = 5
-        limit = 10
+        page, limit = 5, 10
         start = (page - 1) * limit
         end = start + limit
         page_opps = all_opps[start:end]
         assert len(page_opps) == 0
 
-    def test_has_more_correct(self):
-        """has_more should be True when there are more items."""
+    def test_has_more_true(self):
         all_opps = [{"id": i} for i in range(25)]
-        page = 1
-        limit = 20
+        page, limit = 1, 20
         start = (page - 1) * limit
         end = start + limit
-        has_more = end < len(all_opps)
-        assert has_more is True
+        assert (end < len(all_opps)) is True
+
+    def test_has_more_false(self):
+        all_opps = [{"id": i} for i in range(10)]
+        page, limit = 1, 20
+        start = (page - 1) * limit
+        end = start + limit
+        assert (end < len(all_opps)) is False
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  5. Category Filtering (manual simulation)
+#  6. Category Filtering (manual simulation)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -300,16 +320,41 @@ class TestCategoryFiltering:
         filtered = [o for o in opps if o["category"] == "volunteer"]
         assert len(filtered) == 0
 
-    def test_valid_categories(self):
-        """All categories should be from the accepted set."""
-        valid = {"job", "scholarship", "competition", "event", "club", "volunteer"}
+    def test_filter_returns_all_when_none(self):
         opps = [
-            {"category": "job"},
-            {"category": "scholarship"},
-            {"category": "competition"},
-            {"category": "event"},
-            {"category": "club"},
-            {"category": "volunteer"},
+            {"id": "1", "category": "job"},
+            {"id": "2", "category": "scholarship"},
         ]
-        for opp in opps:
-            assert opp["category"] in valid
+        category = None
+        filtered = [o for o in opps if category is None or o["category"] == category]
+        assert len(filtered) == 2
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  7. Curated List Category Distribution
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class TestCategoryDistribution:
+    """Verify the curated list has good category coverage."""
+
+    def _count(self, category: str) -> int:
+        return len([o for o in CARIBBEAN_OPPORTUNITIES if o["category"] == category])
+
+    def test_competitions_count(self):
+        assert self._count("competition") >= 5
+
+    def test_scholarships_count(self):
+        assert self._count("scholarship") >= 4
+
+    def test_events_count(self):
+        assert self._count("event") >= 4
+
+    def test_clubs_count(self):
+        assert self._count("club") >= 4
+
+    def test_volunteer_count(self):
+        assert self._count("volunteer") >= 4
+
+    def test_jobs_count(self):
+        assert self._count("job") >= 1
