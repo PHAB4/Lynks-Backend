@@ -18,6 +18,14 @@
 - `image_url` — thumbnail/logo (frontend shows placeholder when null)
 - `experience_required` — typo fixed (was `expereince_required`)
 
+### Currency Detection (Priority-Based)
+- `_CURRENCY_TABLE` — lookup table with 22+ ISO 4217 currencies (Caribbean priority 1, world major priority 2, symbols priority 3)
+- `_detect_currency(text, source_name)` — 4-layer detection: explicit codes → unambiguous symbols → source context → bare `$` fallback
+- `_SOURCE_CURRENCY_MAP` — exact source-to-currency mapping (e.g. `rss_jamaica_gleaner` → JMD)
+- `_SOURCE_CURRENCY_KEYWORDS` — keyword matching (e.g. "trinidad" in source name → TTD)
+- `_parse_salary(pay_text, source_name)` — updated signature to accept source context
+- **Bug fix:** JMD vs USD ordering — `jmd` now checked before `$` since Jamaica uses the `$` symbol
+
 ### Sources Implemented
 
 | Source | Status | `source_name` | Notes |
