@@ -306,6 +306,57 @@ class TestDetectCurrency:
         table_codes = {code for _, code, _ in _CURRENCY_TABLE}
         assert major_codes.issubset(table_codes)
 
+    # ── Source-context-aware tests ──────────────────────────────────────────
+
+    def test_jamaican_source_bare_dollar(self):
+        """Bare $ from a Jamaican source → JMD."""
+        assert _detect_currency("$500,000", source_name="rss_jamaica_gleaner") == "JMD"
+        assert _detect_currency("$500,000", source_name="facebook_JamaicaTechCommunity") == "JMD"
+
+    def test_trinidadian_source_bare_dollar(self):
+        """Bare $ from a Trinidadian source → TTD (via keyword match)."""
+        assert _detect_currency("$80,000", source_name="facebook_TrinidadJobs") == "TTD"
+        assert _detect_currency("$80,000", source_name="instagram_TriniTech") == "TTD"
+
+    def test_barbadian_source_bare_dollar(self):
+        """Bare $ from a Barbadian source → BBD (via keyword match)."""
+        assert _detect_currency("$75,000", source_name="facebook_BarbadosJobs") == "BBD"
+
+    def test_explicit_code_overrides_source(self):
+        """Explicit currency code in text should override source context."""
+        assert _detect_currency("TTD $50,000", source_name="rss_jamaica_gleaner") == "TTD"
+        assert _detect_currency("EUR 50,000", source_name="rss_jamaica_gleaner") == "EUR"
+
+    def test_no_source_bare_dollar_usd(self):
+        """Bare $ with no source context → USD."""
+        assert _detect_currency("$50,000") == "USD"
+        assert _detect_currency("$50,000", source_name=None) == "USD"
+
+    def test_unknown_source_bare_dollar_usd(self):
+        """Bare $ from an unknown source → USD."""
+        assert _detect_currency("$50,000", source_name="devpost_api") == "USD"
+
+    def test_uwi_source_bare_dollar(self):
+        """UWI Mona is in Jamaica → JMD."""
+        assert _detect_currency("$500,000", source_name="rss_uwi_news") == "JMD"
+
+    def test_loop_caribbean_usd(self):
+        """Loop Caribbean covers multiple countries → USD as safe default."""
+        assert _detect_currency("$50,000", source_name="rss_loop_caribbean") == "USD"
+
+    def test_parse_salary_with_source_context(self):
+        """_parse_salary passes source_name through to _detect_currency."""
+        low, high, currency = _parse_salary("$500,000/year", source_name="rss_jamaica_gleaner")
+        assert low == 500000
+        assert high == 500000
+        assert currency == "JMD"
+
+    def test_parse_salary_without_source(self):
+        """_parse_salary without source_name defaults bare $ to USD."""
+        low, high, currency = _parse_salary("$50,000/year")
+        assert low == 50000
+        assert currency == "USD"
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  3. Keyword Matching
