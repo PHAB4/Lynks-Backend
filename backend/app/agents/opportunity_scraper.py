@@ -133,37 +133,90 @@ _CURRENCY_TABLE: list[tuple[int, str, list[str]]] = [
 _ALL_SYMBOLS = r"\$€£¥₹₩฿"
 
 
-def _detect_currency(text: str) -> str | None:
+# Source-to-currency mapping. When a source only has a bare "$", we use
+# this to infer the correct local currency instead of defaulting to USD.
+# Keys match source_name values from RSS_FEEDS, social media configs, etc.
+_SOURCE_CURRENCY_MAP: dict[str, str] = {
+    # RSS feeds
+    "rss_jamaica_gleaner": "JMD",
+    "rss_loop_caribbean": "USD",       # Loop covers multiple countries — USD is safest
+    "rss_uwi_news": "JMD",            # UWI Mona campus is in Jamaica
+    # Facebook pages
+    "facebook_JamaicaTechCommunity": "JMD",
+    "facebook_CaribbeanTechHub": "USD",
+    # Instagram accounts
+    "instagram_techjamaica": "JMD",
+    "instagram_caribbeantech": "USD",
+    # Social media pages that might get added later — pattern matching below
+}
+
+# If the source name contains these keywords, infer the currency
+_SOURCE_CURRENCY_KEYWORDS: list[tuple[str, str]] = [
+    ("jamaica", "JMD"),
+    ("jamaican", "JMD"),
+    ("trinidad", "TTD"),
+    ("trini", "TTD"),
+    ("barbados", "BBD"),
+    ("barbadian", "BBD"),
+    ("bahamas", "BSD"),
+    ("cayman", "KYD"),
+    ("guyana", "GYD"),
+    ("suriname", "SRD"),
+    ("dominican", "DOP"),
+    ("haiti", "HTG"),
+]
+
+
+def _detect_currency(text: str, source_name: str | None = None) -> str | None:
     """Detect currency from text using a priority-based lookup.
 
-    Specific 3-letter codes (JMD, TTD, etc.) are checked before ambiguous
-    symbols ($, €, etc.) to avoid misidentification.
+    Detection priority:
+    1. Explicit 3-letter ISO codes in the text (JMD, TTD, EUR, etc.)
+    2. Unambiguous symbols in the text (€, £, ¥, etc.)
+    3. Source context — if the source is Jamaican and text has "$", assume JMD
+    4. Bare "$" with no other context → USD
+
     Returns ISO 4217 code or None.
     """
     lower = text.lower()
 
+    # Step 1: Check explicit currency codes and unambiguous symbols
     for priority, code, triggers in sorted(_CURRENCY_TABLE):
         for trigger in triggers:
             if trigger in lower:
                 return code
 
-    # Bare $ without any other currency signal → USD
+    # Step 2: Bare $ — use source context if available
     if "$" in text:
+        if source_name:
+            # Exact match first (e.g. "rss_jamaica_gleaner" → "JMD")
+            if source_name in _SOURCE_CURRENCY_MAP:
+                return _SOURCE_CURRENCY_MAP[source_name]
+
+            # Keyword match (e.g. "facebook_JamaicaJobs" → "JMD")
+            source_lower = source_name.lower()
+            for keyword, currency in _SOURCE_CURRENCY_KEYWORDS:
+                if keyword in source_lower:
+                    return currency
+
+        # No source context or no match → default to USD
         return "USD"
 
     return None
 
 
-def _parse_salary(pay_text: str) -> tuple[float | None, float | None, str | None]:
+def _parse_salary(pay_text: str, source_name: str | None = None) -> tuple[float | None, float | None, str | None]:
     """Attempt to extract structured salary from pay text.
 
     Handles any ISO 4217 currency — Caribbean, major world, and symbol-based.
+    If source_name is provided, bare "$" defaults to the source's local currency
+    instead of always defaulting to USD.
     Returns (salary_min, salary_max, currency) or (None, None, None).
     """
     if not pay_text:
         return None, None, None
 
-    currency = _detect_currency(pay_text)
+    currency = _detect_currency(pay_text, source_name=source_name)
 
     # Try to find numeric ranges like "$50,000 - $75,000" or "50000-75000"
     range_match = re.search(
@@ -1010,7 +1063,7 @@ def scrape_curated_list() -> list[Opportunity]:
     now = _now_iso()
 
     for opp_data in CARIBBEAN_OPPORTUNITIES:
-        salary_min, salary_max, salary_currency = _parse_salary(opp_data.get("pay", ""))
+        salary_min, salary_max, salary_currency = _parse_salary(opp_data.get("pay", ""), source_name="curated")
 
         opp = Opportunity(
             id=str(uuid.uuid4()),
