@@ -15,6 +15,7 @@ users ──< resumes
 users ──< conversations ──< messages
 users ──< user_memories
 users ──< saved_opportunities
+users ──< notifications
 opportunities (standalone)
 ```
 
@@ -205,11 +206,40 @@ Junction table for user-saved/bookmarked opportunities.
 **RLS Policies:**
 - Users can insert their own saves
 
+---
+
+## notifications
+
+In-app notification center. The system creates notifications for new matching opportunities, task milestones, badges, and general reminders. The frontend polls `GET /notifications/unread/count` for a badge indicator.
+
+| Field | Type | Nullable | Default | Notes |
+|-------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_id | uuid | NO | gen_random_uuid() | FK → users.id, ON DELETE CASCADE |
+| title | text | NO | null | Notification headline (e.g. "New opportunity: JS hackathon") |
+| body | text | YES | null | Notification detail text |
+| type | text | NO | 'reminder' | One of: opportunity, task, badge, reminder |
+| link | jsonb | YES | null | Deep link data: `{"type": "opportunity", "id": "abc123"}` or `{"type": "task", "id": "uuid"}` |
+| is_read | boolean | NO | false | Whether the user has seen it |
+| created_at | timestamptz | NO | now() | When created |
+
+**RLS Policies:**
+- Users can read own notifications
+- Users can update own notifications (mark as read)
+
+**Notification Types:**
+- `opportunity` — new matching opportunity found by the scraper
+- `task` — task milestone or reminder
+- `badge` — badge earned
+- `reminder` — general system reminder
+
 ```
 users ──< roadmaps ──< steps ──< tasks ──< evidence
 users ──< resumes
 users ──< conversations ──< messages
 users ──< user_memories
+users ──< saved_opportunities
+users ──< notifications
 opportunities (standalone)
 ```
 
