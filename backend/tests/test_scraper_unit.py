@@ -30,6 +30,8 @@ import pytest
 from app.agents.opportunity_scraper import (
     Opportunity,
     _parse_salary,
+    _detect_currency,
+    _CURRENCY_TABLE,
     _matches_opportunity_keywords,
     _parse_rss_date,
     _now_iso,
@@ -207,6 +209,102 @@ class TestParseSalary:
         assert low == 50.50
         assert high == 75.25
         assert currency == "USD"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  2b. Currency Detection (priority-based)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class TestDetectCurrency:
+    """Tests for _detect_currency() — priority-based currency lookup."""
+
+    def test_caribbean_currencies(self):
+        """All Caribbean currencies should be detected."""
+        assert _detect_currency("JMD 500,000") == "JMD"
+        assert _detect_currency("TTD $80,000") == "TTD"
+        assert _detect_currency("BBD $50,000") == "BBD"
+        assert _detect_currency("KYD $60,000") == "KYD"
+        assert _detect_currency("XCD $40,000") == "XCD"
+        assert _detect_currency("GYD $200,000") == "GYD"
+        assert _detect_currency("SRD $100,000") == "SRD"
+
+    def test_jmd_before_usd(self):
+        """JMD should win over USD when both are present."""
+        assert _detect_currency("JMD $800,000") == "JMD"
+
+    def test_ttd_before_usd(self):
+        """TTD should win over USD when both are present."""
+        assert _detect_currency("TTD $50,000") == "TTD"
+
+    def test_bbd_before_usd(self):
+        """BBD should win over USD when both are present."""
+        assert _detect_currency("BBD $75,000") == "BBD"
+
+    def test_bare_dollar_usd(self):
+        """Bare $ without other signals → USD."""
+        assert _detect_currency("$50,000") == "USD"
+
+    def test_usd_text(self):
+        assert _detect_currency("USD 70,000") == "USD"
+
+    def test_eur_symbol(self):
+        assert _detect_currency("€50,000") == "EUR"
+
+    def test_eur_text(self):
+        assert _detect_currency("EUR 50,000") == "EUR"
+
+    def test_gbp_symbol(self):
+        assert _detect_currency("£40,000") == "GBP"
+
+    def test_gbp_text(self):
+        assert _detect_currency("GBP 40,000") == "GBP"
+
+    def test_cad(self):
+        assert _detect_currency("CAD 80,000") == "CAD"
+        assert _detect_currency("Canadian dollars") == "CAD"
+
+    def test_aud(self):
+        assert _detect_currency("AUD 90,000") == "AUD"
+        assert _detect_currency("Australian dollars") == "AUD"
+
+    def test_jpy(self):
+        assert _detect_currency("¥5,000,000") == "JPY"
+        assert _detect_currency("JPY 5000000") == "JPY"
+
+    def test_inr(self):
+        assert _detect_currency("₹500,000") == "INR"
+        assert _detect_currency("INR 500000") == "INR"
+
+    def test_brl(self):
+        assert _detect_currency("BRL 100,000") == "BRL"
+        assert _detect_currency("Brazilian real") == "BRL"
+
+    def test_mxn(self):
+        assert _detect_currency("MXN 200,000") == "MXN"
+        assert _detect_currency("Mexican peso") == "MXN"
+
+    def test_no_currency(self):
+        """Text with no currency signals → None."""
+        assert _detect_currency("Competitive salary") is None
+        assert _detect_currency("Free to enter") is None
+        assert _detect_currency("") is None
+
+    def test_case_insensitive(self):
+        assert _detect_currency("jmd 500,000") == "JMD"
+        assert _detect_currency("usd 70,000") == "USD"
+
+    def test_currency_table_has_caribbean(self):
+        """The currency table should include at least 8 Caribbean currencies."""
+        caribbean_codes = {"JMD", "TTD", "BBD", "BSD", "KYD", "XCD", "GYD", "SRD", "HTG", "DOP"}
+        table_codes = {code for _, code, _ in _CURRENCY_TABLE}
+        assert caribbean_codes.issubset(table_codes)
+
+    def test_currency_table_has_major(self):
+        """The currency table should include major world currencies."""
+        major_codes = {"USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CNY", "INR"}
+        table_codes = {code for _, code, _ in _CURRENCY_TABLE}
+        assert major_codes.issubset(table_codes)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
