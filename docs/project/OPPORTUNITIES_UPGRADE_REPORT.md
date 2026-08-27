@@ -3,7 +3,7 @@
 **Date:** August 27, 2026
 **Author:** Jordan (project lead) + AI agent
 **Branch:** `feature/opportunities-scraper-upgrade`
-**Status:** Complete — 26/26 tests passing, deployed on Railway
+**Status:** Complete — 160 tests passing (134 unit + 26 integration), deployed on Railway
 
 ---
 
@@ -53,7 +53,9 @@ We upgraded the Lynks opportunities system from a basic curated list to a multi-
 - Updated LLM extraction prompt for structured salary, description, posted_at
 - Source name tracking across all sources
 - Social media scraping (Facebook, Instagram) — stretch goal
-- Curated list expanded to 17 Caribbean opportunities
+- Curated list expanded to 30+ Caribbean opportunities
+- **Priority-based currency detection** — 22+ ISO 4217 currencies via `_CURRENCY_TABLE`
+- **Source-context-aware currency** — bare `$` from Jamaican source → JMD, Trinidadian → TTD
 
 **Sources in priority order:**
 1. RSS feeds (fast, reliable)
@@ -96,7 +98,15 @@ We upgraded the Lynks opportunities system from a basic curated list to a multi-
 
 ### 2.6 Tests
 
-26 tests covering all new endpoints:
+**160 tests total — all passing:**
+
+| Test file | Count | What it covers |
+|-----------|-------|---------------|
+| `test_opportunities.py` | 26 | Integration tests — full HTTP cycle against live server |
+| `test_scraper_unit.py` | 70+ | Salary parsing (11 currencies), keyword matching, caching, curated list validation, source-context currency detection |
+| `test_scout_unit.py` | 64 | Timeframe cutoff, posted_at parsing, curated list (fields, categories, distribution), sorting, pagination, filtering |
+
+26 integration tests covering:
 - Basic list, response shape validation
 - Category filter (valid + invalid)
 - Timeframe filter (valid + invalid)
@@ -109,6 +119,22 @@ We upgraded the Lynks opportunities system from a basic curated list to a multi-
 - Unauthorized access
 - Invalid parameters (sort, page, limit)
 - Refresh endpoint
+
+70+ scraper unit tests covering:
+- Salary parsing: USD/JMD/EUR/GBP ranges, decimals, no salary, JMD range bug fix
+- Currency detection: 22+ currencies, Caribbean priority, source-context-aware (Jamaican/Trinidadian/Barbadian sources), explicit code overrides source
+- Keyword matching: hiring, scholarship, workshop, case insensitive
+- RSS date parsing: RFC2822, ISO, garbage, None
+- Caching: set/get, TTL expiry, overwrite
+- Curated list: required fields, categories, unique IDs, no duplicates, Caribbean locations
+
+64 scout unit tests covering:
+- Timeframe cutoff: day/week/month/quarter/all/invalid
+- Posted_at parsing: ISO, Z suffix, None, garbage
+- Curated list: required fields, valid categories, no duplicates, salary fields, category distribution, Caribbean locations
+- Sorting: recent, salary, None handling
+- Pagination: page 1/2/last, beyond end, has_more
+- Category filtering: filter, no match, None handling
 
 ---
 
@@ -145,6 +171,21 @@ We upgraded the Lynks opportunities system from a basic curated list to a multi-
 **Lesson:** Tests should be written against the actual API contract, not assumptions. The test-fixing process actually improved both the tests and the API.
 
 ---
+### 3.7 Currency detection order bug (JMD vs USD)
+**Problem:** `test_jmd_range` failed — `_parse_salary("JMD $800,000 - $1,200,000")` returned `currency="USD"` because the `$` check came before the `jmd` check in the if/elif chain. Since Jamaica uses the `$` symbol, any text with both "JMD" and "$" would incorrectly resolve to USD.
+**Fix:** Reordered the if/elif chain — `jmd` is now checked before `$`.
+**Lesson:** When multiple currencies share a symbol (JMD, TTD, BBD all use `$`), the specific currency name must always be checked before the ambiguous symbol.
+
+### 3.8 Hardcoded currency list not extensible
+**Problem:** Jordan asked why only 4 currencies were supported, and whether the scraper could handle any currency. The hardcoded if/elif chain required code changes for each new currency.
+**Fix:** Replaced with a priority-based lookup table (`_CURRENCY_TABLE`) — a list of `(priority, code, triggers)` tuples. Caribbean currencies are priority 1 (checked first), major world currencies are priority 2, ambiguous symbols are priority 3. Adding a new currency = one line.
+**Lesson:** Data-driven design (lookup tables) beats code-driven design (if/elif chains) for extensible configurations.
+
+### 3.9 Source context for ambiguous currencies
+**Problem:** Jordan identified that a Trinidadian Instagram page using bare `$` should default to TTD, not USD. The currency detector had no awareness of which source the opportunity came from.
+**Fix:** Added source-context-aware detection: `_detect_currency(text, source_name)` checks `_SOURCE_CURRENCY_MAP` (exact matches like `rss_jamaica_gleaner` → JMD) and `_SOURCE_CURRENCY_KEYWORDS` (keyword matches like "trinidad" → TTD) before falling back to USD.
+**Lesson:** Context is everything in data parsing. A bare `$` means different things in different countries — use all available context before defaulting.
+
 
 ## 4. Changes That Affect Frontend
 
@@ -227,39 +268,51 @@ GET /opportunities?category=job&timeframe=week&sort=recent&page=1&limit=20
 
 | Document | Changes |
 |----------|---------|
-| `docs/reference/SCHEMA.md` | Added opportunities columns, saved_opportunities table, notifications table |
-| `docs/reference/API_CONTRACT.md` | Added 11 new endpoints (6 opportunity + 5 notification) |
-| `docs/reference/TECH_STACK.md` | Added httpx, python-multipart, scraper sources table |
-| `docs/project/PRD.md` | Updated Section 4.4 (Opportunities), added notifications, updated agents table |
+| `docs/reference/SCHEMA.md` | Added opportunities columns, saved_opportunities table, notifications table, updated salary_currency (22+ currencies, source-context-aware) |
+| `docs/reference/API_CONTRACT.md` | Added 11 new endpoints, updated salary_currency response description |
+| `docs/reference/TECH_STACK.md` | Added httpx, python-multipart, scraper sources, full currency detection system section |
+| `docs/project/PRD.md` | Updated Section 4.4 (Opportunities), added currency detection to opportunity card fields |
 | `docs/project/TEAMMATE_HANDOFF.md` | Updated status, added new endpoints |
-| `FRONTEND_HANDOFF.md` | Complete rewrite for frontend team |
-| `docs/plans/SCRAPER_PLAN.md` | Updated with implemented features and backlog |
-| `docs/project/OPPORTUNITIES_UPGRADE_REPORT.md` | This document |
+| `FRONTEND_HANDOFF.md` | Complete rewrite for frontend team, updated salary_currency description |
+| `docs/plans/SCRAPER_PLAN.md` | Added currency detection section, updated with implemented features and backlog |
+| `docs/project/OPPORTUNITIES_UPGRADE_REPORT.md` | This document — updated with currency detection, 160 tests, 3 new challenges |
+| `backend/docs/PROGRESS_RECORD.md` | Added Aug 27 session log (scraper upgrade + currency detection), updated What's Next |
 
 ---
 
 ## 6. What Needs to Happen Next
 
 ### Before merge to main
-1. ✅ Migration SQL run in Supabase
-2. ✅ All tests passing (26/26)
-3. ✅ Railway deployed and healthy
-4. Teammate code review
-5. Merge to main
+1. ✅ All 160 tests passing (134 unit + 26 integration)
+2. ✅ Currency detection upgraded (22+ currencies, source-context-aware)
+3. ✅ All documentation updated
+4. ✅ Railway deployed and healthy
+5. Teammate code review
+6. Merge to main
 
 ### Frontend work
 1. Build the opportunities page with tabbed UI (For You / Browse All)
 2. Implement filtering (category, timeframe), sorting, pagination
 3. Add save/unsave buttons with optimistic UI
-4. Show salary data for jobs (structured format)
+4. Show salary data for jobs (structured format) — currency auto-detected
 5. Handle `null` image_url with placeholders
 6. Add "Go to Source" button with external link
 7. Poll `/opportunities/new-count` for notification badge
 8. Poll `/notifications/unread/count` for bell badge
 
+### Edge case & security tests (before or after merge)
+- Input validation (SQL injection, XSS in query params)
+- Auth & access control (unauthenticated access, invalid tokens)
+- Scraper failure modes (feed down, bad XML, timeouts)
+- Currency edge cases (zero amounts, mixed currencies, Unicode)
+- Pagination edge cases (page 0, negative, overflow)
+
 ### Post-competition
-- Cursor-based pagination (better for real-time data)
+- Cursor-based pagination
 - Web push notifications (replaces polling)
 - Social media scraping (Facebook, Instagram)
 - Admin source health dashboard
 - Conversation memory summarization
+- Performance/load testing
+- Deeper security tests (JWT forgery, IDOR, rate limiting)
+- Full code walkthrough (see `.shogo/plans/`)
