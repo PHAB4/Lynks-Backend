@@ -1,9 +1,9 @@
 # Opportunities Scraper Upgrade — Technical Report
 
-**Date:** August 27, 2026
+**Date:** August 28, 2026
 **Author:** Jordan (project lead) + AI agent
-**Branch:** `feature/opportunities-scraper-upgrade`
-**Status:** Complete — 160 tests passing (134 unit + 26 integration), deployed on Railway
+**Branch:** `main` (merged from `feature/opportunities-scraper-upgrade`)
+**Status:** Complete — 160 tests passing (134 unit + 26 integration), CI/CD active, deployed on Railway
 
 ---
 
@@ -264,7 +264,49 @@ GET /opportunities?category=job&timeframe=week&sort=recent&page=1&limit=20
 
 ---
 
-## 5. Documents Updated
+## 5. CI/CD & Code Quality (Added August 28)
+
+After merging to `main`, we set up automated quality gates to prevent regressions:
+
+### Workflows Added
+
+| File | Trigger | Jobs |
+|------|---------|------|
+| `.github/workflows/ci.yml` | Push/PR to `main` | Ruff lint + format, Mypy type check, Pytest (160 tests), pip-audit + Bandit security scan |
+| `.github/workflows/security.yml` | Weekly (Monday 6 AM UTC) | pip-audit dependency audit, gitleaks secret scan |
+| `.github/dependabot.yml` | Daily (pip) / Weekly (Actions) | Auto-creates PRs for dependency updates |
+
+### Code Fixes Applied for CI
+
+| Category | Violations | Files Changed | Resolution |
+|----------|-----------|---------------|------------|
+| BLE001 (bare except) | 24 | 9 files | Replaced `except Exception` with specific types (`httpx.HTTPError`, `ValueError`, etc.) |
+| Ruff format | 3 files | `db_models.py`, `middleware.py`, `memory.py` | Collapsed multi-line expressions, normalized whitespace |
+| Mypy type errors | 18 | 7 files | Added defaults (`config.py`), fixed return types (`postgres.py`), type annotations (`mentor.py`), and targeted `type: ignore` for SDK limitations |
+| Dependency versions | 26 deps | `requirements.txt` | Pinned to secure minimum versions |
+
+### CI Pipeline Overview
+
+```
+Push/PR to main
+  ├── Lint & Type Check (ruff check + ruff format --check + mypy)
+  ├── Tests (pytest with PostgreSQL service container — 160 tests)
+  └── Security Scan (pip-audit + bandit)
+```
+
+### Dependency Management
+
+Dependabot monitors `backend/requirements.txt` and auto-creates PRs when updates are available. Each PR includes:
+- Version bump details
+- Changelog links
+- Compatibility score (percentage of repos that merged without CI failures)
+- Automatic CI run on the PR branch
+
+Safe to merge: patch/minor updates with green CI. Review carefully: major version jumps (e.g., `openai` 1.x → 3.x).
+
+---
+
+## 6. Documents Updated
 
 | Document | Changes |
 |----------|---------|
@@ -280,15 +322,17 @@ GET /opportunities?category=job&timeframe=week&sort=recent&page=1&limit=20
 
 ---
 
-## 6. What Needs to Happen Next
+## 7. What Needs to Happen Next
 
 ### Before merge to main
 1. ✅ All 160 tests passing (134 unit + 26 integration)
 2. ✅ Currency detection upgraded (22+ currencies, source-context-aware)
 3. ✅ All documentation updated
 4. ✅ Railway deployed and healthy
-5. Teammate code review
-6. Merge to main
+5. ✅ CI/CD workflows active (lint, tests, security, Dependabot)
+6. ✅ All lint/format/type errors fixed
+7. Teammate code review
+8. Merge to main
 
 ### Frontend work
 1. Build the opportunities page with tabbed UI (For You / Browse All)
