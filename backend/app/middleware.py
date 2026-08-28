@@ -18,9 +18,9 @@ from starlette.responses import JSONResponse
 
 # Endpoint groups with their limits: (max_requests, window_seconds)
 RATE_LIMITS: dict[str, tuple[int, int]] = {
-    "llm":   (10, 60),   # 10 requests per minute — LLM endpoints are expensive
-    "auth":  (20, 60),   # 20 per minute — auth flows
-    "default": (60, 60), # 60 per minute — everything else
+    "llm": (10, 60),  # 10 requests per minute — LLM endpoints are expensive
+    "auth": (20, 60),  # 20 per minute — auth flows
+    "default": (60, 60),  # 60 per minute — everything else
 }
 
 # Map path prefixes to rate limit groups
@@ -74,6 +74,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 # ── Security Headers ───────────────────────────────────────────────────────
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Adds standard security headers to all responses."""
