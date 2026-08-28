@@ -13,6 +13,9 @@ All tables use **UUID primary keys** and live in the `public` schema. Auth is ha
 users ──< roadmaps ──< steps ──< tasks ──< evidence
 users ──< resumes
 users ──< conversations ──< messages
+users ──< user_memories
+users ──< saved_opportunities
+users ──< notifications
 opportunities (standalone)
 ```
 
@@ -138,12 +141,27 @@ opportunities (standalone)
 | company | text | NO | null | Organization offering it |
 | location | text | NO | null | Country/city |
 | pay | text | YES | null | Cost or stipend info |
+| salary_min | numeric | YES | null | Minimum salary (jobs only) |
+| salary_max | numeric | YES | null | Maximum salary (jobs only) |
+| salary_currency | text | YES | 'JMD' | Currency code — auto-detected from 22+ ISO 4217 currencies (JMD, TTD, BBD, USD, EUR, GBP, CAD, AUD, JPY, CNY, INR, BRL, MXN, etc.). Source-context-aware: bare `$` from a Jamaican source → JMD, from Trinidad → TTD. |
 | age_requirement | text | YES | null | Age range (e.g. "13-18") |
-| expereince_required | text | YES | null | ⚠️ Typo in DB — should be "experience_required" |
-| url | text | NO | null | Link to apply/learn more |
-| fetched_at | timestamptz | NO | now() | When scraped/added |
+| experience_required | text | YES | null | ✅ Typo fixed (was `expereince_required`) |
+| url | text | NO | null | Link to apply/learn more ("Go to source" button) |
+| category | text | NO | 'event' | One of: job, club, competition, scholarship, event, volunteer |
+| description | text | YES | null | 1-2 sentence summary |
+| posted_at | timestamptz | YES | now() | When the opportunity was originally posted |
+| first_seen_at | timestamptz | YES | now() | When we first scraped it (for new-opportunity notifications) |
+| source_name | text | YES | 'curated' | Where it was scraped from (devpost_api, eventbrite_api, rss_*, facebook_*, instagram_*, llm_generated, curated) |
+| image_url | text | YES | null | Thumbnail/logo URL (frontend shows placeholder when null) |
+| fetched_at | timestamptz | NO | now() | When scraped/added (legacy field) |
 
-**Note:** This table does NOT have a `category` column in the database — categories are embedded in the agent's hardcoded data, not in a DB column.
+**Indexes:**
+- `idx_opportunities_posted_at` — for time-based filtering (posted_at DESC)
+- `idx_opportunities_first_seen` — for new-opportunity notifications (first_seen_at DESC)
+- `idx_opportunities_category` — for category tab filtering
+- `idx_opportunities_cat_time` — composite index for category + time sort
+
+**Note:** Run `app/sql/opportunities_upgrade.sql` in Supabase SQL Editor to add new columns and indexes.
 
 ---
 
@@ -172,12 +190,56 @@ Long-term user facts extracted from conversations. Used to give the AI Mentor pe
 ---
 
 ## Updated Entity Relationship
+## saved_opportunities
+
+Junction table for user-saved/bookmarked opportunities.
+
+| Field | Type | Nullable | Default | Notes |
+|-------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_id | uuid | NO | gen_random_uuid() | FK → users.id, ON DELETE CASCADE |
+| opportunity_id | text | NO | gen_random_uuid() | FK → opportunities.id, ON DELETE CASCADE |
+| saved_at | timestamptz | NO | now() | When saved |
+
+**Constraints:** UNIQUE(user_id, opportunity_id) — user can't save the same opportunity twice.
+
+**RLS Policies:**
+- Users can insert their own saves
+
+---
+
+## notifications
+
+In-app notification center. The system creates notifications for new matching opportunities, task milestones, badges, and general reminders. The frontend polls `GET /notifications/unread/count` for a badge indicator.
+
+| Field | Type | Nullable | Default | Notes |
+|-------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_id | uuid | NO | gen_random_uuid() | FK → users.id, ON DELETE CASCADE |
+| title | text | NO | null | Notification headline (e.g. "New opportunity: JS hackathon") |
+| body | text | YES | null | Notification detail text |
+| type | text | NO | 'reminder' | One of: opportunity, task, badge, reminder |
+| link | jsonb | YES | null | Deep link data: `{"type": "opportunity", "id": "abc123"}` or `{"type": "task", "id": "uuid"}` |
+| is_read | boolean | NO | false | Whether the user has seen it |
+| created_at | timestamptz | NO | now() | When created |
+
+**RLS Policies:**
+- Users can read own notifications
+- Users can update own notifications (mark as read)
+
+**Notification Types:**
+- `opportunity` — new matching opportunity found by the scraper
+- `task` — task milestone or reminder
+- `badge` — badge earned
+- `reminder` — general system reminder
 
 ```
 users ──< roadmaps ──< steps ──< tasks ──< evidence
 users ──< resumes
 users ──< conversations ──< messages
 users ──< user_memories
+users ──< saved_opportunities
+users ──< notifications
 opportunities (standalone)
 ```
 
