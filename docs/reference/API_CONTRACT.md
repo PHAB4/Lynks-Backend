@@ -121,20 +121,15 @@ Response 201: (same shape as POST /roadmap/generate)
 
 ### POST /tasks/{task_id}/evidence
 Uploads an evidence file for a task. Uses `multipart/form-data`.
-The file is validated, uploaded to Supabase Storage, and verified by Gemini 2.5 Flash (vision model).
 ```
 Content-Type: multipart/form-data
-Body: file_type=<mime type>&file=<image file>
+Body: file=<image file>
 
 Response 201: {
   "id": "uuid",
-  "task_id": "uuid",
   "file_url": "https://...",
   "file_type": "image/png",
-  "verification_status": "pending | verified | rejected",
-  "verification_reason": "Legitimate Coursera certificate for Python course",
-  "verification_confidence": "high | medium | low",
-  "verified_at": "datetime | null",
+  "verification_status": "pending",
   "uploaded_at": "datetime"
 }
 ```
@@ -154,9 +149,6 @@ Response 200: [
         "file_url": "https://...",
         "file_type": "image/png",
         "verification_status": "pending | verified | rejected",
-        "verification_reason": "Legitimate Coursera certificate",
-        "verification_confidence": "high",
-        "verified_at": "2026-08-28T12:00:00Z",
         "uploaded_at": "datetime"
       }
     ]
@@ -166,270 +158,26 @@ Response 200: [
 
 ---
 
-### GET /evidence/{evidence_id}/verification
-Returns the full verification details for a single piece of evidence.
-```json
-Response 200: {
-  "evidence_id": "uuid",
-  "verification_status": "verified",
-  "verification_reason": "Legitimate Coursera certificate for Python course",
-  "verification_confidence": "high",
-  "verified_at": "2026-08-28T12:00:00Z"
-}
-```
-
-Errors:
-- 404: `evidence_not_found` — evidence doesn't exist
-- 403: `forbidden` — evidence doesn't belong to the user
-
----
-
-### POST /evidence/{evidence_id}/re-verify
-Re-runs AI verification on existing evidence. Useful when an image was wrongly rejected.
-Fetches the file from Supabase Storage and sends it to Gemini Flash again.
-```json
-Response 200: {
-  "id": "uuid",
-  "verification_status": "verified",
-  "verification_reason": "On re-analysis, this is a legitimate AWS certificate",
-  "verification_confidence": "medium",
-  "verified_at": "2026-08-28T12:05:00Z"
-}
-```
-
-Errors:
-- 404: `evidence_not_found`
-- 403: `forbidden`
-- 502: `verification_failed` — Gemini API error during re-verification
-
----
-
 ### GET /opportunities
-Returns Caribbean opportunities with filtering, sorting, and pagination.
-
-**Query Parameters:**
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| category | string | null | Filter by: job, club, competition, scholarship, event, volunteer |
-| timeframe | string | null | Filter by: day, week, month, quarter, all |
-| sort | string | relevance | Sort by: relevance (LLM), recent (posted_at), salary |
-| page | int | 1 | Page number (offset pagination) |
-| limit | int | 20 | Results per page (max 50) |
-| saved_only | bool | false | Only return saved opportunities |
-
+Returns all Caribbean opportunities.
 ```json
-Response 200: {
-  "opportunities": [
-    {
-      "id": "string (md5 hash of title)",
-      "title": "string",
-      "company": "string",
-      "location": "string",
-      "description": "string",
-      "category": "job|club|competition|scholarship|event|volunteer",
-      "pay": "string",
-      "salary_min": "number | null (jobs only)",
-      "salary_max": "number | null (jobs only)",
-      "salary_currency": "JMD (auto-detected from 22+ ISO 4217 currencies, source-context-aware)",
-      "age_requirement": "string | null",
-      "experience_required": "string",
-      "url": "string (Go to source link)",
-      "posted_at": "datetime | null",
-      "first_seen_at": "datetime | null",
-      "source_name": "devpost_api|eventbrite_api|rss_*|facebook_*|instagram_*|llm_generated|curated",
-      "image_url": "string | null (frontend shows placeholder when null)",
-      "is_saved": true | false,
-      "relevance_score": "number | null"
-    }
-  ],
-  "metadata": {
-    "total_available": 42,
-    "returned": 20,
-    "page": 1,
-    "limit": 20,
-    "has_more": true,
-    "available_categories": ["job", "club", "competition", "scholarship", "event", "volunteer"],
-    "filters_applied": {
-      "category": "job",
-      "timeframe": "week",
-      "sort": "relevance"
-    }
+Response 200: [
+  {
+    "id": "string",
+    "title": "string",
+    "company": "string",
+    "location": "string",
+    "pay": "string",
+    "age_requirement": "string | null",
+    "experience_required": "string",
+    "url": "string",
+    "category": "string"
   }
-}
+]
 ```
 
-**Errors:**
-- 400: `invalid_category` — category not in allowed values
-- 400: `invalid_timeframe` — timeframe not in allowed values
-- 400: `invalid_sort` — sort not in allowed values
-- 404: `user_not_found` — user ID doesn't exist
-
----
-
-### GET /opportunities/new-count
-Returns count of new opportunities (first seen in last 24 hours).
-
-Frontend polls this endpoint every few minutes to show a notification badge.
-```json
-Response 200: {
-  "new_count": 5,
-  "new_since": "2026-08-25T00:00:00Z"
-}
-```
-
----
-
-### GET /opportunities/saved
-Lists all saved opportunities for the authenticated user.
-```json
-Response 200: {
-  "saved": [
-    { "... opportunity object with is_saved: true ..." }
-  ],
-  "total": 15
-}
-```
-
----
-
-### POST /opportunities/{opportunity_id}/save
-Saves/bookmarks an opportunity for the authenticated user.
-```json
-Response 201: {
-  "success": true,
-  "saved_at": "2026-08-26T10:00:00Z"
-}
-```
-
-**Errors:**
-- 409: `already_saved` — user already saved this opportunity
-- 501: `table_not_found` — saved_opportunities table not created yet (run migration SQL)
-
----
-
-### DELETE /opportunities/{opportunity_id}/save
-Removes a saved opportunity.
-```json
-Response 200: { "success": true }
-```
-
-**Errors:**
-- 404: `not_found` — this opportunity was not saved
-- 501: `table_not_found` — saved_opportunities table not created yet
-
----
-
-## Notification Endpoints
-
-### GET /notifications
-Lists all notifications for the authenticated user.
-
-**Query Parameters:**
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| type | string | null | Filter by: opportunity, task, badge, reminder |
-| is_read | bool | null | Filter by read status |
-| limit | int | 50 | Results per page (max 100) |
-| offset | int | 0 | Pagination offset |
-
-```json
-Response 200: {
-  "notifications": [
-    {
-      "id": "uuid",
-      "title": "New opportunity: JS Hackathon",
-      "body": "A new opportunity matching your profile has been found.",
-      "type": "opportunity",
-      "link": { "type": "opportunity", "id": "abc123" },
-      "is_read": false,
-      "created_at": "2026-08-26T10:00:00Z"
-    }
-  ],
-  "unread_count": 5
-}
-```
-
----
-
-### GET /notifications/unread/count
-Returns count of unread notifications. Frontend polls this for the bell badge.
-
-```json
-Response 200: {
-  "unread_count": 5
-}
-```
-
----
-
-### GET /notifications/{notification_id}
-Returns a specific notification.
-
-```json
-Response 200: {
-  "id": "uuid",
-  "title": "New opportunity: JS Hackathon",
-  "body": "A new opportunity matching your profile has been found.",
-  "type": "opportunity",
-  "link": { "type": "opportunity", "id": "abc123" },
-  "is_read": false,
-  "created_at": "2026-08-26T10:00:00Z"
-}
-```
-
-**Errors:**
-- 404: `not_found` — notification doesn't exist or doesn't belong to user
-
----
-
-### POST /notifications
-Creates a new notification. For admin/utility use (triggered by the system).
-
-```json
-Request: {
-  "title": "string (required)",
-  "body": "string (optional)",
-  "type": "reminder (default) | opportunity | task | badge",
-  "link": { "type": "opportunity", "id": "abc123" }  // optional
-}
-
-Response 201: {
-  "id": "uuid",
-  "title": "string",
-  "body": "string | null",
-  "type": "string",
-  "link": { ... } | null,
-  "is_read": false,
-  "created_at": "datetime"
-}
-```
-
----
-
-### PATCH /notifications/{notification_id}/read
-Marks a single notification as read.
-
-```json
-Response 200: {
-  "status": "ok",
-  "message": "Notification marked as read"
-}
-```
-
-**Errors:**
-- 404: `not_found` — notification doesn't exist or doesn't belong to user
-
----
-
-### POST /notifications/read-all
-Marks all of the user's notifications as read.
-
-```json
-Response 200: {
-  "status": "ok",
-  "message": "Marked 12 notifications as read"
-}
-```
+### GET /opportunities?category={category}
+Filter by category. Valid values: `scholarship`, `job`, `competition`, `event`, `club`, `volunteer`.
 
 ---
 
