@@ -1,8 +1,8 @@
 # Lynks Backend — Development Progress Record
 
-**Last Updated:** August 27, 2026
+**Last Updated:** August 28, 2026
 **Prepared By:** Jordan (Project Lead) + Shogo AI Agent
-**Branch:** `feature/opportunities-scraper-upgrade`
+**Branch:** `main`
 **Total Tests:** 134 unit tests + 26 integration tests = 160 passing
 
 ---
@@ -363,11 +363,90 @@ Updated existing endpoint:
 
 ## 11. What's Next
 
+### August 28, 2026 — CI/CD Workflows, Lint Fixes, Mypy Type Fixes
+
+| Time (est.) | Activity |
+|---|---|
+| Morning | Created Dependabot config (`.github/dependabot.yml`) for automated dependency updates. |
+| Morning | Created CI workflow (`.github/workflows/ci.yml`) — lint (ruff), tests (pytest + PostgreSQL via service container), security scan (pip-audit + bandit). |
+| Morning | Created security workflow (`.github/workflows/security.yml`) — weekly dependency audit + gitleaks secret scan. |
+| Morning | Updated `requirements.txt` with secure minimum versions (all dependencies bumped to patch-level safe versions). |
+| Morning | First CI run: ruff lint failed — 24 BLE001 violations (bare `except Exception` catches). |
+| Morning | Fixed all BLE001 violations across 9 files: `opportunity_scraper.py`, `scout.py`, `notifications.py`, `common.py`, `mentor.py`, `memory_extractor.py`, `portfolio.py`, `chat.py`, `security.py`. |
+| Morning | Second CI run: ruff format failed — 3 pre-existing files needed formatting (`db_models.py`, `middleware.py`, `memory.py`). |
+| Morning | Fixed formatting, pushed. Third CI run: all passing except mypy type check (18 errors in 7 files). |
+| Morning | Fixed all 18 mypy errors: `config.py` (env var defaults), `postgres.py` (AsyncGenerator return type), `storage.py` (remove() arg type), `notifications.py` + `schemas.py` (link type broadened), `opportunities.py` (rowcount ignore), `mentor.py` (OpenAI SDK type ignores + Message annotation). |
+| Morning | Dependabot created 9 branches for dependency updates. Advised Jordan on safe vs risky merges. |
+
+### What Was Built — CI/CD & Code Quality
+
+#### GitHub Actions Workflows
+
+**`.github/workflows/ci.yml`** — Runs on every push and PR to `main`:
+| Job | What It Does |
+|-----|-------------|
+| **Lint & Type Check** | Installs deps, runs `ruff check` (linting) + `ruff format --check` (formatting) + `mypy` (type checking) |
+| **Tests** | Runs all pytest tests with PostgreSQL service container for integration tests |
+| **Security Scan** | Runs `pip-audit` (dependency vulnerabilities) + `bandit` (security linting) |
+
+**`.github/workflows/security.yml`** — Weekly schedule (Monday 6 AM UTC):
+| Job | What It Does |
+|-----|-------------|
+| **Dependency Audit** | Runs `pip-audit` on full dependency list |
+| **Secret Scan** | Runs `gitleaks` to detect committed secrets |
+| **Notify** | Reports results (extensible for Slack/email notifications) |
+
+#### Dependabot Configuration
+
+**`.github/dependabot.yml`**:
+- Checks `backend/requirements.txt` daily for pip dependency updates
+- Checks `.github/workflows/` weekly for GitHub Actions updates
+- Auto-creates PRs for new versions
+- Configurable `open-pull-requests-limit` to control PR volume
+
+#### Code Quality Fixes
+
+**BLE001 — Bare Exception Catches (24 violations fixed):**
+Replaced generic `except Exception` with specific exception types across 9 files:
+- `opportunity_scraper.py` — `httpx.HTTPError`, `json.JSONDecodeError`, `ValueError`, `KeyError`
+- `scout.py` — `httpx.HTTPError`, `ValueError`
+- `notifications.py` — `httpx.HTTPError`
+- `mentor.py` — `httpx.HTTPError`, `ValueError`
+- `memory_extractor.py` — `httpx.HTTPError`
+- `portfolio.py` — `httpx.HTTPError`, `ValueError`
+- `chat.py` — `httpx.HTTPError`
+- `common.py` — `httpx.HTTPError`
+- `security.py` — `ValueError`
+
+**Mypy Type Errors (18 violations fixed):**
+| File | Error Count | Fix |
+|------|-------------|-----|
+| `config.py` | 5 | Added `=""` defaults to Settings fields (CI lacks env vars) |
+| `postgres.py` | 1 | Return type `AsyncGenerator[AsyncSession, None]` instead of `AsyncSession` |
+| `storage.py` | 1 | Wrapped `file_path` in `[file_path]` — `remove()` expects `list[str]` |
+| `notifications.py` | 1 | Added `# type: ignore[attr-defined]` for `rowcount` (SQLAlchemy typing limitation) |
+| `schemas.py` | 4 | Broadened `link` field to `Optional[str \| dict]` (DB stores JSON dicts) |
+| `opportunities.py` | 1 | Added `# type: ignore[attr-defined]` for `rowcount` |
+| `mentor.py` | 5 | `# type: ignore[call-overload]` on OpenAI SDK calls + explicit `list[Message]` annotation |
+
+**Ruff Format Fixes (3 files):**
+- `db_models.py` — Collapsed multi-line dict definitions, normalized whitespace
+- `middleware.py` — Normalized blank lines and dict alignment
+- `memory.py` — Collapsed multi-line query chains
+
+**Updated `requirements.txt`:**
+- All dependencies pinned to secure minimum versions
+- `pydantic>=2.11.0`, `sqlalchemy>=2.0.40`, `openai>=1.0.0`, `supabase>=2.15.0`, etc.
+
+---
+
 ### Before Merge
 1. ✅ All 160 tests passing
 2. ✅ All documentation updated
-3. Teammate code review
-4. Merge to main
+3. ✅ CI/CD workflows (lint, tests, security, Dependabot)
+4. ✅ All lint/format/type errors fixed
+5. Teammate code review
+6. Merge to main
 
 ### High Priority (Post-Merge)
 1. Frontend dev builds opportunities page UI (FRONTEND_HANDOFF.md has complete guide)
