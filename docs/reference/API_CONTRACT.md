@@ -121,15 +121,20 @@ Response 201: (same shape as POST /roadmap/generate)
 
 ### POST /tasks/{task_id}/evidence
 Uploads an evidence file for a task. Uses `multipart/form-data`.
+The file is validated, uploaded to Supabase Storage, and verified by Gemini 2.5 Flash (vision model).
 ```
 Content-Type: multipart/form-data
-Body: file=<image file>
+Body: file_type=<mime type>&file=<image file>
 
 Response 201: {
   "id": "uuid",
+  "task_id": "uuid",
   "file_url": "https://...",
   "file_type": "image/png",
-  "verification_status": "pending",
+  "verification_status": "pending | verified | rejected",
+  "verification_reason": "Legitimate Coursera certificate for Python course",
+  "verification_confidence": "high | medium | low",
+  "verified_at": "datetime | null",
   "uploaded_at": "datetime"
 }
 ```
@@ -149,12 +154,53 @@ Response 200: [
         "file_url": "https://...",
         "file_type": "image/png",
         "verification_status": "pending | verified | rejected",
+        "verification_reason": "Legitimate Coursera certificate",
+        "verification_confidence": "high",
+        "verified_at": "2026-08-28T12:00:00Z",
         "uploaded_at": "datetime"
       }
     ]
   }
 ]
 ```
+
+---
+
+### GET /evidence/{evidence_id}/verification
+Returns the full verification details for a single piece of evidence.
+```json
+Response 200: {
+  "evidence_id": "uuid",
+  "verification_status": "verified",
+  "verification_reason": "Legitimate Coursera certificate for Python course",
+  "verification_confidence": "high",
+  "verified_at": "2026-08-28T12:00:00Z"
+}
+```
+
+Errors:
+- 404: `evidence_not_found` — evidence doesn't exist
+- 403: `forbidden` — evidence doesn't belong to the user
+
+---
+
+### POST /evidence/{evidence_id}/re-verify
+Re-runs AI verification on existing evidence. Useful when an image was wrongly rejected.
+Fetches the file from Supabase Storage and sends it to Gemini Flash again.
+```json
+Response 200: {
+  "id": "uuid",
+  "verification_status": "verified",
+  "verification_reason": "On re-analysis, this is a legitimate AWS certificate",
+  "verification_confidence": "medium",
+  "verified_at": "2026-08-28T12:05:00Z"
+}
+```
+
+Errors:
+- 404: `evidence_not_found`
+- 403: `forbidden`
+- 502: `verification_failed` — Gemini API error during re-verification
 
 ---
 
