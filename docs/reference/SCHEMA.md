@@ -88,8 +88,11 @@ opportunities (standalone)
 | user_id | uuid | NO | gen_random_uuid() | FK → users.id |
 | file_url | text | NO | null | Supabase Storage URL |
 | file_type | text | NO | null | MIME type (e.g. "image/png") |
-| uploaded_at | timestamptz | NO | now() | When uploaded |
 | verification_status | text | YES | null | pending / verified / rejected |
+| verification_reason | text | YES | null | Explanation of why verified/rejected (e.g. "Legitimate Coursera certificate for Python course") |
+| verification_confidence | text | YES | null | "high", "medium", or "low" — confidence level of the AI verification |
+| verified_at | timestamptz | YES | null | When verification was completed |
+| uploaded_at | timestamptz | NO | now() | When uploaded |
 | created_at | timestamptz | NO | now() | |
 
 ---
