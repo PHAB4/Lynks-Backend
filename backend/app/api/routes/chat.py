@@ -92,20 +92,14 @@ async def list_conversations(
 ):
     """List all conversations for the sidebar — titles, summaries, timestamps, message counts."""
     result = await db.execute(
-        select(Conversation)
-        .where(Conversation.user_id == user_id)
-        .order_by(Conversation.created_at.desc())
-        .limit(50)
+        select(Conversation).where(Conversation.user_id == user_id).order_by(Conversation.created_at.desc()).limit(50)
     )
     conversations = result.scalars().all()
 
     items = []
     for conv in conversations:
         # Get message count
-        count_result = await db.execute(
-            select(sqlfunc.count(Message.id))
-            .where(Message.conversation_id == conv.id)
-        )
+        count_result = await db.execute(select(sqlfunc.count(Message.id)).where(Message.conversation_id == conv.id))
         msg_count = count_result.scalar() or 0
 
         # Generate title from first user message if no summary
@@ -121,13 +115,15 @@ async def list_conversations(
             if first_msg:
                 title = first_msg.content[:60] + ("..." if len(first_msg.content) > 60 else "")
 
-        items.append({
-            "conversation_id": conv.id,
-            "title": title,
-            "summary": conv.summary,
-            "message_count": msg_count,
-            "created_at": conv.created_at,
-        })
+        items.append(
+            {
+                "conversation_id": conv.id,
+                "title": title,
+                "summary": conv.summary,
+                "message_count": msg_count,
+                "created_at": conv.created_at,
+            }
+        )
 
     return {"conversations": items}
 
@@ -147,9 +143,7 @@ async def get_conversation_messages(
         )
 
     result = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at)
+        select(Message).where(Message.conversation_id == conversation_id).order_by(Message.created_at)
     )
     messages = result.scalars().all()
 
