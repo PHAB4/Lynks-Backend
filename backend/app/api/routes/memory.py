@@ -28,10 +28,7 @@ async def list_memories(
 ):
     """List all memories for the current user."""
     result = await db.execute(
-        select(UserMemory)
-        .where(UserMemory.user_id == user_id)
-        .order_by(UserMemory.created_at.desc())
-        .limit(30)
+        select(UserMemory).where(UserMemory.user_id == user_id).order_by(UserMemory.created_at.desc()).limit(30)
     )
     memories = result.scalars().all()
 
