@@ -1,6 +1,6 @@
 # Lynks API Contract
 
-> **Last updated:** August 22, 2026
+> **Last updated:** August 28, 2026
 > **Base URL:** `http://localhost:8000` (local) / `https://lynks-backend-production.up.railway.app` (production)
 > **Auth:** Bearer token in `Authorization` header (Supabase JWT)
 > **Content-Type:** `application/json` (except evidence upload: `multipart/form-data`)
