@@ -1,6 +1,6 @@
 # Lynks — Product Requirement Document
 
-**Last updated:** August 27, 2026
+**Last updated:** August 28, 2026
 
 ## 1. Problem Statement
 
