@@ -71,7 +71,7 @@ def delete_evidence_file(file_url: str) -> bool:
             return False
 
         file_path = parts[1]
-        supabase_admin.storage.from_(BUCKET_NAME).remove(file_path)
+        supabase_admin.storage.from_(BUCKET_NAME).remove([file_path])
         logger.info("Deleted evidence file: %s", file_path)
         return True
     except (StorageException, ValueError, IOError) as e:
