@@ -1,6 +1,6 @@
 # Lynks Tech Stack
 
-> **Last updated:** August 22, 2026
+> **Last updated:** August 28, 2026
 
 ---
 
@@ -45,6 +45,63 @@
 | Database | Supabase Cloud (free tier) |
 | Storage | Supabase Storage (free tier) |
 | Frontend | TBD |
+
+## CI/CD & Code Quality
+
+| Component | Tool | Configuration |
+|-----------|------|---------------|
+| Linter | Ruff | `.github/workflows/ci.yml` — runs on every push/PR to `main` |
+| Formatter | Ruff format | `.github/workflows/ci.yml` — enforces consistent code style |
+| Type checker | Mypy | `.github/workflows/ci.yml` — catches type errors before merge |
+| Test runner | Pytest | `.github/workflows/ci.yml` — runs 160 tests with PostgreSQL service container |
+| Dependency audit | pip-audit | Both `ci.yml` (every push) and `security.yml` (weekly) |
+| Security linter | Bandit | `.github/workflows/ci.yml` — catches common security anti-patterns |
+| Secret scanner | Gitleaks | `.github/workflows/security.yml` — weekly scan for committed secrets |
+| Dependency updates | Dependabot | `.github/dependabot.yml` — auto-creates PRs for new versions |
+
+### CI Pipeline (`ci.yml`)
+
+```
+Push/PR to main
+  ├── Lint & Type Check
+  │   ├── ruff check (linting — BLE001, F, E, W rules)
+  │   ├── ruff format --check (formatting)
+  │   └── mypy --ignore-missing-imports (type checking)
+  ├── Tests
+  │   └── pytest (134 unit + 26 integration tests, PostgreSQL service container)
+  └── Security Scan
+      ├── pip-audit (dependency vulnerabilities)
+      └── bandit (security linting — non-blocking)
+```
+
+### Weekly Security Pipeline (`security.yml`)
+
+```
+Monday 6 AM UTC (schedule)
+  ├── Dependency Audit
+  │   └── pip-audit on full dependency list
+  ├── Secret Scan
+  │   └── gitleaks detect (scans for committed secrets)
+  └── Notify (extensible)
+```
+
+### Linting Rules
+
+Ruff is configured in `backend/ruff.toml` with focused rules:
+- **F** — Pyflakes (unused imports, undefined names)
+- **E** — pycodestyle errors (indentation, whitespace)
+- **W** — pycodestyle warnings
+- **BLE001** — Blind exception catching (replaced 24 bare `except Exception` with specific types)
+- **I** — Import sorting
+- **DTZ** — DateTime timezone awareness
+- **C4** — Comprehension suggestions
+
+### Dependabot
+
+- Checks `backend/requirements.txt` **daily** for pip dependency updates
+- Checks `.github/workflows/` **weekly** for GitHub Actions updates
+- Auto-creates PRs with changelog links and compatibility scores
+- Can be limited via `open-pull-requests-limit` in `.github/dependabot.yml`
 
 ## AI / LLM
 
