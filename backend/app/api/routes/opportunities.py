@@ -258,7 +258,7 @@ async def unsave_opportunity(
         )
         await db.commit()
 
-        if result.rowcount == 0:
+        if result.rowcount == 0:  # type: ignore[attr-defined]
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={
