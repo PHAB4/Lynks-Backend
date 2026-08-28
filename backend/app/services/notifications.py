@@ -2,7 +2,7 @@
 Notification service — handles all notification operations.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,7 +50,7 @@ async def get_unread_count(db: AsyncSession, user_id: str) -> int:
     result = await db.execute(
         select(func.count(Notification.id)).where(
             Notification.user_id == user_id,
-            Notification.is_read == False,
+            ~Notification.is_read,
         )
     )
     return result.scalar() or 0
@@ -101,7 +101,7 @@ async def mark_all_as_read(db: AsyncSession, user_id: str) -> int:
         update(Notification)
         .where(
             Notification.user_id == user_id,
-            Notification.is_read == False,
+            ~Notification.is_read,
         )
         .values(is_read=True)
     )
@@ -120,8 +120,7 @@ async def create_opportunity_notification(
     opportunity_id: str,
 ) -> Notification | None:
     """Create notification for a new matching opportunity."""
-    # Check if we already notified about this in the last 24h
-    yesterday = datetime.utcnow() - timedelta(hours=24)
+    yesterday = datetime.now(tz=timezone.utc) - timedelta(hours=24)
     result = await db.execute(
         select(Notification).where(
             Notification.user_id == user_id,
@@ -131,7 +130,6 @@ async def create_opportunity_notification(
     )
     existing = result.scalars().all()
     
-    # Simple dedup: skip if similar title already notified recently
     for n in existing:
         if opportunity_title.lower() in (n.title or "").lower():
             return None
