@@ -51,7 +51,7 @@ class Opportunity:
     experience_required: str
     url: str
     category: str  # job, club, competition, scholarship, event, volunteer
-    source: str    # local_db, llm_generated, devpost_api, etc.
+    source: str  # local_db, llm_generated, devpost_api, etc.
     # New fields
     description: str = ""
     salary_min: float | None = None
@@ -611,6 +611,7 @@ async def get_saved_opportunity_ids(db: AsyncSession, user_id: str) -> set[str]:
     """Get the set of opportunity IDs that a user has saved."""
     try:
         from sqlalchemy import text
+
         result = await db.execute(
             text("SELECT opportunity_id FROM saved_opportunities WHERE user_id = :uid"),
             {"uid": user_id},
@@ -702,7 +703,10 @@ async def discover_opportunities(
 
     # Apply sorting
     if sort == "recent":
-        pool.sort(key=lambda o: _parse_posted_at(o.get("posted_at")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        pool.sort(
+            key=lambda o: _parse_posted_at(o.get("posted_at")) or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
     elif sort == "salary":
         pool.sort(key=lambda o: o.get("salary_max") or 0, reverse=True)
     else:
@@ -728,27 +732,29 @@ async def discover_opportunities(
     results = []
     for opp in paginated:
         opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
-        results.append({
-            "id": opp_id,
-            "title": opp.get("title", "Unknown"),
-            "company": opp.get("company", "Unknown"),
-            "location": opp.get("location", "Caribbean"),
-            "pay": opp.get("pay", "Varies"),
-            "salary_min": opp.get("salary_min"),
-            "salary_max": opp.get("salary_max"),
-            "salary_currency": opp.get("salary_currency"),
-            "age_requirement": opp.get("age_requirement"),
-            "experience_required": opp.get("experience_required", "None"),
-            "url": opp.get("url", ""),
-            "category": opp.get("category", "event"),
-            "description": opp.get("description", ""),
-            "posted_at": opp.get("posted_at"),
-            "first_seen_at": opp.get("first_seen_at"),
-            "source_name": opp.get("source_name", "curated"),
-            "image_url": opp.get("image_url"),
-            "is_saved": opp_id in saved_ids,
-            "relevance_score": opp.get("relevance_score"),
-        })
+        results.append(
+            {
+                "id": opp_id,
+                "title": opp.get("title", "Unknown"),
+                "company": opp.get("company", "Unknown"),
+                "location": opp.get("location", "Caribbean"),
+                "pay": opp.get("pay", "Varies"),
+                "salary_min": opp.get("salary_min"),
+                "salary_max": opp.get("salary_max"),
+                "salary_currency": opp.get("salary_currency"),
+                "age_requirement": opp.get("age_requirement"),
+                "experience_required": opp.get("experience_required", "None"),
+                "url": opp.get("url", ""),
+                "category": opp.get("category", "event"),
+                "description": opp.get("description", ""),
+                "posted_at": opp.get("posted_at"),
+                "first_seen_at": opp.get("first_seen_at"),
+                "source_name": opp.get("source_name", "curated"),
+                "image_url": opp.get("image_url"),
+                "is_saved": opp_id in saved_ids,
+                "relevance_score": opp.get("relevance_score"),
+            }
+        )
 
     available_categories = await get_available_categories(db)
 
