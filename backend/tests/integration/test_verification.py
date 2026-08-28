@@ -32,7 +32,7 @@ load_dotenv()
 #  CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
 
-BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BACKEND_URL", "https://lynks-backend-production.up.railway.app")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
