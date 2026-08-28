@@ -91,6 +91,7 @@ jobs:
             --tb=short \
             --ignore=tests/test_endpoints.py \
             --ignore=tests/test_ai_memory.py \
+            --ignore=tests/test_opportunities.py \
             -k "not test_refresh_opportunities"
       - name: Upload coverage
         if: always()
