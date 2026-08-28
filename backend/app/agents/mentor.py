@@ -102,19 +102,16 @@ async def _load_user_context(
             interests_str = ", ".join(str(i) for i in user.interests)
 
     sections.append(f"""## User Profile
-- Name: {user.name or 'Not set'}
-- Age: {user.age or 'Not set'}
-- Country: {user.country or 'Not set'}
-- Education: {user.education_level or 'Not set'}
-- Career path: {user.career_path or 'Not set'}
+- Name: {user.name or "Not set"}
+- Age: {user.age or "Not set"}
+- Country: {user.country or "Not set"}
+- Education: {user.education_level or "Not set"}
+- Career path: {user.career_path or "Not set"}
 - Interests: {interests_str}""")
 
     # ── 2. Long-term memories (~300 tokens) ────────────────────────────
     mem_result = await db.execute(
-        select(UserMemory)
-        .where(UserMemory.user_id == user_id)
-        .order_by(UserMemory.created_at.desc())
-        .limit(20)
+        select(UserMemory).where(UserMemory.user_id == user_id).order_by(UserMemory.created_at.desc()).limit(20)
     )
     memories = mem_result.scalars().all()
 
@@ -128,7 +125,7 @@ async def _load_user_context(
     result = await db.execute(
         select(Roadmap)
         .options(selectinload(Roadmap.steps).selectinload(Step.tasks))
-        .where(Roadmap.user_id == user_id, Roadmap.is_active == True)
+        .where(Roadmap.user_id == user_id, Roadmap.is_active)
     )
     roadmap = result.scalar_one_or_none()
 
@@ -145,9 +142,7 @@ async def _load_user_context(
             total_tasks += total_in_step
 
             step_status = "✅ DONE" if completed_in_step == total_in_step and total_in_step > 0 else "🔄 IN PROGRESS"
-            roadmap_lines.append(
-                f"\n### Step {step.order}: {step.title} [{step_status}]"
-            )
+            roadmap_lines.append(f"\n### Step {step.order}: {step.title} [{step_status}]")
 
             for t in step_tasks:
                 task_icon = "✅" if t.status == "complete" else "⬜"
@@ -208,10 +203,7 @@ async def _load_previous_conversations(
     conversations = conv_result.scalars().all()
 
     # Filter out the current conversation
-    other_convs = [
-        c for c in conversations
-        if c.id != current_conversation_id
-    ][:limit]
+    other_convs = [c for c in conversations if c.id != current_conversation_id][:limit]
 
     if not other_convs:
         return ""
@@ -256,10 +248,7 @@ def _load_system_prompt() -> str:
     if prompt_file.exists():
         return prompt_file.read_text(encoding="utf-8")
     logger.warning("Prompt file not found at %s — using fallback", prompt_file)
-    return (
-        "You are the Lynks Mentor — a warm, encouraging career guide "
-        "for young people in the Caribbean."
-    )
+    return "You are the Lynks Mentor — a warm, encouraging career guide for young people in the Caribbean."
 
 
 SYSTEM_PROMPT_BASE = _load_system_prompt()
@@ -429,9 +418,7 @@ async def _load_conversation_history_optimized(
     Otherwise, load all messages (conversation is short enough).
     """
     result = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at)
+        select(Message).where(Message.conversation_id == conversation_id).order_by(Message.created_at)
     )
     messages = result.scalars().all()
 
@@ -444,10 +431,12 @@ async def _load_conversation_history_optimized(
     history = []
 
     if conv and conv.summary:
-        history.append({
-            "role": "system",
-            "content": f"[Summary of earlier messages in this conversation: {conv.summary}]",
-        })
+        history.append(
+            {
+                "role": "system",
+                "content": f"[Summary of earlier messages in this conversation: {conv.summary}]",
+            }
+        )
 
     # Last 10 messages verbatim
     recent = messages[-_RECENT_MESSAGE_LIMIT:]
@@ -460,10 +449,8 @@ async def _load_conversation_history_optimized(
 async def _get_message_count(db: AsyncSession, conversation_id: str) -> int:
     """Count messages in a conversation."""
     from sqlalchemy import func as sqlfunc
-    result = await db.execute(
-        select(sqlfunc.count(Message.id))
-        .where(Message.conversation_id == conversation_id)
-    )
+
+    result = await db.execute(select(sqlfunc.count(Message.id)).where(Message.conversation_id == conversation_id))
     return result.scalar() or 0
 
 
@@ -477,9 +464,7 @@ async def _generate_conversation_summary(
     Saves the summary to the conversation record.
     """
     result = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conversation.id)
-        .order_by(Message.created_at)
+        select(Message).where(Message.conversation_id == conversation.id).order_by(Message.created_at)
     )
     messages = list(result.scalars().all())
 
@@ -488,10 +473,7 @@ async def _generate_conversation_summary(
 
     # Summarize all but the last 5 messages
     to_summarize = messages[:-5]
-    conv_text = "\n".join(
-        f"{'User' if m.role == 'user' else 'Mentor'}: {m.content}"
-        for m in to_summarize
-    )
+    conv_text = "\n".join(f"{'User' if m.role == 'user' else 'Mentor'}: {m.content}" for m in to_summarize)
 
     SUMMARY_PROMPT = f"""Summarize this conversation segment in 2-3 sentences.
 Focus on: what the user asked, what advice was given, what decisions were made.
@@ -625,15 +607,20 @@ async def send_message(
             result = await _execute_tool(db, user_id, tool_name, tool_args)
             tool_calls_made.append({"tool": tool_name, "args": tool_args, "result": result})
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": json.dumps(result),
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": json.dumps(result),
+                }
+            )
 
         # After tool execution, reload context (roadmap may have changed)
         updated_context = await _load_user_context(db, user_id, conversation.id)
-        messages[0] = {"role": "system", "content": SYSTEM_PROMPT_BASE + f"\n\n---\n\n# Current User Context\n\n{updated_context}"}
+        messages[0] = {
+            "role": "system",
+            "content": SYSTEM_PROMPT_BASE + f"\n\n---\n\n# Current User Context\n\n{updated_context}",
+        }
 
         # Second LLM call — generate the natural-language response using tool results
         final_response = client.chat.completions.create(
