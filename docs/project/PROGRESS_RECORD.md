@@ -2,8 +2,8 @@
 
 **Last Updated:** August 28, 2026
 **Prepared By:** Jordan (Project Lead) + Shogo AI Agent
-**Branch:** `main` (latest)
-**Total Tests:** 45/45 passing
+**Branch:** `main`
+**Total Tests:** 134 unit tests + 26 integration tests = 160 passing
 
 ---
 
@@ -47,7 +47,7 @@ The system features 6 AI agents:
 | Morning | Researched how ChatGPT and Claude handle conversation history. Discovered the key insight: **Storage != Context** (all messages saved in DB, but only a subset sent to LLM per request). |
 | Morning | Defined the **Three-Layer Loading Architecture** (sidebar titles -> messages -> LLM context) and **Hybrid Summarization** strategy. |
 | Morning | Drafted the full AI Memory System Plan with 4 phases. |
-| Midday | Pushed plan to GitHub `docs/plans/AI_MEMORY_SYSTEM_PLAN.md`. |
+| Midday | Pushed plan to GitHub `docs/AI_MEMORY_SYSTEM_PLAN.md`. |
 | Afternoon | Created `feature/ai-memory-system` branch. |
 | Afternoon | **Phase 1:** Extracted system prompt from hardcoded Python string to external `mentor_system.md` file. |
 | Afternoon | **Phase 2:** Built long-term memory system — `UserMemory` model, `memory_extractor.py`, `memory.py` routes (GET/POST/PATCH/DELETE). |
@@ -274,7 +274,7 @@ created_at  TIMESTAMPTZ (default: now())
 | `app/sql/fix_conversations_unique_constraint.sql` | Standalone SQL to drop Conversations unique constraint |
 | `app/sql/notifications_migration.sql` | SQL migration: notifications table with RLS and indexes |
 | `tests/test_ai_memory.py` | AI Memory System test suite (15 tests with cleanup + summary output) |
-| `docs/plans/AI_MEMORY_SYSTEM_PLAN.md` | Full implementation plan with research, architecture, and change tracker |
+| `docs/AI_MEMORY_SYSTEM_PLAN.md` | Full implementation plan with research, architecture, and change tracker |
 
 ### Modified Files (8)
 | File | Changes |
@@ -284,21 +284,21 @@ created_at  TIMESTAMPTZ (default: now())
 | `app/models/schemas.py` | Added `MemoryResponse`, `MemoryCreateRequest`, `ConversationListItem`, `NotificationCreate`, `NotificationResponse`, `NotificationListResponse` |
 | `app/api/routes/chat.py` | Added `GET /chat/conversations`, `GET /chat/conversations/{id}` |
 | `app/main.py` | Registered `memory_router` and `notifications_router` |
-| `docs/reference/SCHEMA.md` | Added user_memories table, conversations.summary, notifications table |
-| `docs/reference/API_CONTRACT.md` | Added 6 new endpoints, updated POST /chat/message response |
-| `docs/project/PRD.md` | Added Long-term Memory and Conversation History features |
+| `docs/SCHEMA.md` | Added user_memories table, conversations.summary, notifications table |
+| `docs/API_CONTRACT.md` | Added 6 new endpoints, updated POST /chat/message response |
+| `docs/PRD.md` | Added Long-term Memory and Conversation History features |
 
 ---
 
 ## 9. What Changed in Each Document
 
-### docs/reference/SCHEMA.md
+### docs/SCHEMA.md
 - Added `user_memories` table definition with columns, RLS policies, and index
 - Added `notifications` table definition with columns, RLS policies, and indexes
 - Added `conversations.summary` field
 - Updated entity relationship diagram
 
-### docs/reference/API_CONTRACT.md
+### docs/API_CONTRACT.md
 Added 6 new endpoints:
 
 | Endpoint | Method | Purpose |
@@ -313,7 +313,7 @@ Added 6 new endpoints:
 Updated existing endpoint:
 - `POST /chat/message` — Added `summary_updated` field to response
 
-### docs/project/PRD.md
+### docs/PRD.md
 - Added Long-term Memory feature under AI Mentor section
 - Added Conversation History feature under AI Mentor section
 - Added Memory Extractor to agent summary table
@@ -335,23 +335,136 @@ Updated existing endpoint:
 
 ---
 
+### August 27, 2026 — Opportunities Scraper Upgrade + Currency Detection
+
+| Time (est.) | Activity |
+|---|---|
+| Morning | Reviewed existing scraper plan, schema, API contract, frontend requirements, and tech stack docs. |
+| Morning | Gathered frontend requirements: opportunities page with tabs, save/bookmark, source links, notifications. |
+| Morning | Made structured decisions: offset-based pagination, 1-hour in-memory TTL caching, polling-based notifications. |
+| Morning | Saved updated plan to GitHub at `docs/plans/SCRAPER_PLAN.md`. |
+| Afternoon | Built all 6 implementation files locally: scraper, scout, endpoints, migration SQL, models, schemas. |
+| Afternoon | Created branch `feature/opportunities-scraper-upgrade` and pushed 8 files to GitHub. |
+| Afternoon | Wrote 26 integration tests (`test_opportunities.py`) — all 26 passing. |
+| Afternoon | Wrote scraper unit tests (`test_scraper_unit.py`) — 45+ tests covering salary parsing, keyword matching, caching, curated list. |
+| Afternoon | Wrote scout unit tests (`test_scout_unit.py`) — 30+ tests covering timeframe, sorting, pagination, curated list validation. |
+| Evening | **Bug fix:** `test_jmd_range` failed — `_parse_salary` checked `$` before `jmd`, so `"JMD $800K"` returned USD. Fixed by reordering if/elif. |
+| Evening | **Feature request:** Jordan asked why only 4 currencies. Replaced hardcoded if/elif with priority-based lookup table (`_CURRENCY_TABLE`) — now handles 22+ currencies including all Caribbean ISO 4217 codes. |
+| Evening | **Feature request:** Jordan asked about source context — if a Trinidadian page uses bare `$`, shouldn't it default to TTD? Added source-context-aware currency detection: `_detect_currency(text, source_name)` checks source name against `_SOURCE_CURRENCY_MAP` and keyword matching before defaulting to USD. |
+| Evening | Added `_SOURCE_CURRENCY_MAP` (exact matches like `rss_jamaica_gleaner` → JMD) and `_SOURCE_CURRENCY_KEYWORDS` (keyword matches like `"trinidad"` → TTD). |
+| Evening | Updated `_parse_salary` signature to accept optional `source_name` parameter. |
+| Evening | Wrote 10+ new tests for source-context-aware currency detection (Jamaican/Trinidadian/Barbadian sources). |
+| Evening | All tests passing: **134 unit tests + 26 integration tests = 160 total**. |
+| Evening | Created code walkthrough plan in `.shogo/plans/` — 7 phases covering every file in the codebase. |
+| Evening | Created edge case & security test plan in `.shogo/plans/` — input validation, auth, scraper failures, currency edge cases, pagination edge cases. |
+| Evening | Updated all project documentation: PROGRESS_RECORD, SCHEMA, API_CONTRACT, TECH_STACK, FRONTEND_HANDOFF, OPPORTUNITIES_UPGRADE_REPORT, PRD, SCRAPER_PLAN. |
+
+---
+
 ## 11. What's Next
 
-### High Priority
-1. Frontend build — teammate working on Next.js UI (landing page, auth, onboarding, dashboard, chat)
-2. Railway deployment verification — confirm production is healthy after merge
-3. End-to-end testing with real user flow
+### August 28, 2026 — CI/CD Workflows, Lint Fixes, Mypy Type Fixes
+
+| Time (est.) | Activity |
+|---|---|
+| Morning | Created Dependabot config (`.github/dependabot.yml`) for automated dependency updates. |
+| Morning | Created CI workflow (`.github/workflows/ci.yml`) — lint (ruff), tests (pytest + PostgreSQL via service container), security scan (pip-audit + bandit). |
+| Morning | Created security workflow (`.github/workflows/security.yml`) — weekly dependency audit + gitleaks secret scan. |
+| Morning | Updated `requirements.txt` with secure minimum versions (all dependencies bumped to patch-level safe versions). |
+| Morning | First CI run: ruff lint failed — 24 BLE001 violations (bare `except Exception` catches). |
+| Morning | Fixed all BLE001 violations across 9 files: `opportunity_scraper.py`, `scout.py`, `notifications.py`, `common.py`, `mentor.py`, `memory_extractor.py`, `portfolio.py`, `chat.py`, `security.py`. |
+| Morning | Second CI run: ruff format failed — 3 pre-existing files needed formatting (`db_models.py`, `middleware.py`, `memory.py`). |
+| Morning | Fixed formatting, pushed. Third CI run: all passing except mypy type check (18 errors in 7 files). |
+| Morning | Fixed all 18 mypy errors: `config.py` (env var defaults), `postgres.py` (AsyncGenerator return type), `storage.py` (remove() arg type), `notifications.py` + `schemas.py` (link type broadened), `opportunities.py` (rowcount ignore), `mentor.py` (OpenAI SDK type ignores + Message annotation). |
+| Morning | Dependabot created 9 branches for dependency updates. Advised Jordan on safe vs risky merges. |
+
+### What Was Built — CI/CD & Code Quality
+
+#### GitHub Actions Workflows
+
+**`.github/workflows/ci.yml`** — Runs on every push and PR to `main`:
+| Job | What It Does |
+|-----|-------------|
+| **Lint & Type Check** | Installs deps, runs `ruff check` (linting) + `ruff format --check` (formatting) + `mypy` (type checking) |
+| **Tests** | Runs all pytest tests with PostgreSQL service container for integration tests |
+| **Security Scan** | Runs `pip-audit` (dependency vulnerabilities) + `bandit` (security linting) |
+
+**`.github/workflows/security.yml`** — Weekly schedule (Monday 6 AM UTC):
+| Job | What It Does |
+|-----|-------------|
+| **Dependency Audit** | Runs `pip-audit` on full dependency list |
+| **Secret Scan** | Runs `gitleaks` to detect committed secrets |
+| **Notify** | Reports results (extensible for Slack/email notifications) |
+
+#### Dependabot Configuration
+
+**`.github/dependabot.yml`**:
+- Checks `backend/requirements.txt` daily for pip dependency updates
+- Checks `.github/workflows/` weekly for GitHub Actions updates
+- Auto-creates PRs for new versions
+- Configurable `open-pull-requests-limit` to control PR volume
+
+#### Code Quality Fixes
+
+**BLE001 — Bare Exception Catches (24 violations fixed):**
+Replaced generic `except Exception` with specific exception types across 9 files:
+- `opportunity_scraper.py` — `httpx.HTTPError`, `json.JSONDecodeError`, `ValueError`, `KeyError`
+- `scout.py` — `httpx.HTTPError`, `ValueError`
+- `notifications.py` — `httpx.HTTPError`
+- `mentor.py` — `httpx.HTTPError`, `ValueError`
+- `memory_extractor.py` — `httpx.HTTPError`
+- `portfolio.py` — `httpx.HTTPError`, `ValueError`
+- `chat.py` — `httpx.HTTPError`
+- `common.py` — `httpx.HTTPError`
+- `security.py` — `ValueError`
+
+**Mypy Type Errors (18 violations fixed):**
+| File | Error Count | Fix |
+|------|-------------|-----|
+| `config.py` | 5 | Added `=""` defaults to Settings fields (CI lacks env vars) |
+| `postgres.py` | 1 | Return type `AsyncGenerator[AsyncSession, None]` instead of `AsyncSession` |
+| `storage.py` | 1 | Wrapped `file_path` in `[file_path]` — `remove()` expects `list[str]` |
+| `notifications.py` | 1 | Added `# type: ignore[attr-defined]` for `rowcount` (SQLAlchemy typing limitation) |
+| `schemas.py` | 4 | Broadened `link` field to `Optional[str \| dict]` (DB stores JSON dicts) |
+| `opportunities.py` | 1 | Added `# type: ignore[attr-defined]` for `rowcount` |
+| `mentor.py` | 5 | `# type: ignore[call-overload]` on OpenAI SDK calls + explicit `list[Message]` annotation |
+
+**Ruff Format Fixes (3 files):**
+- `db_models.py` — Collapsed multi-line dict definitions, normalized whitespace
+- `middleware.py` — Normalized blank lines and dict alignment
+- `memory.py` — Collapsed multi-line query chains
+
+**Updated `requirements.txt`:**
+- All dependencies pinned to secure minimum versions
+- `pydantic>=2.11.0`, `sqlalchemy>=2.0.40`, `openai>=1.0.0`, `supabase>=2.15.0`, etc.
+
+---
+
+### Before Merge
+1. ✅ All 160 tests passing
+2. ✅ All documentation updated
+3. ✅ CI/CD workflows (lint, tests, security, Dependabot)
+4. ✅ All lint/format/type errors fixed
+5. Teammate code review
+6. Merge to main
+
+### High Priority (Post-Merge)
+1. Frontend dev builds opportunities page UI (FRONTEND_HANDOFF.md has complete guide)
+2. Run migration SQL for new opportunities columns in Supabase
+3. Railway deployment verification
 
 ### Medium Priority
-4. Memory extraction in production — verify extraction runs after real conversations (not just tests)
-5. Conversation auto-titling — generate conversation titles from first message (for sidebar)
-6. Opportunity scraper upgrade — move from curated list to real RSS feeds
+4. Edge case & security tests (see `.shogo/plans/edge-case--security-tests_*.plan.md`)
+5. Memory extraction in production
+6. Conversation auto-titling
 
-### Lower Priority
-7. Evidence verification (AI-powered) — LLM-based evidence review
-8. Notifications delivery — email push notifications for new matching opportunities
-9. Conversation search — full-text search across conversation history
-10. Memory summarization — compress old memories when approaching the 20-fact limit
+### Lower Priority (Post-Competition)
+7. Cursor-based pagination
+8. Web push notifications (replaces polling)
+9. Social media scraping (Facebook, Instagram)
+10. Admin source health dashboard
+11. Evidence verification (AI-powered)
+12. Full code walkthrough (see `.shogo/plans/code-walkthrough-plan_*.plan.md`)
 
 ---
 
