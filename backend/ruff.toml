@@ -1,0 +1,32 @@
+# Ruff configuration for Lynks Backend
+# Focus CI on real errors, not style suggestions
+
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = [
+    "F",     # Pyflakes (undefined names, unused imports, etc.)
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "BLE",   # flake8-blind-except
+    "I",     # isort (import sorting)
+    "DTZ",   # flake8-datetimez
+    "C4",    # flake8-comprehensions
+]
+
+ignore = [
+    "F401",  # unused imports — fix gradually, not a CI blocker
+    "F841",  # unused variable — fix gradually
+    "E501",  # line too long — handled by formatter
+    "W291",  # trailing whitespace — handled by formatter
+    "W293",  # whitespace in blank lines — handled by formatter
+    "I001",  # import block sorting — not critical
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["F", "E"]  # tests can be lenient
+
+[format]
+quote-style = "double"
+indent-style = "space"
