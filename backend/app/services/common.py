@@ -28,3 +28,4 @@ def compute_step_status(tasks: list) -> str:
     if not tasks:
         return "pending"
     return "complete" if all(t.status == "complete" for t in tasks) else "pending"
+
