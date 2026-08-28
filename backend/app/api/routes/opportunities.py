@@ -79,9 +79,7 @@ async def list_opportunities(
         )
 
     try:
-        result = await discover_opportunities(
-            db, user_id, category, timeframe, sort, page, limit
-        )
+        result = await discover_opportunities(db, user_id, category, timeframe, sort, page, limit)
     except ValueError as e:
         code = str(e).split(":")[0]
         message = str(e).split(":", 1)[1].strip() if ":" in str(e) else str(e)
@@ -100,9 +98,7 @@ async def list_opportunities(
     # If saved_only, filter to only saved opportunities
     if saved_only:
         saved_ids = await get_saved_opportunity_ids(db, user_id)
-        result["opportunities"] = [
-            o for o in result["opportunities"] if o["id"] in saved_ids
-        ]
+        result["opportunities"] = [o for o in result["opportunities"] if o["id"] in saved_ids]
         result["metadata"]["total_available"] = len(result["opportunities"])
         result["metadata"]["returned"] = len(result["opportunities"])
 
@@ -117,11 +113,12 @@ async def refresh_opportunities(
     """Trigger a manual refresh of the opportunity database."""
     try:
         from app.agents.opportunity_scraper import scrape_opportunities
+
         opportunities = await scrape_opportunities()
         return {
             "status": "ok",
             "count": len(opportunities),
-            "sources": list(set(o.get("source_name", "unknown") for o in opportunities)),
+            "sources": list({o.get("source_name", "unknown") for o in opportunities}),
             "message": f"Scraped {len(opportunities)} opportunities",
         }
     except (OSError, ValueError) as e:
@@ -166,27 +163,29 @@ async def list_saved_opportunities(
     for opp in CARIBBEAN_OPPORTUNITIES:
         opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
         if opp_id in saved_ids:
-            results.append({
-                "id": opp_id,
-                "title": opp.get("title", "Unknown"),
-                "company": opp.get("company", "Unknown"),
-                "location": opp.get("location", "Caribbean"),
-                "description": opp.get("description", ""),
-                "category": opp.get("category", "event"),
-                "pay": opp.get("pay", "Varies"),
-                "salary_min": opp.get("salary_min"),
-                "salary_max": opp.get("salary_max"),
-                "salary_currency": opp.get("salary_currency"),
-                "age_requirement": opp.get("age_requirement"),
-                "experience_required": opp.get("experience_required", "None"),
-                "url": opp.get("url", ""),
-                "posted_at": opp.get("posted_at"),
-                "first_seen_at": opp.get("first_seen_at"),
-                "source_name": opp.get("source_name", "curated"),
-                "image_url": opp.get("image_url"),
-                "is_saved": True,
-                "relevance_score": None,
-            })
+            results.append(
+                {
+                    "id": opp_id,
+                    "title": opp.get("title", "Unknown"),
+                    "company": opp.get("company", "Unknown"),
+                    "location": opp.get("location", "Caribbean"),
+                    "description": opp.get("description", ""),
+                    "category": opp.get("category", "event"),
+                    "pay": opp.get("pay", "Varies"),
+                    "salary_min": opp.get("salary_min"),
+                    "salary_max": opp.get("salary_max"),
+                    "salary_currency": opp.get("salary_currency"),
+                    "age_requirement": opp.get("age_requirement"),
+                    "experience_required": opp.get("experience_required", "None"),
+                    "url": opp.get("url", ""),
+                    "posted_at": opp.get("posted_at"),
+                    "first_seen_at": opp.get("first_seen_at"),
+                    "source_name": opp.get("source_name", "curated"),
+                    "image_url": opp.get("image_url"),
+                    "is_saved": True,
+                    "relevance_score": None,
+                }
+            )
 
     return {"saved": results, "total": len(results)}
 
@@ -201,9 +200,7 @@ async def save_opportunity(
     try:
         # Check if already saved
         existing = await db.execute(
-            text(
-                "SELECT id FROM saved_opportunities WHERE user_id = :uid AND opportunity_id = :oid"
-            ),
+            text("SELECT id FROM saved_opportunities WHERE user_id = :uid AND opportunity_id = :oid"),
             {"uid": user_id, "oid": opportunity_id},
         )
         if existing.fetchone():
@@ -220,10 +217,7 @@ async def save_opportunity(
         # Insert the save
         now = datetime.now(timezone.utc)
         await db.execute(
-            text(
-                "INSERT INTO saved_opportunities (user_id, opportunity_id, saved_at) "
-                "VALUES (:uid, :oid, :saved_at)"
-            ),
+            text("INSERT INTO saved_opportunities (user_id, opportunity_id, saved_at) VALUES (:uid, :oid, :saved_at)"),
             {"uid": user_id, "oid": opportunity_id, "saved_at": now},
         )
         await db.commit()
@@ -259,9 +253,7 @@ async def unsave_opportunity(
     """Remove a saved opportunity."""
     try:
         result = await db.execute(
-            text(
-                "DELETE FROM saved_opportunities WHERE user_id = :uid AND opportunity_id = :oid"
-            ),
+            text("DELETE FROM saved_opportunities WHERE user_id = :uid AND opportunity_id = :oid"),
             {"uid": user_id, "oid": opportunity_id},
         )
         await db.commit()
