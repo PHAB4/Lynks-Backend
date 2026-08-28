@@ -580,7 +580,7 @@ async def send_message(
     messages = [{"role": "system", "content": system_prompt}] + history + [{"role": "user", "content": message}]
 
     # First LLM call — may request a tool call
-    response = client.chat.completions.create(
+    response = client.chat.completions.create(  # type: ignore[call-overload]
         model=settings.LLM_MODEL,
         messages=_sanitize_messages(messages),
         tools=TOOLS,
@@ -623,7 +623,7 @@ async def send_message(
         }
 
         # Second LLM call — generate the natural-language response using tool results
-        final_response = client.chat.completions.create(
+        final_response = client.chat.completions.create(  # type: ignore[call-overload]
             model=settings.LLM_MODEL,
             messages=_sanitize_messages(messages),
             temperature=0.7,
@@ -685,7 +685,7 @@ async def get_chat_history(db: AsyncSession, user_id: str, conversation_id: str 
     result = await db.execute(
         select(Message).where(Message.conversation_id == conversation.id).order_by(Message.created_at)
     )
-    messages = result.scalars().all()
+    messages: list[Message] = list(result.scalars().all())
 
     return {
         "conversation_id": conversation.id,
