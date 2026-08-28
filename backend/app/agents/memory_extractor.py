@@ -66,9 +66,7 @@ def _format_existing_memories(memories: list[UserMemory]) -> str:
     """Format existing memories into a readable string."""
     if not memories:
         return "(none)"
-    return "\n".join(
-        f"- [{m.category}] {m.fact}" for m in memories
-    )
+    return "\n".join(f"- [{m.category}] {m.fact}" for m in memories)
 
 
 async def extract_and_save_memories(
@@ -82,18 +80,13 @@ async def extract_and_save_memories(
     """
     # Load existing memories to avoid duplication
     existing_result = await db.execute(
-        select(UserMemory)
-        .where(UserMemory.user_id == user_id)
-        .order_by(UserMemory.created_at.desc())
-        .limit(30)
+        select(UserMemory).where(UserMemory.user_id == user_id).order_by(UserMemory.created_at.desc()).limit(30)
     )
     existing_memories = list(existing_result.scalars().all())
 
     # Load conversation messages
     msg_result = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at)
+        select(Message).where(Message.conversation_id == conversation_id).order_by(Message.created_at)
     )
     messages = list(msg_result.scalars().all())
 
@@ -151,10 +144,7 @@ async def extract_and_save_memories(
 
         # Double-check deduplication against existing facts
         fact_lower = fact.lower()
-        is_duplicate = any(
-            fact_lower in m.fact.lower() or m.fact.lower() in fact_lower
-            for m in existing_memories
-        )
+        is_duplicate = any(fact_lower in m.fact.lower() or m.fact.lower() in fact_lower for m in existing_memories)
         if is_duplicate:
             continue
 
@@ -176,15 +166,11 @@ async def extract_and_save_memories(
     # Prune if over 30 memories (keep newest 30)
     if len(existing_memories) + len(saved) > 30:
         all_result = await db.execute(
-            select(UserMemory)
-            .where(UserMemory.user_id == user_id)
-            .order_by(UserMemory.created_at.desc())
-            .limit(30)
+            select(UserMemory).where(UserMemory.user_id == user_id).order_by(UserMemory.created_at.desc()).limit(30)
         )
         keep_ids = {m.id for m in all_result.scalars().all()}
         delete_result = await db.execute(
-            select(UserMemory)
-            .where(
+            select(UserMemory).where(
                 UserMemory.user_id == user_id,
                 ~UserMemory.id.in_(keep_ids),
             )
@@ -200,9 +186,6 @@ async def should_extract(user_id: str, conversation_id: str, db: AsyncSession) -
     """Check if we should run extraction — every 10 messages."""
     from sqlalchemy import func as sqlfunc
 
-    result = await db.execute(
-        select(sqlfunc.count(Message.id))
-        .where(Message.conversation_id == conversation_id)
-    )
+    result = await db.execute(select(sqlfunc.count(Message.id)).where(Message.conversation_id == conversation_id))
     count = result.scalar() or 0
     return count > 0 and count % 10 == 0
