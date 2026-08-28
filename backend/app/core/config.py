@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Supabase client (kept for backward compat with existing profile route)
-from supabase import create_client
+from supabase import create_client  # noqa: E402
 
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
 
