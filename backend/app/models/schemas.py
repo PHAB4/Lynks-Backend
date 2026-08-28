@@ -183,7 +183,7 @@ class NotificationCreate(BaseModel):
     title: str
     body: str
     type: str = "info"
-    link: Optional[str] = None
+    link: Optional[str | dict] = None
 
 
 class NotificationResponse(BaseModel):
@@ -191,7 +191,7 @@ class NotificationResponse(BaseModel):
     title: str
     body: str
     type: str
-    link: Optional[str] = None
+    link: Optional[str | dict] = None
     is_read: bool = False
     created_at: datetime
 
