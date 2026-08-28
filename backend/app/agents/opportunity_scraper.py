@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from xml.etree import ElementTree as ET
 
 import httpx
-from openai import OpenAI
+from openai import APIError as OpenAIError, OpenAI
 
 from app.core.config import settings
 
@@ -54,8 +54,8 @@ class Opportunity:
     url: str = ""
     category: str = "event"
     description: str = ""
-    posted_at: str | None = None       # ISO format — when it was originally posted
-    first_seen_at: str | None = None   # ISO format — when we first scraped it
+    posted_at: str | None = None  # ISO format — when it was originally posted
+    first_seen_at: str | None = None  # ISO format — when we first scraped it
     source_name: str = "curated"
     image_url: str | None = None
 
@@ -139,8 +139,8 @@ _ALL_SYMBOLS = r"\$€£¥₹₩฿"
 _SOURCE_CURRENCY_MAP: dict[str, str] = {
     # RSS feeds
     "rss_jamaica_gleaner": "JMD",
-    "rss_loop_caribbean": "USD",       # Loop covers multiple countries — USD is safest
-    "rss_uwi_news": "JMD",            # UWI Mona campus is in Jamaica
+    "rss_loop_caribbean": "USD",  # Loop covers multiple countries — USD is safest
+    "rss_uwi_news": "JMD",  # UWI Mona campus is in Jamaica
     # Facebook pages
     "facebook_JamaicaTechCommunity": "JMD",
     "facebook_CaribbeanTechHub": "USD",
@@ -220,7 +220,7 @@ def _parse_salary(pay_text: str, source_name: str | None = None) -> tuple[float 
 
     # Try to find numeric ranges like "$50,000 - $75,000" or "50000-75000"
     range_match = re.search(
-        rf'[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)\s*[-–to]+\s*[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)',
+        rf"[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)\s*[-–to]+\s*[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)",
         pay_text.lower(),
     )
     if range_match:
@@ -232,7 +232,7 @@ def _parse_salary(pay_text: str, source_name: str | None = None) -> tuple[float 
             pass
 
     # Try to find a single number like "$50,000/year" or "USD 60,000"
-    single_match = re.search(rf'[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)', pay_text.lower())
+    single_match = re.search(rf"[{_ALL_SYMBOLS}]?\s*([\d,]+(?:\.\d+)?)", pay_text.lower())
     if single_match:
         try:
             val = float(single_match.group(1).replace(",", ""))
@@ -377,13 +377,34 @@ RSS_FEEDS = [
 
 # Keywords to filter for opportunity-relevant posts
 OPPORTUNITY_KEYWORDS = [
-    "hiring", "job", "vacancy", "position", "apply", "application",
-    "scholarship", "grant", "funding", "fellowship",
-    "hackathon", "competition", "contest", "challenge",
-    "workshop", "training", "bootcamp", "programme", "program",
-    "volunteer", "internship", "apprenticeship",
-    "opportunity", "open call", "recruitment",
-    "deadline", "registration", "enrol",
+    "hiring",
+    "job",
+    "vacancy",
+    "position",
+    "apply",
+    "application",
+    "scholarship",
+    "grant",
+    "funding",
+    "fellowship",
+    "hackathon",
+    "competition",
+    "contest",
+    "challenge",
+    "workshop",
+    "training",
+    "bootcamp",
+    "programme",
+    "program",
+    "volunteer",
+    "internship",
+    "apprenticeship",
+    "opportunity",
+    "open call",
+    "recruitment",
+    "deadline",
+    "registration",
+    "enrol",
 ]
 
 
@@ -407,7 +428,7 @@ def _parse_rss_date(date_str: str | None) -> str | None:
             "%Y-%m-%d %H:%M:%S",
         ]:
             try:
-                dt = datetime.strptime(date_str.strip(), fmt)
+                dt = datetime.strptime(date_str.strip(), fmt).replace(tzinfo=timezone.utc)
                 return dt.isoformat()
             except ValueError:
                 continue
@@ -469,16 +490,10 @@ async def fetch_from_rss(feed_config: dict) -> list[Opportunity]:
         # Handle both RSS 2.0 and Atom feeds
         # RSS 2.0: /rss/channel/item
         # Atom: /feed/entry
-        items = root.findall(".//item") or root.findall(
-            ".//{http://www.w3.org/2005/Atom}entry"
-        )
+        items = root.findall(".//item") or root.findall(".//{http://www.w3.org/2005/Atom}entry")
 
         for item in items:
-            title = (
-                item.findtext("title")
-                or item.findtext("{http://www.w3.org/2005/Atom}title")
-                or ""
-            ).strip()
+            title = (item.findtext("title") or item.findtext("{http://www.w3.org/2005/Atom}title") or "").strip()
 
             description = (
                 item.findtext("description")
@@ -487,11 +502,7 @@ async def fetch_from_rss(feed_config: dict) -> list[Opportunity]:
                 or ""
             ).strip()
 
-            link = (
-                item.findtext("link")
-                or item.findtext("{http://www.w3.org/2005/Atom}link")
-                or ""
-            ).strip()
+            link = (item.findtext("link") or item.findtext("{http://www.w3.org/2005/Atom}link") or "").strip()
 
             pub_date = (
                 item.findtext("pubDate")
@@ -584,8 +595,8 @@ async def fetch_from_facebook(page_id: str) -> list[Opportunity]:
 
         for post_html in posts[:10]:  # Limit to 10 most recent posts
             # Strip HTML tags for plain text
-            post_text = re.sub(r'<[^>]+>', ' ', post_html).strip()
-            post_text = re.sub(r'\s+', ' ', post_text)
+            post_text = re.sub(r"<[^>]+>", " ", post_html).strip()
+            post_text = re.sub(r"\s+", " ", post_text)
 
             if not _matches_opportunity_keywords(post_text):
                 continue
@@ -640,6 +651,7 @@ async def scrape_all_social_media() -> list[Opportunity]:
     # Instagram (stretch — log warning if instaloader not available)
     try:
         import instaloader  # noqa: F401
+
         for username in INSTAGRAM_ACCOUNTS:
             try:
                 opps = await _fetch_from_instagram(username)
@@ -1194,7 +1206,7 @@ def generate_opportunities_with_llm() -> list[Opportunity]:
         set_cached_opportunities(cache_key, [o.to_dict() for o in opportunities])
         return opportunities
 
-    except (openai.APIError, json.JSONDecodeError) as e:
+    except (OpenAIError, json.JSONDecodeError) as e:
         logger.warning("LLM opportunity generation failed: %s", e)
         return []
 
@@ -1262,4 +1274,6 @@ if __name__ == "__main__":
     opportunities = asyncio.run(scrape_opportunities())
     print(f"\nScraped {len(opportunities)} opportunities:\n")
     for opp in opportunities:
-        print(f"  [{opp.get('category')}] {opp.get('title')} — {opp.get('location')} (source: {opp.get('source_name')})")
+        print(
+            f"  [{opp.get('category')}] {opp.get('title')} — {opp.get('location')} (source: {opp.get('source_name')})"
+        )
