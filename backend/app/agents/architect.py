@@ -1,14 +1,14 @@
 """
-Career Architect Agent -- generates personalized roadmaps from user profile data.
+Career Architect Agent — generates personalized roadmaps from user profile data.
 
 Uses the OpenAI Python SDK talking to an OpenAI-compatible compute gateway
-(Highrise / Impala AI). No LangChain or CrewAI dependency -- intentionally
+(Highrise / Impala AI). No LangChain or CrewAI dependency — intentionally
 kept self-contained so the orchestration library decision doesn't block this.
 
 Flow:
   1. Validate the user's profile is complete enough to generate a roadmap
   2. Call the LLM with a structured prompt + the user's profile
-  3. Parse the LLM's JSON response into Roadmap -> Steps -> Tasks
+  3. Parse the LLM's JSON response into Roadmap → Steps → Tasks
   4. Save everything to Postgres (deactivate old roadmaps, insert new ones)
   5. Return the structured roadmap matching API_CONTRACT.md
 """
@@ -31,7 +31,7 @@ from app.models.db_models import Roadmap, Step, Task, User
 logger = logging.getLogger(__name__)
 
 
-# -- Types ----------------------------------------------------------------
+# ── Types ──────────────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -66,10 +66,14 @@ class GeneratedRoadmap:
     steps: list[GeneratedStep]
 
 
-# -- Profile validation ----------------------------------------------------
+# ── Profile validation ─────────────────────────────────────────────────────
 
 
 def validate_profile(user: User) -> None:
+    """
+    Check that the user has enough profile data to generate a roadmap.
+    Raises ValueError with a code the route can catch.
+    """
     required_fields = ["career_path", "education_level", "country"]
     missing = [f for f in required_fields if not getattr(user, f, None)]
     if missing:
@@ -87,23 +91,23 @@ def user_to_profile(user: User) -> ProfileData:
     )
 
 
-# -- LLM call ---------------------------------------------------------------
+# ── LLM call ───────────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT = """\
-You are the Career Architect for Lynks -- a platform helping young people in the Caribbean \
+You are the Career Architect for Lynks — a platform helping young people in the Caribbean \
 build structured career paths.
 
 Your job: given a user's profile, generate a personalized career roadmap as structured JSON.
 
 ## Rules
 
-1. The roadmap must have 4-8 **steps** (milestones), ordered logically from foundational \
+1. The roadmap must have 4–8 **steps** (milestones), ordered logically from foundational \
 to advanced. Each step is a phase the user works through before moving to the next.
 
-2. Each step must have 2-4 **tasks** (concrete, actionable items the user can actually do). \
+2. Each step must have 2–4 **tasks** (concrete, actionable items the user can actually do). \
 Tasks are what get marked "complete" and can have evidence (certificates, photos) attached.
 
-3. Tasks must be **specific and Caribbean-contextualized** where possible -- consider \
+3. Tasks must be **specific and Caribbean-contextualized** where possible — consider \
 the user's country, education level, and local opportunities. A task like "enroll in \
 Coursera's Google IT Support Certificate" is good. A task like "get experience" is not.
 
@@ -114,7 +118,7 @@ explaining what to do and why it matters).
 
 6. `order` on both steps and tasks is a 1-based integer indicating position.
 
-7. Return ONLY valid JSON -- no markdown fences, no commentary outside the JSON.
+7. Return ONLY valid JSON — no markdown fences, no commentary outside the JSON.
 """
 
 
@@ -162,14 +166,19 @@ Rules for the JSON:
 
 
 def call_llm(profile: ProfileData) -> GeneratedRoadmap:
+    """
+    Call the OpenAI-compatible compute gateway and parse the response
+    into a GeneratedRoadmap.
+
+    Uses the OpenAI Python SDK — the compute gateway (Highrise/Impala AI)
+    exposes an OpenAI-compatible API, so we point the SDK at their base URL.
+    """
     client = OpenAI(
         api_key=settings.LLM_API_KEY,
         base_url=settings.LLM_API_BASE_URL,
     )
 
-    user_message = (
-        build_user_message(profile) + "\n\n" + RESPONSE_FORMAT_INSTRUCTIONS
-    )
+    user_message = build_user_message(profile) + "\n\n" + RESPONSE_FORMAT_INSTRUCTIONS
 
     response = client.chat.completions.create(
         model=settings.LLM_MODEL,
@@ -183,9 +192,10 @@ def call_llm(profile: ProfileData) -> GeneratedRoadmap:
 
     raw_content = response.choices[0].message.content.strip()
 
+    # Strip markdown fences if the model wraps them anyway
     if raw_content.startswith("```"):
         lines = raw_content.split("\n")
-        lines = lines[1:]
+        lines = lines[1:]  # drop opening fence
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         raw_content = "\n".join(lines)
@@ -200,6 +210,7 @@ def call_llm(profile: ProfileData) -> GeneratedRoadmap:
 
 
 def _parse_roadmap(data: dict) -> GeneratedRoadmap:
+    """Parse the LLM's JSON output into our dataclass structure."""
     steps = []
     for i, step_data in enumerate(data.get("steps", []), start=1):
         tasks = []
@@ -226,7 +237,7 @@ def _parse_roadmap(data: dict) -> GeneratedRoadmap:
     return GeneratedRoadmap(steps=steps)
 
 
-# -- Save to DB --------------------------------------------------------------
+# ── Save to DB ─────────────────────────────────────────────────────────────
 
 
 async def save_roadmap(
@@ -235,15 +246,22 @@ async def save_roadmap(
     profile: ProfileData,
     generated: GeneratedRoadmap,
 ) -> Roadmap:
+    """
+    1. Deactivate any existing active roadmaps for this user
+    2. Insert the new roadmap + steps + tasks
+    3. Return the saved roadmap (with IDs)
+    """
+    # Deactivate old roadmaps
     result = await db.execute(
         select(Roadmap).where(
             Roadmap.user_id == user_id,
-            Roadmap.is_active == True,
+            Roadmap.is_active == True,  # noqa: E712
         )
     )
     for old_roadmap in result.scalars().all():
         old_roadmap.is_active = False
 
+    # Create the roadmap
     roadmap_id = str(uuid.uuid4())
     roadmap = Roadmap(
         id=roadmap_id,
@@ -253,6 +271,7 @@ async def save_roadmap(
     )
     db.add(roadmap)
 
+    # Create steps and tasks
     for step_gen in generated.steps:
         step_id = str(uuid.uuid4())
         step = Step(
@@ -277,6 +296,7 @@ async def save_roadmap(
 
     await db.commit()
 
+    # Re-fetch with relationships loaded explicitly
     roadmap = await db.get(Roadmap, roadmap_id)
     await db.refresh(roadmap, ["steps"])
     for step in roadmap.steps:
@@ -284,24 +304,40 @@ async def save_roadmap(
     return roadmap
 
 
-# -- Public API --------------------------------------------------------------
+# ── Public API ──────────────────────────────────────────────────────────────
 
 
 async def generate_roadmap(
     db: AsyncSession,
     user_id: str,
 ) -> dict:
+    """
+    Full pipeline: validate → call LLM → save → return API shape.
+
+    Returns a dict matching the API_CONTRACT.md roadmap response shape.
+    Raises ValueError for profile_incomplete, RuntimeError for LLM errors.
+    """
+    # 1. Load user
     user = await db.get(User, user_id)
     if not user:
         raise ValueError("user_not_found: no user with this ID")
 
+    # 2. Validate profile
     validate_profile(user)
+
+    # 3. Build profile data
     profile = user_to_profile(user)
+
+    # 4. Call the LLM
     generated = call_llm(profile)
+
+    # 5. Save to DB
     roadmap = await save_roadmap(db, user_id, profile, generated)
 
+    # 6. Build the API response shape
     steps_response = []
     for step in sorted(roadmap.steps, key=lambda s: s.order):
+        # Compute step status: "complete" only if ALL tasks are complete
         tasks = sorted(step.tasks, key=lambda t: t.order)
         if tasks and all(t.status == "complete" for t in tasks):
             step_status = "complete"
