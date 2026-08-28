@@ -7,16 +7,16 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Supabase
-    SUPABASE_URL: str
-    SUPABASE_ANON_KEY: str
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
 
     # Postgres (Supabase provides this — pooler URL for async access)
-    DATABASE_URL: str  # e.g. postgresql+asyncpg://user:pass@host:6543/postgres
+    DATABASE_URL: str = ""  # e.g. postgresql+asyncpg://user:pass@host:6543/postgres
 
     # LLM — OpenAI-compatible compute gateway (Highrise / Impala AI)
-    LLM_API_BASE_URL: str  # e.g. https://api.highrise.ai/v1
-    LLM_API_KEY: str
+    LLM_API_BASE_URL: str = ""  # e.g. https://api.highrise.ai/v1
+    LLM_API_KEY: str = ""
     LLM_MODEL: str = "openai/gpt-oss-120b"  # Groq model — override in .env if needed
 
     # Test config (optional)
