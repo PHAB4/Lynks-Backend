@@ -62,7 +62,7 @@ async def create_notification(
     title: str,
     body: str | None = None,
     notification_type: str = "reminder",
-    link: dict | None = None,
+    link: dict | str | None = None,
 ) -> Notification:
     """Create a new notification."""
     notification = Notification(
@@ -106,7 +106,7 @@ async def mark_all_as_read(db: AsyncSession, user_id: str) -> int:
         .values(is_read=True)
     )
     await db.commit()
-    return result.rowcount
+    return result.rowcount  # type: ignore[attr-defined]
 
 
 # ── Notification Triggers ────────────────────────────────────────────────
