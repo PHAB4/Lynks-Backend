@@ -3,9 +3,14 @@ Lynks Backend — FastAPI entry point.
 
 This file registers every router. When you add a new route file in api/routes/,
 import and include it here.
+
+NOTE: Your existing main.py only registers the profile router.
+This is the UPDATED version that adds the roadmap router.
+Copy the roadmap router registration into your existing main.py.
 """
 
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +19,6 @@ from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 
 from app.api.routes.chat import router as chat_router
 from app.api.routes.memory import router as memory_router
-from app.api.routes.notifications import router as notifications_router
 from app.api.routes.opportunities import router as opportunities_router
 from app.api.routes.portfolio import router as portfolio_router
 from app.api.routes.profile import router as profile_router
@@ -37,7 +41,7 @@ app = FastAPI(
 )
 
 # CORS — allow frontend origins
-import os
+# In production, set CORS_ORIGINS env var to your frontend URL(s), comma-separated
 cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000")
 cors_origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()]
 
@@ -56,14 +60,15 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
 
 # ── Register routers ───────────────────────────────────────────────────────
+# Each router handles one feature area (see API_CONTRACT.md for endpoints).
 
 # Profile
 app.include_router(profile_router)
 
-# Roadmap — Career Architect agent
+# Roadmap — NEW (Career Architect agent)
 app.include_router(roadmap_router)
 
-# Portfolio — Portfolio Manager agent
+# Portfolio — NEW (Portfolio Manager agent)
 app.include_router(portfolio_router)
 
 # Opportunities — Job Scout agent
@@ -72,14 +77,14 @@ app.include_router(opportunities_router)
 # Resume
 app.include_router(resume_router)
 
-# Chat — Mentor-Orchestrator agent
+# Chat — Mentor-Orchestrator agent (has access to all other agents)
 app.include_router(chat_router)
+
 
 # Memory — long-term user facts
 app.include_router(memory_router)
 
-# Notifications
-app.include_router(notifications_router)
+# ── Health check ───────────────────────────────────────────────────────────
 
 
 @app.get("/health")
