@@ -19,12 +19,12 @@ async def get_notifications(
 ) -> list[Notification]:
     """Get notifications for a user with optional filters."""
     query = select(Notification).where(Notification.user_id == user_id)
-    
+
     if notification_type:
         query = query.where(Notification.type == notification_type)
     if is_read is not None:
         query = query.where(Notification.is_read == is_read)
-    
+
     query = query.order_by(Notification.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(query)
     return list(result.scalars().all())
@@ -89,7 +89,7 @@ async def mark_as_read(db: AsyncSession, notification_id: str, user_id: str) -> 
     notification = result.scalar_one_or_none()
     if not notification:
         return False
-    
+
     notification.is_read = True
     await db.commit()
     return True
@@ -129,11 +129,11 @@ async def create_opportunity_notification(
         )
     )
     existing = result.scalars().all()
-    
+
     for n in existing:
         if opportunity_title.lower() in (n.title or "").lower():
             return None
-    
+
     return await create_notification(
         db,
         user_id=user_id,
