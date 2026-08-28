@@ -45,7 +45,7 @@ async def post_task_evidence(
 ):
     """
     Upload evidence for a task.
-    
+
     The file is validated, saved, and then sent to the LLM for verification.
     The verification runs synchronously (blocks until complete) — this is
     Open Question #6 from the context handoff. If the team decides async is
@@ -136,7 +136,7 @@ async def get_portfolio(
 ):
     """
     Get the user's portfolio — completed tasks with their evidence.
-    
+
     Only returns tasks that have at least one piece of evidence attached.
     """
     portfolio = await get_user_portfolio(db, user_id)
