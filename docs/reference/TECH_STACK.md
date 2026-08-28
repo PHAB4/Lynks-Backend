@@ -1,119 +1,51 @@
 # Lynks Tech Stack
 
-> **Last updated:** August 28, 2026
+> **Last updated:** August 27, 2026
 
 ---
 
 ## Backend
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Language | Python | 3.11+ |
-| Web framework | FastAPI | latest |
-| ORM | SQLAlchemy (async) | 2.x |
-| Database driver | asyncpg | latest |
-| Auth | Supabase Auth (JWT verification) | — |
-| LLM | Groq (OpenAI-compatible API, Llama 3 8B) | — |
-| LLM SDK | OpenAI Python SDK | latest |
-| File storage | Supabase Storage | — |
-| Validation | Pydantic v2 | — |
-| HTTP client | httpx | (RSS feeds, social media scraping) |
-| Multipart forms | python-multipart | (file uploads) |
+| Component | Technology |
+|-----------|------------|
+| Language | Python 3.11+ |
+| Web framework | FastAPI |
+| ORM | SQLAlchemy (async) |
+| Database driver | asyncpg |
+| Auth | Supabase Auth (JWT verification) |
+| LLM | Groq (OpenAI-compatible API, Llama 3 8B) |
+| LLM SDK | OpenAI Python SDK |
+| File storage | Supabase Storage |
+| Validation | Pydantic v2 |
+| HTTP client | httpx (RSS feeds, social media scraping) |
+| Multipart forms | python-multipart (file uploads) |
 
 ## Database
 
 | Component | Technology |
-|-----------|-----------|
-| PostgreSQL host | Supabase Cloud (AWS us-west-2) |
+|-----------|------------|
+| PostgreSQL | Supabase Cloud (AWS us-west-2) |
 | Connection | Pooler mode (port 5432) |
-| ORM | SQLAlchemy with UUID primary keys |
 | Auth | Supabase Auth (auth.users + triggers) |
-| Storage | Supabase Storage (public `evidence` bucket) |
+| Storage | Supabase Storage (public evidence bucket) |
 | RLS | Row Level Security on all tables |
 
 ## Frontend (teammate's responsibility)
 
 | Component | Technology |
-|-----------|-----------|
+|-----------|------------|
 | Framework | Next.js (React) |
 | Auth SDK | @supabase/supabase-js |
 | UI | TBD by frontend dev |
 
-## Infrastructure
-
-| Component | Hosting |
-|-----------|---------|
-| Backend | TBD (Railway / Render / Fly.io) |
-| Database | Supabase Cloud (free tier) |
-| Storage | Supabase Storage (free tier) |
-| Frontend | TBD |
-
-## CI/CD & Code Quality
-
-| Component | Tool | Configuration |
-|-----------|------|---------------|
-| Linter | Ruff | `.github/workflows/ci.yml` — runs on every push/PR to `main` |
-| Formatter | Ruff format | `.github/workflows/ci.yml` — enforces consistent code style |
-| Type checker | Mypy | `.github/workflows/ci.yml` — catches type errors before merge |
-| Test runner | Pytest | `.github/workflows/ci.yml` — runs 160 tests with PostgreSQL service container |
-| Dependency audit | pip-audit | Both `ci.yml` (every push) and `security.yml` (weekly) |
-| Security linter | Bandit | `.github/workflows/ci.yml` — catches common security anti-patterns |
-| Secret scanner | Gitleaks | `.github/workflows/security.yml` — weekly scan for committed secrets |
-| Dependency updates | Dependabot | `.github/dependabot.yml` — auto-creates PRs for new versions |
-
-### CI Pipeline (`ci.yml`)
-
-```
-Push/PR to main
-  ├── Lint & Type Check
-  │   ├── ruff check (linting — BLE001, F, E, W rules)
-  │   ├── ruff format --check (formatting)
-  │   └── mypy --ignore-missing-imports (type checking)
-  ├── Tests
-  │   └── pytest (134 unit + 26 integration tests, PostgreSQL service container)
-  └── Security Scan
-      ├── pip-audit (dependency vulnerabilities)
-      └── bandit (security linting — non-blocking)
-```
-
-### Weekly Security Pipeline (`security.yml`)
-
-```
-Monday 6 AM UTC (schedule)
-  ├── Dependency Audit
-  │   └── pip-audit on full dependency list
-  ├── Secret Scan
-  │   └── gitleaks detect (scans for committed secrets)
-  └── Notify (extensible)
-```
-
-### Linting Rules
-
-Ruff is configured in `backend/ruff.toml` with focused rules:
-- **F** — Pyflakes (unused imports, undefined names)
-- **E** — pycodestyle errors (indentation, whitespace)
-- **W** — pycodestyle warnings
-- **BLE001** — Blind exception catching (replaced 24 bare `except Exception` with specific types)
-- **I** — Import sorting
-- **DTZ** — DateTime timezone awareness
-- **C4** — Comprehension suggestions
-
-### Dependabot
-
-- Checks `backend/requirements.txt` **daily** for pip dependency updates
-- Checks `.github/workflows/` **weekly** for GitHub Actions updates
-- Auto-creates PRs with changelog links and compatibility scores
-- Can be limited via `open-pull-requests-limit` in `.github/dependabot.yml`
-
 ## AI / LLM
 
 | Component | Details |
-|-----------|---------|
-| Provider | Groq (OpenAI-compatible endpoint) |
-| Model | llama3-8b-8192 (openai/gpt-oss-120b also used) |
-| Base URL | https://api.groq.com/openai/v1 |
-| Use cases | Roadmap generation, chat responses, resume generation, opportunity extraction |
-| Response time | 5-15 seconds per call |
+|-----------|--------|
+| Provider | Groq |
+| Model | llama3-8b-8192 |
+| Endpoint | https://api.groq.com/openai/v1 |
+| Response time | 5-15 seconds |
 
 ## Scraper Sources
 
@@ -130,51 +62,15 @@ Ruff is configured in `backend/ruff.toml` with focused rules:
 | Curated List | Hardcoded | No | Permanent fallback (17 Caribbean opportunities) |
 | LLM Generation | AI | Yes (Groq) | Generates opportunities from training data |
 
-## Currency Detection System
-
-The scraper uses a **priority-based lookup table** (`_CURRENCY_TABLE`) to detect currencies from salary text. Detection priority:
-
-1. **Explicit 3-letter ISO codes** in the text (e.g. "JMD $500,000", "EUR 50,000") — highest confidence
-2. **Unambiguous symbols** (€, £, ¥, ₹, ₩, ฿) — second priority
-3. **Source context** — if text has bare `$` and the source is Jamaican → JMD, Trinidadian → TTD, etc.
-4. **Bare `$` fallback** → USD (only when no source context available)
-
-**Supported currencies (22+):** JMD, TTD, BBD, BSD, KYD, XCD, GYD, SRD, HTG, DOP, USD, EUR, GBP, CAD, AUD, NZD, CHF, JPY, CNY, INR, BRL, MXN, KRW, THB.
-
-**Source-context detection** maps source names to local currencies:
-- `_SOURCE_CURRENCY_MAP` — exact matches (e.g. `rss_jamaica_gleaner` → JMD)
-- `_SOURCE_CURRENCY_KEYWORDS` — keyword matches (e.g. "trinidad" in source name → TTD)
-
-## Conversation Memory Strategy
-
-**Current:** Load last 3 conversation summaries into mentor context.
-**Proposed:** Hybrid sliding window + summarization (see below).
-**Future:** Add vector database (pgvector) for semantic search of past conversations.
-
-## Vector Database for Embedding Search (Future)
-
-| Component | Recommended | Notes |
-|-----------|------------|-------|
-| Vector DB | Supabase pgvector | Already on Supabase — enable the extension |
-| Embedding model | text-embedding-3-small or Groq embedding | Fast, cheap |
-| Use case | Search past conversations by similarity | "What did I ask about scholarships?" |
-
-**pgvector setup (when ready):**
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-ALTER TABLE conversations ADD COLUMN embedding vector(1536);
-CREATE INDEX ON conversations USING ivfflat (embedding vector_cosine_ops);
-```
-
 ## Key Design Decisions
 
-1. **UUID everywhere** — every primary key is UUID, not auto-increment
-2. **snake_case everywhere** — field names, table names, endpoints
-3. **Async throughout** — FastAPI + SQLAlchemy async + asyncpg
-4. **Supabase for everything** — Auth, Database, Storage (no self-hosted services)
-5. **LLM via OpenAI SDK** — compatible with any OpenAI-format API (Groq, OpenAI, Impala)
-6. **No LangChain/CrewAI** — agents are self-contained Python modules
-7. **In-memory caching** — 1-hour TTL for scraped opportunities, no Redis
-8. **Offset pagination** — simple page/limit, cursor pagination deferred post-competition
-9. **Opportunities are curated + scraped** — not stored in a dedicated DB table
-10. **Graceful scraper failure** — each source returns [] on error, curated list is permanent fallback
+1. UUID everywhere — every PK is UUID, not auto-increment
+2. snake_case everywhere — fields, tables, endpoints
+3. Async throughout — FastAPI + SQLAlchemy async + asyncpg
+4. Supabase for everything — Auth, Database, Storage
+5. LLM via OpenAI SDK — compatible with any OpenAI-format API
+6. No LangChain/CrewAI — agents are self-contained Python modules
+7. In-memory caching — 1-hour TTL for scraped opportunities, no Redis
+8. Offset pagination — simple page/limit, cursor pagination deferred post-competition
+9. Opportunities are curated + scraped — not stored in a dedicated DB table
+10. Graceful scraper failure — each source returns [] on error, curated list is permanent fallback
