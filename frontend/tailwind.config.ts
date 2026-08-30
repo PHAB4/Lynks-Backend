@@ -41,6 +41,9 @@ const config: Config = {
       fontFamily: {
         sans: ['DM Sans', 'Inter', 'system-ui', 'sans-serif'],
         heading: ['Bricolage Grotesque', 'Google Sans Flex', 'Inter', 'system-ui', 'sans-serif'],
+        googleSansFlex: ['var(--font-google-sans-flex)', 'sans-serif'],
+        helveticaNowDisplay: ['var(--font-helvetica-now-display)', 'sans-serif'],
+        inter: ['var(--font-inter)', 'sans-serif'],
       },
     },
   },
