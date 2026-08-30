@@ -76,7 +76,7 @@ _state = {
 def _headers(content_type: str = "application/json") -> dict:
     h = {}
     if _state["token"]:
-        h["Authorization"] = f"Bearer {_state['token']}"
+        h["Authorization"] = "Bearer " + _state["token"]
     if content_type:
         h["Content-Type"] = content_type
     return h
@@ -106,7 +106,7 @@ def _get_token():
         print(f"  {Colors.CYAN}Token found in .env — testing...{Colors.RESET}")
         resp = httpx.get(
             f"{BASE_URL}/profile",
-            headers={"Authorization": f"Bearer {JWT_TOKEN}"},
+            headers={"Authorization": "Bearer " + JWT_TOKEN},
             timeout=HTTP_TIMEOUT,
         )
         if resp.status_code in (200, 404):

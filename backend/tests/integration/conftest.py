@@ -59,7 +59,7 @@ def auth_token() -> str | None:
         # Verify token works
         resp = httpx.get(
             f"{BASE_URL}/health",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": "Bearer " + token},
             timeout=HTTP_TIMEOUT,
         )
         if resp.status_code in (200, 404):
