@@ -96,14 +96,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <div className={cn('flex items-center gap-3 border-t border-[#EDE3FF] p-3 shrink-0 mt-auto', collapsed && 'justify-center')}>
-            <button className="shrink-0 flex justify-center items-center rounded-full bg-[#EADFFF] w-10 h-10">
+            <Link href="/settings" className="shrink-0 flex justify-center items-center rounded-full bg-[#EADFFF] w-10 h-10 hover:opacity-80 transition-opacity cursor-pointer">
               <span className="text-[#6B26EA] text-sm font-semibold">JD</span>
-            </button>
+            </Link>
             {!collapsed && (
-              <div className="flex flex-col min-w-0">
+              <Link href="/settings" className="flex flex-col min-w-0 hover:opacity-80 transition-opacity cursor-pointer">
                 <p className="text-[13px] font-semibold text-[#0D0026] truncate">John Doe</p>
                 <p className="text-[11px] text-[rgba(0,0,0,0.50)]">Premium Member</p>
-              </div>
+              </Link>
             )}
           </div>
         </aside>
