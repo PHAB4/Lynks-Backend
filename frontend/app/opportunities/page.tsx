@@ -1,104 +1,214 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, MapPin, DollarSign, Bookmark, ChevronDown } from 'lucide-react'
+import { Search, MapPin, DollarSign, ExternalLink, Filter, Briefcase } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 
-const OPPORTUNITIES = [
-  { id: 1, title: 'AI Product Designer', company: 'Future Labs', location: 'San Francisco, CA (Hybrid)', salary: '$130k - $160k', logo: '🏢' },
-  { id: 2, title: 'Frontend Engineer', company: 'Lynks Corp', location: 'New York, NY (Remote)', salary: '$110k - $140k', logo: '💻' },
-  { id: 3, title: 'Data Analyst', company: 'Insight Analytics', location: 'Austin, TX (On-site)', salary: '$95k - $120k', logo: '📊' },
-  { id: 4, title: 'UX Researcher', company: 'Human Scale', location: 'Remote', salary: '$105k - $125k', logo: '🎨' },
-  { id: 5, title: 'Machine Learning Eng.', company: 'Cognitive AI', location: 'Seattle, WA (Hybrid)', salary: '$160k - $190k', logo: '🤖' },
-  { id: 6, title: 'Product Manager', company: 'Velocity Software', location: 'Denver, CO (Remote)', salary: '$120k - $150k', logo: '🚀' },
-  { id: 7, title: 'Brand Identity Designer', company: 'Studio Craft', location: 'Los Angeles, CA', salary: '$90k - $115k', logo: '✨' },
-  { id: 8, title: 'Operations Coordinator', company: 'Flow Logistics', location: 'Chicago, IL (Hybrid)', salary: '$80k - $100k', logo: '📋' },
+const CATEGORIES = [
+  'Software Engineering',
+  'Data Science',
+  'Project Management',
+  'UX Design',
+]
+
+const MOCK_JOBS = [
+  {
+    id: 1,
+    title: 'Senior Frontend Developer',
+    company: 'TechCorp Inc.',
+    location: 'San Francisco, CA (Hybrid)',
+    salary: '$120k - $160k',
+    category: 'Software Engineering',
+    posted: '2 days ago',
+    source: 'LinkedIn',
+    logo: '🏢',
+  },
+  {
+    id: 2,
+    title: 'Data Scientist',
+    company: 'DataFlow Analytics',
+    location: 'New York, NY (Remote)',
+    salary: '$100k - $130k',
+    category: 'Data Science',
+    posted: '1 day ago',
+    source: 'Indeed',
+    logo: '📊',
+  },
+  {
+    id: 3,
+    title: 'Product Manager',
+    company: 'InnovateTech',
+    location: 'Austin, TX (On-site)',
+    salary: '$90k - $120k',
+    category: 'Project Management',
+    posted: '3 days ago',
+    source: 'Glassdoor',
+    logo: '🚀',
+  },
+  {
+    id: 4,
+    title: 'UX Designer',
+    company: 'DesignStudio',
+    location: 'Los Angeles, CA (Remote)',
+    salary: '$85k - $110k',
+    category: 'UX Design',
+    posted: '5 hours ago',
+    source: 'Dribbble',
+    logo: '🎨',
+  },
+  {
+    id: 5,
+    title: 'Full Stack Engineer',
+    company: 'CloudNine Systems',
+    location: 'Seattle, WA (Hybrid)',
+    salary: '$130k - $170k',
+    category: 'Software Engineering',
+    posted: '1 day ago',
+    source: 'LinkedIn',
+    logo: '☁️',
+  },
+  {
+    id: 6,
+    title: 'Machine Learning Engineer',
+    company: 'AI Ventures',
+    location: 'Boston, MA (Remote)',
+    salary: '$140k - $180k',
+    category: 'Data Science',
+    posted: '4 days ago',
+    source: 'AngelList',
+    logo: '🤖',
+  },
 ]
 
 export default function OpportunitiesPage() {
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<'personal' | 'all'>('personal')
-  const [viewMode, setViewMode] = useState<'career' | 'general'>('career')
-  const [timeFilter, setTimeFilter] = useState('week')
-  const [saved, setSaved] = useState<Set<number>>(new Set())
-  const toggleSave = (id: number) => { setSaved(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n }) }
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+
+  const filteredJobs = MOCK_JOBS.filter(job => {
+    const matchesSearch = !search ||
+      job.title.toLowerCase().includes(search.toLowerCase()) ||
+      job.company.toLowerCase().includes(search.toLowerCase())
+    const matchesCategory = !selectedCategory || job.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
 
   return (
     <AppLayout>
-      <div className="flex flex-col min-h-screen bg-[#F9F5FF]">
-        <div className="flex-1 p-4 md:p-10">
+      <div className="min-h-screen bg-[#F9F5FF]">
+        <div className="max-w-7xl mx-auto px-6 py-8">
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl md:text-[40px] font-semibold leading-tight md:leading-[50px] text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Opportunities</h1>
-              <p className="text-sm text-[#8B898E]">AI-powered matches scraped live across the web.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-[#8B898E]">View Mode:</span>
-              <div className="relative">
-                <select value={viewMode} onChange={(e) => setViewMode(e.target.value as 'career' | 'general')} className="appearance-none py-3 px-4 pr-10 rounded-xl border border-[#EDE3FF] bg-[#F6F5F8] text-sm font-medium text-[#0D0026] cursor-pointer focus:outline-none">
-                  <option value="career">Career</option>
-                  <option value="general">General Opportunities</option>
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A8] pointer-events-none" />
-              </div>
-            </div>
+          <div className="mb-6">
+            <h1 className="text-[40px] font-semibold leading-[50px] text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+              Opportunities
+            </h1>
+            <p className="text-sm text-[#8B898E]">AI-powered matches scraped live across the web.</p>
           </div>
 
-          {/* Search & Filters */}
-          <div className="p-4 md:p-5 rounded-2xl border border-[#EDE3FF] bg-white mb-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-              <div className="flex items-center gap-2.5 rounded-[10px] border border-[rgba(0,0,0,0.30)] bg-[rgba(215,212,212,0.10)] px-4 py-2.5 w-full md:w-[500px]">
-                <Search size={16} className="text-[rgba(0,0,0,0.30)] shrink-0" />
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search opportunity....." className="bg-transparent text-base text-[#0D0026] placeholder:text-[rgba(0,0,0,0.30)] focus:outline-none w-full" />
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} className="appearance-none py-3 px-4 pr-10 rounded-xl border border-[#EDE3FF] bg-[#F6F5F8] text-sm font-medium text-[#0D0026] cursor-pointer focus:outline-none">
-                    <option value="day">Today</option>
-                    <option value="week">Within the week</option>
-                    <option value="month">This month</option>
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A8] pointer-events-none" />
-                </div>
-                <button className="flex items-center justify-center p-3 rounded-[10px] bg-[#F9F5FF] border border-[#EDE3FF]">
-                  <Bookmark size={20} className="text-[#6B26EA]" />
-                </button>
-              </div>
+          {/* Search + Filters */}
+          <div className="p-5 rounded-2xl border border-[#EDE3FF] bg-white mb-6">
+            {/* Search Bar */}
+            <div className="flex items-center gap-2.5 rounded-[10px] border border-[rgba(0,0,0,0.30)] bg-[rgba(215,212,212,0.10)] px-4 py-3 mb-5">
+              <Search size={18} className="text-[rgba(0,0,0,0.30)] shrink-0" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search opportunity..."
+                className="bg-transparent text-base text-[#0D0026] placeholder:text-[rgba(0,0,0,0.30)] focus:outline-none w-full"
+              />
             </div>
+
+            {/* Category Filters */}
             <div className="flex items-center gap-2.5 flex-wrap">
               <span className="text-[13px] font-semibold text-[#8B898E]">Filter Results:</span>
-              <button onClick={() => setFilter('personal')} className={cn('py-2 px-4 rounded-full text-sm font-semibold transition-colors', filter === 'personal' ? 'bg-[#6B26EA] text-white' : 'border border-[#EDE3FF] bg-[#F9F5FF] text-[#6B26EA]')}>Personal Matches</button>
-              <button onClick={() => setFilter('all')} className={cn('py-2 px-4 rounded-full text-sm font-semibold transition-colors', filter === 'all' ? 'bg-[#6B26EA] text-white' : 'border border-[#EDE3FF] bg-[#F9F5FF] text-[#6B26EA]')}>All Web Scraped</button>
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                  className={cn(
+                    'py-2 px-4 rounded-full text-sm font-semibold transition-colors',
+                    selectedCategory === cat
+                      ? 'bg-[#6B26EA] text-white'
+                      : 'border border-[#EDE3FF] bg-[#F9F5FF] text-[#6B26EA] hover:bg-[#EDE3FF]'
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Cards Grid - responsive columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
-            {OPPORTUNITIES.map((opp) => (
-              <div key={opp.id} className="flex flex-col gap-4 p-4 rounded-2xl border border-[#EDE3FF] bg-white hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-[10px] bg-[#F9F5FF] text-xl">{opp.logo}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="py-1 px-2 rounded-md bg-[#F9F5FF] text-xs font-bold text-[#6B26EA]">#{opp.id}</span>
-                    <button onClick={() => toggleSave(opp.id)} className={cn('flex items-center justify-center w-8 h-8 rounded-lg transition-colors', saved.has(opp.id) ? 'bg-[#6B26EA] text-white' : 'bg-[#F9F5FF]')}>
-                      <Bookmark size={14} className={saved.has(opp.id) ? 'fill-white text-white' : 'text-[#6B26EA]'} />
-                    </button>
+          {/* Job Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredJobs.map((job) => (
+              <div
+                key={job.id}
+                className="p-5 rounded-2xl border border-[#EDE3FF] bg-white hover:shadow-[0_8px_24px_rgba(107,38,234,0.08)] transition-shadow"
+              >
+                {/* Company Logo + Title */}
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#F9F5FF] flex items-center justify-center text-2xl shrink-0">
+                    {job.logo}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-[15px] font-semibold text-[#1E1E1E] truncate" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {job.title}
+                    </h3>
+                    <p className="text-sm text-[#6B26EA] font-medium" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {job.company}
+                    </p>
                   </div>
                 </div>
-                <div className="flex flex-col gap-1"><p className="text-base font-semibold text-[#0D0026] truncate">{opp.title}</p><p className="text-sm font-medium text-[#8B898E]">{opp.company}</p></div>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5"><MapPin size={14} className="text-[#A8A8A8] shrink-0" /><p className="text-xs text-[#8B898E] truncate">{opp.location}</p></div>
-                  <div className="flex items-center gap-1.5"><DollarSign size={14} className="text-[#A8A8A8] shrink-0" /><p className="text-xs font-semibold text-[#6B26EA]">{opp.salary}</p></div>
+
+                {/* Location + Salary */}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin size={14} className="text-[#8E8C94] shrink-0" />
+                    <p className="line-clamp-1 text-[#6C6A72] text-xs" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {job.location}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <DollarSign size={14} className="text-[#8E8C94] shrink-0" />
+                    <p className="text-[#6B26EA] text-xs font-semibold" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {job.salary}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center mt-auto pt-1">
-                  <p className="text-[11px] text-[#A8A8A8]">AI Scraped</p>
-                  <button className="py-1.5 px-3 rounded-lg bg-[#6B26EA] text-white text-xs font-semibold hover:bg-[#5A1FD0] transition-colors">Go to source</button>
+
+                {/* Footer */}
+                <div className="flex justify-between items-center pt-3 border-t border-[rgba(30,30,30,0.07)]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#8E8C94] text-[11px]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {job.posted}
+                    </span>
+                    <span className="text-[#8E8C94] text-[11px]">•</span>
+                    <span className="text-[#8E8C94] text-[11px]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {job.source}
+                    </span>
+                  </div>
+                  <button className="py-1.5 px-3 rounded-lg bg-[#6B26EA] text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-[#5A1FD0] transition-colors">
+                    Go to source
+                    <ExternalLink size={12} />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Empty State */}
+          {filteredJobs.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 rounded-full bg-[#EADFFF] flex items-center justify-center mb-4">
+                <Search size={24} className="text-[#6B26EA]" />
+              </div>
+              <p className="text-lg font-semibold text-[#0D0026] mb-2">No opportunities found</p>
+              <p className="text-sm text-[#8B898E] max-w-md">
+                Try adjusting your search or filters to find more opportunities.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>

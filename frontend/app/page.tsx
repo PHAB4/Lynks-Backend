@@ -1,122 +1,114 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef } from 'react'
+
+function ScrollReveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)' }, delay)
+        } else {
+          el.style.opacity = '0'; el.style.transform = 'translateY(30px)'
+        }
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+    )
+    el.style.opacity = '0'
+    el.style.transform = 'translateY(30px)'
+    el.style.transition = 'opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)'
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [delay])
+  return <div ref={ref} className={className}>{children}</div>
+}
 
 export default function LandingPage() {
-  const [showLogin, setShowLogin] = useState(false)
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
+  const features = [
+    { label: 'NOTIFICATIONS', title: 'Get notified and even be reminded about incomplete tasks', description: 'As you traverse through your career journey, our systems stay up to date with opportunities to carry you along your career journey and notify you of such. It also notifies you of tasks that you may still have to complete to continue, along your career journey.', image: '/images/OxA7NlDbOxTaTU6TLtJ6Bf0vvI.png', imageAlt: 'Notifications', reverse: false },
+    { label: 'RESUME WRITING', title: 'Get usable resumes with the click of a button', description: 'Our systems are not only capable of creating resumes for the user, It also continuously updates the users resume according to the tasks the user completed along their career journey', image: '/images/lY89a5i4dJFJRvKsqqmRte78SI.png', imageAlt: 'Resume', reverse: true },
+    { label: 'TASKS', title: 'Lynks guides you every step of the way', description: 'By mapping out each step on the career roadmap Lynks keeps the user on task while making the process personal and more enjoyable. Furthermore, with the assistance of our on chat box system the user has the option to ask questions about their career process while being informed fully about application processes and other opportunities', image: '/images/LNFMMqlJPosVeR1MkDOtzG9OmX4.png', imageAlt: 'Tasks', reverse: false },
+    { label: 'STAY INFORMED', title: 'Keep up to date with opportunities as they appear', description: 'Stay informed about all opportunities in your area not only for the sake of employment but for the personal development. Lynks makes you aware of opportunities opening your mind to other paths not only those in your field of interest', image: '/images/VATig1fwVrqP6Ni30VbZR37tals.png', imageAlt: 'Stay Informed', reverse: true },
+  ]
 
   return (
     <div className="flex flex-col items-center bg-[#F9F5FF] min-h-screen w-full overflow-hidden">
-      {/* Navbar */}
-      <nav className="flex items-center justify-between w-full max-w-[1200px] mx-auto px-5 py-4">
-        <div className="w-16 h-6 relative">
+      <nav className="nav-shadow flex items-center justify-between w-full max-w-[1200px] mx-auto px-5 py-4 relative z-20">
+        <div className="flex items-center gap-1">
           <span className="text-[#0D0026] text-xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>LYNKS</span>
+          <span className="text-[#6B26EA] text-lg font-bold">&raquo;</span>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={() => setShowLogin(true)} className="text-[#8B898E] text-sm hover:text-[#0D0026] transition-colors cursor-pointer" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
-            Login
-          </button>
-          <Link href="/signup" className="bg-[#6B26EA] text-white text-sm px-6 py-2 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
-            Sign up
-          </Link>
+          <Link href="/login" className="text-[#8B898E] text-sm hover:text-[#0D0026] transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>Login</Link>
+          <Link href="/signup" className="bg-[#6B26EA] text-white text-sm px-6 py-2 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>Sign up</Link>
         </div>
       </nav>
 
-      {/* Hero */}
-      <div className="flex flex-col items-center justify-center flex-1 w-full max-w-[1200px] mx-auto px-5 py-12">
-        <p className="text-[128px] leading-[55px] text-[#6B26EA] mb-2" style={{ fontFamily: "'Birthstone', cursive" }}>Let&apos;s</p>
-        <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Lynk</h1>
-        <Link href="/onboarding" className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
+      <ScrollReveal className="flex flex-col items-center justify-center flex-1 w-full max-w-[1200px] mx-auto px-5 py-12">
+        <div className="relative">
+          <p className="text-[128px] leading-[55px] text-[#6B26EA] mb-2" style={{ fontFamily: "'Birthstone', cursive" }}>Let&apos;s</p>
+          <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Lynk</h1>
+          <div className="halftone-pattern absolute -right-20 top-0 w-[180px] h-[140px] rounded-full" />
+        </div>
+        <Link id="hero-get-started" href="/signup" className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-all duration-300" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
           Get started
         </Link>
-      </div>
+      </ScrollReveal>
 
-      {/* Tagline bar */}
-      <div className="w-full bg-[#6B26EA] py-10 px-12">
-        <h2 className="text-white text-[29px] font-medium leading-[130%] text-center max-w-[800px] mx-auto" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 500 }}>
+      <ScrollReveal className="w-full bg-[#6B26EA] py-10 px-12">
+        <h2 className="text-white text-[29px] font-medium leading-[130%] text-center max-w-[800px] mx-auto" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
           Get connected, get informed and receive guidance. Make your career journey easier than its ever been
         </h2>
-      </div>
+      </ScrollReveal>
 
-      {/* Feature 1: Notifications */}
-      <div className="w-full max-w-[1200px] mx-auto bg-[#F9F5FF] rounded-[50px] px-[100px] py-12 my-6 flex items-center gap-14">
-        <div className="flex-1 flex flex-col gap-11">
-          <div className="bg-[#6B26EA] rounded-full px-5 py-3 w-fit">
-            <span className="text-white text-xl font-semibold" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Notifications</span>
-          </div>
-          <h3 className="text-[25px] font-bold leading-[50px]" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
-            Get notified and even be reminded about incomplete tasks
-          </h3>
-          <p className="text-[16px] leading-[30px] text-[rgba(0,0,0,0.6)]">
-            As you traverse through your career journey, our systems stay up to date with opportunities to carry you along your career journey and notify you of such. It also notifies you of tasks that you may still have to complete to continue, along your career journey.
-          </p>
+      {features.map((feature, i) => (
+        <div key={i} className={`w-full max-w-[1200px] mx-auto px-[60px] py-16 flex items-center gap-14 ${feature.reverse ? 'flex-row-reverse' : ''}`}>
+          <ScrollReveal delay={0} className={`flex-1 flex flex-col gap-6 ${feature.reverse ? 'items-end text-right' : 'items-start text-left'}`}>
+            <span className="text-[#6B26EA] text-xs font-semibold tracking-[0.15em] uppercase" style={{ fontFamily: "'DM Sans', sans-serif" }}>{feature.label}</span>
+            <h3 className="text-[25px] font-bold leading-[40px] text-[#0D0026]" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}>{feature.title}</h3>
+            <p className="text-[16px] leading-[28px] text-[rgba(0,0,0,0.6)]" style={{ fontFamily: "'DM Sans', sans-serif" }}>{feature.description}</p>
+          </ScrollReveal>
+          <ScrollReveal delay={150} className="flex-1 flex justify-center">
+            <div className="feature-image-ring relative w-[380px] h-[380px]">
+              <img src={feature.image} alt={feature.imageAlt} className="w-full h-full object-cover rounded-full" />
+            </div>
+          </ScrollReveal>
         </div>
-        <div className="flex-1 aspect-square rounded-full bg-[#EDE3FF] overflow-hidden flex items-center justify-center">
-          <img src="/images/OxA7NlDbOxTaTU6TLtJ6Bf0vvI.png" alt="Notifications" className="w-full h-full object-cover" />
-        </div>
-      </div>
+      ))}
 
-      {/* Feature 2: Resume Writing */}
-      <div className="w-full max-w-[1200px] mx-auto bg-[#E0E0E0] rounded-[50px] px-[100px] py-12 my-6 flex items-center gap-14">
-        <div className="flex-1 aspect-square rounded-full bg-[#F9F5FF] overflow-hidden flex items-center justify-center">
-          <img src="/images/lY89a5i4dJFJRvKsqqmRte78SI.png" alt="Resume" className="w-full h-full object-cover" />
-        </div>
-        <div className="flex-1 flex flex-col gap-10 items-end">
-          <div className="bg-[#6B26EA] rounded-full px-5 py-3 w-fit">
-            <span className="text-white text-xl font-semibold" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Resume writing</span>
-          </div>
-          <h3 className="text-[25px] font-bold leading-[50px] text-right" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
-            Get usable resumes with the click of a button
-          </h3>
-          <p className="text-[16px] leading-[30px] text-right text-[rgba(0,0,0,0.6)]">
-            Our systems are not only capable of creating resumes for the user, It also continuously updates the users resume according to the tasks the user completed along their career journey
-          </p>
-        </div>
-      </div>
+      {/* Ready to start CTA */}
+      <ScrollReveal className="w-full bg-[#F9F5FF] py-20 px-5 text-center">
+        <h2 className="text-[36px] font-bold text-[#0D0026] mb-4" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Ready to start?</h2>
+        <p className="text-[16px] text-[rgba(0,0,0,0.6)] mb-8 max-w-md mx-auto" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          Join LYNKS today and take the first step towards your career journey.
+        </p>
+        <button
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            setTimeout(() => {
+              const btn = document.getElementById('hero-get-started')
+              if (btn) {
+                btn.classList.add('ring-4', 'ring-[#6B26EA]/50')
+                setTimeout(() => btn.classList.remove('ring-4', 'ring-[#6B26EA]/50'), 2000)
+              }
+            }, 600)
+          }}
+          className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-all duration-300"
+          style={{ fontFamily: "'DM Sans', sans-serif" }}
+        >
+          Get started
+        </button>
+      </ScrollReveal>
 
-      {/* Feature 3: Tasks */}
-      <div className="w-full max-w-[1200px] mx-auto bg-[#F9F5FF] rounded-[30px] px-[100px] py-12 my-6 flex items-center gap-14">
-        <div className="flex-1 flex flex-col gap-[63px]">
-          <div className="bg-[#6B26EA] rounded-full px-5 py-3 w-[122px]">
-            <span className="text-white text-xl font-semibold text-center" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Tasks</span>
-          </div>
-          <h3 className="text-[25px] font-bold leading-[35px]" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
-            Lynks guides you every step of the way
-          </h3>
-          <p className="text-[16px] leading-[30px] text-[rgba(0,0,0,0.6)]">
-            By mapping out each step on the career roadmap Lynks keeps the user on task while making the process personal and more enjoyable. Furthermore, with the assistance of our on chat box system the user has the option to ask questions about their career process while being informed fully about application processes and other opportunities
-          </p>
-        </div>
-        <div className="flex-1 aspect-square rounded-full bg-[#EDE3FF] overflow-hidden flex items-center justify-center">
-          <img src="/images/LNFMMqlJPosVeR1MkDOtzG9OmX4.png" alt="Tasks" className="w-full h-full object-cover" />
-        </div>
-      </div>
-
-      {/* Feature 4: Stay Informed */}
-      <div className="w-full max-w-[1200px] mx-auto bg-[#E0E0E0] rounded-[50px] px-[100px] py-12 my-6 flex items-center gap-14">
-        <div className="flex-1 aspect-square rounded-full bg-[#F9F5FF] overflow-hidden flex items-center justify-center">
-          <img src="/images/VATig1fwVrqP6Ni30VbZR37tals.png" alt="Stay Informed" className="w-full h-full object-cover" />
-        </div>
-        <div className="flex-1 flex flex-col gap-10 items-end">
-          <div className="bg-[#6B26EA] rounded-full px-5 py-3 w-fit">
-            <span className="text-white text-xl font-semibold text-center" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Stay informed</span>
-          </div>
-          <h3 className="text-[25px] font-bold leading-[35px] text-right" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 700 }}>
-            Keep up to date with opportunities as they appear
-          </h3>
-          <p className="text-[16px] leading-[30px] text-right text-[rgba(0,0,0,0.6)]">
-            Stay informed about all opportunities in your area not only for the sake of employment but for the personal development. Lynks makes you aware of opportunities opening your mind to other paths not only those in your field of interest
-          </p>
-        </div>
-      </div>
-
-      {/* Footer */}
       <footer className="w-full bg-[#E0E0E0] py-5 px-5 mt-12">
         <div className="flex items-center justify-between max-w-[1200px] mx-auto">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <span className="text-xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>LYNKS</span>
+            <span className="text-[#6B26EA] text-sm font-bold">&raquo;</span>
           </div>
           <p className="text-[20px] leading-[30px]" style={{ fontFamily: "'Inter', sans-serif" }}>2026 LYNKS</p>
           <div className="flex items-center gap-3">
@@ -129,29 +121,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-      {/* Login Modal */}
-      {showLogin && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowLogin(false)}>
-          <div className="bg-white rounded-3xl p-10 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-[28px] font-semibold text-[#0D0026] mb-2" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Log in</h2>
-            <p className="text-sm text-[rgba(30,30,30,0.6)] mb-8">Welcome back! Sign in to continue your journey.</p>
-            <div className="flex flex-col gap-5">
-              <div>
-                <label className="text-sm font-semibold text-[rgba(30,30,30,0.8)] block mb-2">Email Address</label>
-                <input type="email" placeholder="email@gmail.com" value={loginForm.email} onChange={(e) => setLoginForm(p => ({ ...p, email: e.target.value }))} className="w-full p-3.5 rounded-[10px] border border-[rgba(0,0,0,0.20)] bg-[rgba(215,212,212,0.10)] text-[15px] focus:outline-none focus:border-[#6B26EA] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }} />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-[rgba(30,30,30,0.8)] block mb-2">Password</label>
-                <input type="password" placeholder="••••••••" value={loginForm.password} onChange={(e) => setLoginForm(p => ({ ...p, password: e.target.value }))} className="w-full p-3.5 rounded-[10px] border border-[rgba(0,0,0,0.20)] bg-[rgba(215,212,212,0.10)] text-[15px] focus:outline-none focus:border-[#6B26EA] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }} />
-              </div>
-              <button className="w-full py-3 rounded-[20px] bg-[#EADFFF] border border-[rgba(0,0,0,0.43)] text-sm font-medium hover:bg-[#D4C4F7] transition-colors cursor-pointer" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

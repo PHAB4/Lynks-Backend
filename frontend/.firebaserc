@@ -1,5 +1,1 @@
-{
-  "projects": {
-    "default": "lynks-frontend"
-  }
-}
+{"projects":{"default":"lynks-gen-ai"}}
