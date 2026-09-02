@@ -141,7 +141,7 @@ export default function LandingPage() {
       <div className="flex flex-col items-center bg-[#F9F5FF] min-h-screen w-full overflow-hidden relative z-10">
         {/* Navbar */}
         <nav className="nav-shadow flex items-center justify-between w-full max-w-[1200px] mx-auto px-5 py-4">
-          <img src="/lynks-logo.jpg" alt="LYNKS" className="h-6 w-auto object-contain" style={{ mixBlendMode: "screen" }} />
+          <img src="/lynks-full-logo.png" alt="LYNKS" className="h-6 w-auto object-contain" />
           <div className="flex items-center gap-4">
             <button>
             <Link href= "/login" className="bg-[#E0E0E0] text-[#6B26EA] text-sm px-6 py-2 rounded-full hover:bg-[#D1D1D1] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
@@ -208,7 +208,7 @@ export default function LandingPage() {
         {/* Footer */}
         <footer className="w-full bg-[#E0E0E0] py-5 px-5 mt-12">
           <div className="flex items-center justify-between max-w-[1200px] mx-auto">
-            <img src="/lynks-logo.jpg" alt="LYNKS" className="h-6 w-auto object-contain" style={{ mixBlendMode: "screen" }} />
+            <img src="/lynks-full-logo.png" alt="LYNKS" className="h-6 w-auto object-contain" />
             <p className="text-[20px] leading-[30px]" style={{ fontFamily: "'Inter', sans-serif" }}>2026 LYNKS</p>
             <div className="flex items-center gap-3">
               <a href="https://www.instagram.com/lynks.tt/" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">

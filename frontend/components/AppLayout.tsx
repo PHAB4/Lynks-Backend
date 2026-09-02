@@ -220,7 +220,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="hidden md:flex flex-col w-[305px] shrink-0 bg-[#F9F5FF] border-r border-[#EDE3FF] py-2.5 px-[11px] h-screen sticky top-0 z-20">
           <div className="flex items-center justify-between w-full h-10 mb-2.5 shrink-0">
             <Link href="/dashboard" onClick={() => setSidebarExpanded(false)}>
-              <img src="/lynks-logo.jpg" alt="LYNKS" className="h-6 w-auto object-contain" style={{ mixBlendMode: "multiply" }} />
+              <img src="/lynks-full-logo.png" alt="LYNKS" className="h-6 w-auto object-contain" />
             </Link>
             <button
               onClick={handleSidebarExpand}
