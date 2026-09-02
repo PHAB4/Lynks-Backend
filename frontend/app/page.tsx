@@ -29,8 +29,6 @@ function AnimatedSection({ children, className = '', delay = 0 }: { children: Re
 
 export default function LandingPage() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-  const [showLogin, setShowLogin] = useState(false)
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     setMousePos({ x: e.clientX, y: e.clientY })
@@ -145,8 +143,10 @@ export default function LandingPage() {
         <nav className="nav-shadow flex items-center justify-between w-full max-w-[1200px] mx-auto px-5 py-4">
           <img src="/lynks-logo.jpg" alt="LYNKS" className="h-6 w-auto object-contain" style={{ mixBlendMode: "screen" }} />
           <div className="flex items-center gap-4">
-            <button onClick={() => setShowLogin(true)} className="text-[#8B898E] text-sm hover:text-[#0D0026] transition-colors cursor-pointer" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
-              Login
+            <button>
+            <Link href= "/login" className="bg-[#E0E0E0] text-[#6B26EA] text-sm px-6 py-2 rounded-full hover:bg-[#D1D1D1] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
+              Log in
+            </Link>  
             </button>
             <Link href="/signup" className="bg-[#6B26EA] text-white text-sm px-6 py-2 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
               Sign up
@@ -220,29 +220,6 @@ export default function LandingPage() {
             </div>
           </div>
         </footer>
-
-        {/* Login Modal */}
-        {showLogin && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowLogin(false)}>
-            <div className="bg-white rounded-3xl p-10 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
-              <h2 className="text-[28px] font-semibold text-[#0D0026] mb-2" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Log in</h2>
-              <p className="text-sm text-[rgba(30,30,30,0.6)] mb-8">Welcome back! Sign in to continue your journey.</p>
-              <div className="flex flex-col gap-5">
-                <div>
-                  <label className="text-sm font-semibold text-[rgba(30,30,30,0.8)] block mb-2">Email Address</label>
-                  <input type="email" placeholder="email@gmail.com" value={loginForm.email} onChange={(e) => setLoginForm(p => ({ ...p, email: e.target.value }))} className="w-full p-3.5 rounded-[10px] border border-[rgba(0,0,0,0.20)] bg-[rgba(215,212,212,0.10)] text-[15px] focus:outline-none focus:border-[#6B26EA] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }} />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-[rgba(30,30,30,0.8)] block mb-2">Password</label>
-                  <input type="password" placeholder="••••••••" value={loginForm.password} onChange={(e) => setLoginForm(p => ({ ...p, password: e.target.value }))} className="w-full p-3.5 rounded-[10px] border border-[rgba(0,0,0,0.20)] bg-[rgba(215,212,212,0.10)] text-[15px] focus:outline-none focus:border-[#6B26EA] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }} />
-                </div>
-                <Link href="/login" className="w-full py-3 rounded-[20px] bg-[#EADFFF] border border-[rgba(0,0,0,0.43)] text-sm font-medium hover:bg-[#D4C4F7] transition-colors cursor-pointer text-center block" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
-                  Continue
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </>
   )
