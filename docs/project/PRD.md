@@ -55,37 +55,43 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 
 ### 4.5 Career Opportunities Page — UX Pattern
 
-The career opportunities page has two tabs:
+The career opportunities page uses a two-tab filter system with a VIEW mode selector:
+
+**VIEW Mode (top right dropdown):**
+
+| Mode | Description |
+|---|---|
+| **Career** | Shows ONLY job opportunities |
+| **General** | Shows ALL scraped opportunities — jobs, internships, youth groups, grants, education, etc. |
+
+**Filter Tabs (below search bar):**
 
 | Tab | Description |
 |---|---|
-| **For You** (default) | Opportunities matched to the user's profile, sorted by relevance. Uses rule-based matching against career path, country, age, education level. No AI required. |
-| **Browse All** | Full catalog of all opportunities with filters. |
+| **All Web-scraped** | All opportunities in the current VIEW mode |
+| **Personal matches** | Opportunities tailored to the user's profile (scoped to current VIEW mode) |
 
-**Filters available:**
+**Additional Controls:**
 
-| Filter | Options |
-|---|---|
-| Category | Job, Competition, Club, Scholarship, Event, Volunteer |
-| Timeframe | Within Week, Within Month, Within Quarter, All Time |
-| Sort | Relevance, Recent, Salary |
-| Page | Offset pagination (default 20 per page, max 50) |
+| Control | Options | Notes |
+|---|---|---|
+| Search bar | Text input | Filters by title and company name |
+| Time filter | Today, This Week, This Month | Dropdown to the right of search bar |
+| Save icon | Toggle | When clicked, shows only bookmarked opportunities |
 
 **Opportunity Card Fields:**
 
 | Field | Type | Notes |
 |---|---|---|
+| Company initial | Avatar | Circular avatar with company first letter |
 | Title | string | Opportunity name |
+| Type badge | string | Category label (Job, Internship, Youth Group, Grant) — shown on General view |
 | Company/Organization | string | Hosting organization |
-| Category | string | Job, scholarship, competition, etc. |
 | Location | string | Physical location or "Remote" |
 | Salary | object | `{ min, max, currency }` for jobs; `null` for others. Currency auto-detected (22+ ISO 4217 codes), source-context-aware. |
-| Description | string | Brief description |
-| Image | string (URL) | Thumbnail/preview image |
-| Posted At | datetime | When originally posted |
-| Source | string | Where it was scraped from (devpost, eventbrite, curated, etc.) |
-| Go To Source | link | URL to the original opportunity page |
-| Save/Unsave | button | Bookmark for later |
+| Recency number | int | Top right — scrape order (1 = most recent) |
+| Save/Unsave | icon | Bookmark icon — fills with `#6B26EA` when saved |
+| Go to source | link | Purple `#6B26EA` button linking to the original opportunity page |
 
 **"Ask About This" Button:**
 

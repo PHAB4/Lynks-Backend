@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Check, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
 
@@ -38,6 +38,7 @@ export default function LoginPage() {
     localStorage.setItem('lynks_user', JSON.stringify({
       name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
       email: user.email,
+      id: user.id,
     }))
     router.push('/dashboard')
   }
@@ -45,9 +46,9 @@ export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#F7F3FE] px-4">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <h1 className="text-3xl font-bold text-[#6B26EA]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>LYNKS</h1>
-          <p className="text-[#8B898E] text-sm">Welcome back</p>
+        <div className="flex flex-col items-center gap-3 mb-2">
+          <img src="/lynks-full-logo.png" alt="LYNKS" className="h-72 w-auto object-contain" />
+          <p className="text-[#8B898E] text-sm mt-2">Welcome back</p>
         </div>
         {serverError && <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center">{serverError}</div>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

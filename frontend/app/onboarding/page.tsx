@@ -62,7 +62,7 @@ export default function OnboardingPage() {
       {/* Logo */}
       <div className="px-6 py-5">
         <div className="flex items-center gap-1">
-          <span className="text-[#0D0026] text-xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>LYNKS</span>
+          <img src="/lynks-full-logo.png" alt="LYNKS" className="h-6 w-auto object-contain" />
           <span className="text-[#6B26EA] text-lg font-bold">&raquo;</span>
         </div>
       </div>
