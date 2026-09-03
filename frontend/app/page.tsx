@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 
 function AnimatedSection({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -28,17 +28,6 @@ function AnimatedSection({ children, className = '', delay = 0 }: { children: Re
 }
 
 export default function LandingPage() {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    setMousePos({ x: e.clientX, y: e.clientY })
-  }, [])
-
-  useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [handleMouseMove])
-
   const features = [
     {
       label: 'NOTIFICATIONS',
@@ -86,17 +75,6 @@ export default function LandingPage() {
           opacity: 1;
           transform: translateY(0);
         }
-        .mouse-glow {
-          position: fixed;
-          width: 600px;
-          height: 600px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(107,38,234,0.08) 0%, rgba(107,38,234,0.03) 40%, transparent 70%);
-          pointer-events: none;
-          z-index: 0;
-          transform: translate(-50%, -50%);
-          transition: left 0.3s ease-out, top 0.3s ease-out;
-        }
         .halftone-pattern {
           background-image: radial-gradient(circle, #6B26EA 1px, transparent 1px);
           background-size: 8px 8px;
@@ -136,12 +114,10 @@ export default function LandingPage() {
         }
       `}</style>
 
-      <div className="mouse-glow" style={{ left: mousePos.x, top: mousePos.y }} />
-
-      <div className="flex flex-col items-center bg-[#F9F5FF] min-h-screen w-full overflow-hidden relative z-10">
+      <div className="flex flex-col items-center bg-[#F9F5FF] min-h-screen w-full overflow-hidden relative">
         {/* Navbar */}
         <nav className="nav-shadow flex items-center justify-between w-full max-w-[1200px] mx-auto px-5 py-4">
-          <img src="/lynks-full-logo.png" alt="LYNKS" className="h-6 w-auto object-contain" />
+          <img src="/lynks-full-logo.png" alt="LYNKS" className="h-28 w-auto object-contain" />
           <div className="flex items-center gap-4">
             <button>
             <Link href= "/login" className="bg-[#E0E0E0] text-[#6B26EA] text-sm px-6 py-2 rounded-full hover:bg-[#D1D1D1] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
@@ -156,10 +132,9 @@ export default function LandingPage() {
 
         {/* Hero */}
         <div className="flex flex-col items-center justify-center flex-1 w-full max-w-[1200px] mx-auto px-5 py-12 relative">
-          <div className="relative text-center">
-            <p className="text-[128px] leading-[55px] text-[#6B26EA] mb-2" style={{ fontFamily: "'Birthstone', cursive" }}>Let&apos;s</p>
-            <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Lynk</h1>
-            <div className="halftone-pattern absolute -right-20 top-0 w-[180px] h-[140px] rounded-full" />
+          <div className="relative flex flex-col">
+            <p className="text-[128px] leading-[55px] text-[#6B26EA] mb-4 -ml-[120px]" style={{ fontFamily: "'Birthstone', cursive" }}>Let&apos;s</p>
+            <h1 className="text-[96px] leading-[55px] font-semibold text-[#0D0026] mb-16 self-center" style={{ fontFamily: "'Google Sans Flex', sans-serif", fontWeight: 600 }}>Lynk</h1>
           </div>
           <Link href="/onboarding" className="bg-[#6B26EA] text-white text-sm px-8 py-3 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Helvetica Now Display', 'Inter', sans-serif" }}>
             Get started
@@ -194,10 +169,10 @@ export default function LandingPage() {
                 <div className="feature-image-circle relative w-[380px] h-[380px]">
                   <img src={feature.image} alt={feature.imageAlt} className="w-full h-full object-cover rounded-full" />
                   <svg className="star-decoration" style={{ top: '-10px', right: '10%', width: 16, height: 16 }} viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0L9.8 6.2L16 8L9.8 9.8L8 16L6.2 9.8L0 8L6.2 6.2L8 0Z" />
+                    <path d="M8 0L9.8 6.2L16 8L9.8 9.8L8 16L6.2 9.8L0 8L6.2 6.2 L8 0Z" />
                   </svg>
                   <svg className="star-decoration" style={{ bottom: '20%', left: '-5px', width: 10, height: 10 }} viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0L9.8 6.2L16 8L9.8 9.8L8 16L6.2 9.8L0 8L6.2 6.2L8 0Z" />
+                    <path d="M8 0L9.8 6.2L16 8L9.8 9.8L8 16L6.2 9.8L0 8L6.2 6.2 L8 0Z" />
                   </svg>
                 </div>
               </div>

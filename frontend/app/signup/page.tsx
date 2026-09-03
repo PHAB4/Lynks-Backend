@@ -55,7 +55,7 @@ export default function SignupPage() {
     <div className="flex items-center justify-center min-h-screen bg-[#F7F3FE] px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center gap-3 mb-8">
-          <img src="/lynks-full-logo.png" alt="LYNKS" className="h-6 w-auto object-contain" />
+          <img src="/lynks-full-logo.png" alt="LYNKS" className="h-72 w-auto object-contain" />
           <p className="text-[#8B898E] text-sm">Create your account</p>
         </div>
         {serverError && <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center">{serverError}</div>}

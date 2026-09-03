@@ -60,14 +60,6 @@ export default function DashboardPage() {
       </AppLayout>
     )
   }
-
-  const greeting = (() => {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'Good morning'
-    if (hour < 17) return 'Good afternoon'
-    return 'Good evening'
-  })()
-
   const initials = (profile?.name || 'U').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
@@ -75,7 +67,6 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-[#F7F3FE] overflow-y-auto">
         <div className="max-w-[1100px] mx-auto px-4 md:px-8 py-8 md:py-12">
           <div className="mb-8">
-            <p className="text-sm text-[#8B898E] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>{greeting}</p>
             <h1 className="text-[28px] md:text-[36px] font-semibold text-[#0D0026] leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
               Welcome, {profile?.name}
             </h1>
