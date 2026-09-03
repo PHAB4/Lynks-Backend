@@ -1,6 +1,11 @@
-<<<<<<< HEAD
-﻿const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+import { supabase } from '@/lib/supabase'
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
 const BASE = BACKEND
+interface ApiOptions {
+  method?: string
+  body?: unknown
+  headers?: Record<string, string>
+}
 function headers(auth?: string): HeadersInit {
   const h: HeadersInit = { 'Content-Type': 'application/json' }
   if (auth) h['Authorization'] = `Bearer ${auth}`
@@ -11,6 +16,62 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail ?? body.error ?? `Request failed (${res.status})`)
+  }
+  return res.json()
+}
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) {
+    throw new Error('Not authenticated')
+  }
+  return {
+    Authorization: `Bearer ${session.access_token}`,
+    'Content-Type': 'application/json',
+  }
+}
+async function refreshTokenIfNeeded(): Promise<string | null> {
+  const { data, error } = await supabase.auth.refreshSession()
+  if (error || !data.session?.access_token) return null
+  return data.session.access_token
+}
+export async function fetchAPI<T = unknown>(
+  path: string,
+  options: ApiOptions = {},
+): Promise<T> {
+  const authHeaders = await getAuthHeaders()
+  const url = `${BASE}${path}`
+  const doFetch = async (token?: string) => {
+    const reqHeaders: Record<string, string> = {
+      ...authHeaders,
+      ...options.headers,
+    }
+    if (token) reqHeaders.Authorization = `Bearer ${token}`
+    return fetch(url, {
+      method: options.method || 'GET',
+      headers: reqHeaders,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    })
+  }
+  let res = await doFetch()
+  if (res.status === 401) {
+    const newToken = await refreshTokenIfNeeded()
+    if (newToken) {
+      res = await doFetch(newToken)
+    }
+  }
+  if (!res.ok) {
+    let errorDetail = ''
+    try {
+      const errBody = await res.json()
+      errorDetail =
+        errBody?.detail?.error?.message ||
+        errBody?.detail?.message ||
+        (typeof errBody?.detail === 'string' ? errBody.detail : '') ||
+        res.statusText
+    } catch {
+      errorDetail = res.statusText
+    }
+    throw new Error(errorDetail || `Request failed (${res.status})`)
   }
   return res.json()
 }
@@ -59,78 +120,3 @@ export const memory = {
   update: (auth: string, id: string, content: string) => request<any>(`/memory/${id}`, { method: 'PATCH', headers: headers(auth), body: JSON.stringify({ content }) }),
   delete: (auth: string, id: string) => request<any>(`/memory/${id}`, { method: 'DELETE', headers: headers(auth) }),
 }
-=======
-import { supabase } from '@/lib/supabase'
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
-
-interface ApiOptions {
-  method?: string
-  body?: unknown
-  headers?: Record<string, string>
-}
-
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.access_token) {
-    throw new Error('Not authenticated')
-  }
-  return {
-    Authorization: `Bearer ${session.access_token}`,
-    'Content-Type': 'application/json',
-  }
-}
-
-async function refreshTokenIfNeeded(): Promise<string | null> {
-  const { data, error } = await supabase.auth.refreshSession()
-  if (error || !data.session?.access_token) return null
-  return data.session.access_token
-}
-
-export async function fetchAPI<T = unknown>(
-  path: string,
-  options: ApiOptions = {},
-): Promise<T> {
-  const authHeaders = await getAuthHeaders()
-  const url = `${BACKEND_URL}${path}`
-
-  const doFetch = async (token?: string) => {
-    const headers: Record<string, string> = {
-      ...authHeaders,
-      ...options.headers,
-    }
-    if (token) headers.Authorization = `Bearer ${token}`
-    return fetch(url, {
-      method: options.method || 'GET',
-      headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
-    })
-  }
-
-  let res = await doFetch()
-
-  if (res.status === 401) {
-    const newToken = await refreshTokenIfNeeded()
-    if (newToken) {
-      res = await doFetch(newToken)
-    }
-  }
-
-  if (!res.ok) {
-    let errorDetail = ''
-    try {
-      const errBody = await res.json()
-      errorDetail =
-        errBody?.detail?.error?.message ||
-        errBody?.detail?.message ||
-        (typeof errBody?.detail === 'string' ? errBody.detail : '') ||
-        res.statusText
-    } catch {
-      errorDetail = res.statusText
-    }
-    throw new Error(errorDetail || `Request failed (${res.status})`)
-  }
-
-  return res.json()
-}
->>>>>>> feature/chat-agent-integration
