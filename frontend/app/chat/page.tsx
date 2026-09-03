@@ -1,14 +1,22 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send } from 'lucide-react'
+import { Send, Paperclip } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
 
 export default function ChatPage() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; content: string; time: string }>>([])
-  const [userName, setUserName] = useState('')
+  const [userName, setUserName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('lynks_user')
+      if (cached) {
+        try { return JSON.parse(cached).name || 'there' } catch { /* ignore */ }
+      }
+    }
+    return 'there'
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -43,6 +51,7 @@ export default function ChatPage() {
   return (
     <AppLayout>
       <div className="flex h-screen bg-[#F7F3FE]">
+        {/* Chat section */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 overflow-y-auto px-4 md:px-6 py-8">
             {messages.length === 0 ? (
@@ -77,6 +86,7 @@ export default function ChatPage() {
               </div>
             )}
           </div>
+          {/* Chat input */}
           <div className="px-4 md:px-6 pb-4 md:pb-6">
             <div className="flex items-center gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] mx-auto shadow-[0_0_5px_rgba(0,0,0,0.05)]">
               <input
@@ -98,6 +108,7 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
+
       </div>
     </AppLayout>
   )
