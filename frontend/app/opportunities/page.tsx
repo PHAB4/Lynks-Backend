@@ -6,7 +6,7 @@ import type { Opportunity } from '@/lib/types'
 import AppLayout from '@/components/AppLayout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, RefreshCw, Bookmark, BookmarkCheck, ExternalLink, Loader2, Briefcase, MapPin, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, RefreshCw, Bookmark, BookmarkCheck, ExternalLink, Loader2, Briefcase, MapPin, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const CATEGORIES = [
   { label: 'All', value: '' },
@@ -170,6 +170,12 @@ export default function OpportunitiesPage() {
                         <div className="flex items-center gap-3 mt-2">
                           <span className="text-xs font-medium bg-[#EADFFF] text-[#6B26EA] px-2 py-0.5 rounded-full capitalize">{opp.category}</span>
                           {opp.age_requirement && <span className="text-xs text-[#8B898E]">Age: {opp.age_requirement}</span>}
+                          {opp.pay && opp.pay !== 'Varies' && opp.pay !== 'Unpaid' && (
+                            <span className="flex items-center gap-1 text-xs font-medium text-[#16a34a] bg-[#dcfce7] px-2 py-0.5 rounded-full">
+                              <DollarSign className="w-3 h-3" />
+                              {opp.pay}
+                            </span>
+                          )}
                         </div>
                       </div>
 
