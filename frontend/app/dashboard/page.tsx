@@ -8,11 +8,8 @@ import { cn } from '@/lib/cn'
 import { getProfile, getOpportunities, getUnreadNotificationCount, getPortfolio, DashboardProfile } from '@/lib/dashboard-api'
 import { getRoadmap, Roadmap } from '@/lib/roadmap-api'
 import { supabase } from '@/lib/supabase'
-import { useAuthGate } from '@/lib/use-auth'
-
 export default function DashboardPage() {
   const router = useRouter()
-  const authChecked = useAuthGate()
   const [profile, setProfile] = useState<DashboardProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [roadmapProgress, setRoadmapProgress] = useState({ percent: 0, total: 0, completed: 0 })
@@ -87,7 +84,7 @@ export default function DashboardPage() {
     loadDashboard()
   }, [router])
 
-  if (!authChecked || loading) {
+  if (loading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-screen bg-[#F7F3FE]">

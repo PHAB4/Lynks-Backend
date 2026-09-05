@@ -5,7 +5,10 @@ import { supabase } from '@/lib/supabase'
 function getCachedSession(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    return Boolean(localStorage.getItem('sb-qcyxyunngbkupttcwlbk-auth-token'))
+    const key = Object.keys(localStorage).find(
+      (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
+    )
+    return key ? Boolean(localStorage.getItem(key)) : false
   } catch {
     return false
   }
