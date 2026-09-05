@@ -341,6 +341,55 @@ Response 200: {
 
 ---
 
+### GET /opportunities/matches
+Returns personalized opportunity matches for the authenticated user.
+Uses rule-based scoring (career path, education, age, interests, location).
+Only returns opportunities with `relevance_score >= 50`, sorted by score descending.
+
+```json
+Query Parameters: page (int, default 1), limit (int, default 20)
+Response 200: {
+  "opportunities": [
+    {
+      "id": "string (md5 hash of title)",
+      "title": "string",
+      "company": "string",
+      "location": "string",
+      "description": "string",
+      "category": "string",
+      "pay": "string",
+      "salary_min": "number | null",
+      "salary_max": "number | null",
+      "salary_currency": "string | null",
+      "age_requirement": "string | null",
+      "experience_required": "string",
+      "url": "string",
+      "posted_at": "datetime | null",
+      "first_seen_at": "datetime | null",
+      "source_name": "string",
+      "image_url": "string | null",
+      "is_saved": true | false,
+      "relevance_score": 85
+    }
+  ],
+  "metadata": {
+    "total_available": 12,
+    "returned": 12,
+    "page": 1,
+    "limit": 20,
+    "has_more": false,
+    "filters_applied": {
+      "personal_match": true
+    }
+  }
+}
+```
+
+**Errors:**
+- 404: `user_not_found` — user ID doesn't exist
+
+---
+
 ### GET /opportunities/new-count
 Returns count of new opportunities (first seen in last 24 hours).
 
