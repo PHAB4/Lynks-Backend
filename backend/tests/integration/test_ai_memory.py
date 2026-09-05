@@ -410,8 +410,7 @@ def test_conversation_messages_not_found():
 def test_chat_continues_conversation():
     """POST /chat/message with conversation_id — continues existing conversation."""
     if not _state["test_conversation_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no test_conversation_id){Colors.RESET}")
-        return False
+        pytest.skip("No test_conversation_id available — test_chat_creates_conversation may have failed")
 
     resp = httpx.post(
         f"{BASE_URL}/chat/message",
@@ -447,8 +446,7 @@ def test_chat_history():
 def test_chat_history_with_conversation_id():
     """GET /chat/history?conversation_id=... — still works."""
     if not _state["test_conversation_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no test_conversation_id){Colors.RESET}")
-        return False
+        pytest.skip("No test_conversation_id available — test_chat_creates_conversation may have failed")
 
     resp = httpx.get(
         f"{BASE_URL}/chat/history?conversation_id={_state['test_conversation_id']}",
