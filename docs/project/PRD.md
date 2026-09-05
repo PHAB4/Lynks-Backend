@@ -1,6 +1,6 @@
 # Lynks — Product Requirement Document
 
-**Last updated:** August 31, 2026
+**Last updated:** September 5, 2026
 
 ## 1. Problem Statement
 
@@ -128,6 +128,31 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 - AI generates a resume from the user's profile, roadmap, and evidence
 - Available via `POST /resume/generate` and `GET /resume`
 - Resume stored as structured JSON in the database
+
+
+### 4.9 Dashboard / Home Screen
+
+The dashboard is the first screen users see after login. It provides an at-a-glance summary of their career journey and a launchpad to all major features.
+
+**Data Source:** `GET /dashboard/summary` — a single-call aggregation endpoint that returns all dashboard data. No hardcoded values.
+
+**Dashboard Sections:**
+
+| Section | Description | Data Source |
+|---|---|---|
+| Welcome / Profile | Greeting + profile card (name, email, role, interests) | `profile` from `/dashboard/summary` |
+| Quick Stats | Roadmap progress %, tasks completed, opportunities available | `roadmap` + `opportunities` from `/dashboard/summary` |
+| Getting Started | 4-step onboarding checklist (profile, chat, roadmap, opportunities) | `onboarding_checklist` from `/dashboard/summary` |
+| Recent Opportunities | Top 3 recent opportunities with title, company, location, salary | `opportunities.recent` from `/dashboard/summary` |
+| Notifications | Unread count badge + recent notifications | `notifications` from `/dashboard/summary` |
+| Career Tip | Rotating tips and encouragement | Static (phase 1), personalized (phase 2) |
+| Quick Links | Navigation cards to Chat, Roadmap, Opportunities, Resume | Static — no API call needed |
+
+**Design Principles:**
+- **Single API call** — the dashboard fetches everything from `GET /dashboard/summary` in one round trip
+- **Graceful degradation** — if a section fails (e.g. no roadmap yet), all other sections still load
+- **No hardcoded data** — all dynamic content (stats, opportunities, notifications) comes from the backend
+- **Mobile-first layout** — responsive grid that stacks on mobile, side-by-side on desktop
 
 ## 5. AI Agents Summary
 
