@@ -1,5 +1,7 @@
 # Missing Endpoints & Integration Gaps
 
+> **Last updated:** September 5, 2026
+
 ## Backend Agents vs API Routes
 
 | Agent / Feature | Agent Code Exists? | API Endpoint Exists? | Notes |
@@ -20,7 +22,7 @@
 
 | Page | Backend Connected? | Current State |
 |---|---|---|
-| **`/dashboard`** | ❌ **NOT connected** | Hardcoded `RECENT_OPPORTUNITIES` array. Reads profile directly from Supabase (not through backend API). |
+| **`/dashboard`** | ⚠️ **Backend ready** | `GET /dashboard/summary` endpoint live. Frontend team needs to replace hardcoded data with API call. |
 | **`/roadmap`** | ❌ **NOT connected** | Placeholder page — just shows "Your roadmap will appear here." Backend endpoints exist but no frontend integration. |
 | **`/opportunities`** | ❌ **NOT connected** | Hardcoded `CAREER_JOBS` and `GENERAL_OPPORTUNITIES` arrays. Backend endpoints exist but no frontend integration. |
 | **`/resume`** | ❌ Likely not connected | Needs verification. |
@@ -32,14 +34,8 @@
 
 ## Missing Backend Endpoints (features with agent code but no dedicated endpoint)
 
-### 1. **Dashboard Summary Endpoint** — `GET /dashboard/summary`
-No aggregation endpoint exists. The frontend needs:
-- Roadmap progress (% complete, current step)
-- Opportunity count (new since last visit)
-- Notification count (unread)
-- Portfolio summary (tasks completed, evidence count)
-
-The frontend currently uses hardcoded data for all of this.
+### 1. ~~**Dashboard Summary Endpoint**~~ ✅ Done
+`GET /dashboard/summary` — single-call aggregation endpoint that returns profile, roadmap progress, opportunities, notifications, and onboarding checklist. Merged to main on 2026-09-05.
 
 ### 2. **Task Completion via REST** — `PATCH /roadmap/tasks/{task_id}/complete`
 Tasks can only be completed via the **Mentor's tool calling** (`complete_task` in chat). There is no standalone REST endpoint to mark a task complete from the Roadmap page directly (e.g., clicking a checkbox).
@@ -60,18 +56,16 @@ The onboarding flow writes directly to Supabase client-side (`supabase.from('use
 
 ## Missing Frontend Integrations (endpoints exist, but UI uses hardcoded data)
 
-### 1. `/dashboard` — Needs real data
+### 1. `/dashboard` — Backend endpoint ready, needs frontend wiring ✅
 ```
-Currently:
-  - HARDCODED RECENT_OPPORTUNITIES array
-  - Profile fetched directly from Supabase (not through backend)
-  - No roadmap progress
-  - No notification count
-  - No portfolio stats
+Backend:
+  - GET /dashboard/summary ✅ (live on main)
+  - Returns: profile, roadmap progress, opportunities (count + top 3), notifications (count + top 3), onboarding checklist
 
-Needs:
-  - GET /dashboard/summary (new endpoint needed)
-  - Or compose from: GET /roadmap + GET /opportunities/new-count + GET /notifications/unread/count + GET /portfolio/portfolio
+Frontend needs:
+  - Replace HARDCODED RECENT_OPPORTUNITIES with API data
+  - Replace HARDCODED DASHBOARD_STATS with computed roadmap data
+  - Single fetch('/api/dashboard/summary') call replaces 4-5 separate calls
 ```
 
 ### 2. `/roadmap` — Needs full integration
@@ -123,7 +117,7 @@ Needs:
 
 | Priority | Gap | Effort |
 |---|---|---|
-| 🔴 High | Dashboard has hardcoded data, no real API calls | Medium — needs new aggregation endpoint or compose from existing |
+| ✅ Done | Dashboard aggregation endpoint | `GET /dashboard/summary` live — frontend needs wiring |
 | 🔴 High | Roadmap page is a placeholder, needs full UI + task completion endpoint | Large — new endpoint + full page build |
 | 🔴 High | Opportunities page uses hardcoded data, needs real API integration | Medium — endpoints exist, just need frontend wiring |
 | 🟡 Medium | Task completion only works via chat tool calling, not REST | Small — add `PATCH /roadmap/tasks/{id}/complete` endpoint |
