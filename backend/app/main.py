@@ -44,7 +44,8 @@ app = FastAPI(
 
 # CORS — allow frontend origins
 # In production, set CORS_ORIGINS env var to your frontend URL(s), comma-separated
-cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+_DEFAULT_ORIGINS = "http://localhost:3000,https://lynks-gen-ai.web.app,https://lynks-frontend.web.app"
+cors_origins_str = os.getenv("CORS_ORIGINS", _DEFAULT_ORIGINS)
 cors_origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()]
 
 app.add_middleware(
