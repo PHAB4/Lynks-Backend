@@ -2,9 +2,7 @@
   "hosting": {
     "public": "out",
     "ignore": ["firebase.json", "**/node_modules/**", "**/.git/**"],
-    "rewrites": [
-      { "source": "**", "destination": "/index.html" }
-    ],
+    "cleanUrls": true,
     "headers": [
       {
         "source": "**/*.html",
