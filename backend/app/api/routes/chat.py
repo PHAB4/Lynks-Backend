@@ -28,6 +28,11 @@ class ChatMessageRequest(BaseModel):
     message: str
 
 
+class ReorderRequest(BaseModel):
+    conversation_id: str
+    action: str  # "top" | "bottom" | "up" | "down"
+
+
 @router.post("/message")
 async def post_chat_message(
     body: ChatMessageRequest,
@@ -94,7 +99,7 @@ async def list_conversations(
     result = await db.execute(
         select(Conversation)
         .where(Conversation.user_id == user_id)
-        .order_by(Conversation.is_pinned.desc(), Conversation.created_at.desc())
+        .order_by(Conversation.is_pinned.desc(), Conversation.sort_order.asc(), Conversation.created_at.desc())
         .limit(50)
     )
     conversations = result.scalars().all()
@@ -146,6 +151,68 @@ async def toggle_pin_conversation(
     conv.is_pinned = not conv.is_pinned
     await db.commit()
     return {"conversation_id": conv.id, "is_pinned": conv.is_pinned}
+
+
+@router.post("/conversations/reorder")
+async def reorder_conversation(
+    body: ReorderRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reorder a conversation — move to top, bottom, up, or down."""
+    conv = await db.get(Conversation, body.conversation_id)
+    if not conv or conv.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": "not_found", "message": "Conversation not found"}},
+        )
+
+    # Get all user conversations in current order
+    result = await db.execute(
+        select(Conversation)
+        .where(Conversation.user_id == user_id)
+        .order_by(Conversation.is_pinned.desc(), Conversation.sort_order.asc(), Conversation.created_at.desc())
+    )
+    all_convs = result.scalars().all()
+
+    # Separate pinned and unpinned
+    pinned = [c for c in all_convs if c.is_pinned]
+    unpinned = [c for c in all_convs if not c.is_pinned]
+
+    # Find which group the target is in
+    target_list = pinned if conv.is_pinned else unpinned
+    try:
+        idx = next(i for i, c in enumerate(target_list) if c.id == conv.id)
+    except StopIteration:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": "not_found", "message": "Conversation not found in order list"}},
+        )
+
+    action = body.action
+    if action == "top":
+        target_list.insert(0, target_list.pop(idx))
+    elif action == "bottom":
+        target_list.append(target_list.pop(idx))
+    elif action == "up" and idx > 0:
+        target_list.insert(idx - 1, target_list.pop(idx))
+    elif action == "down" and idx < len(target_list) - 1:
+        target_list.insert(idx + 1, target_list.pop(idx))
+
+    # Update sort_order for all items in the affected group
+    for i, c in enumerate(target_list):
+        c.sort_order = i
+
+    await db.commit()
+
+    # Return updated list
+    updated = pinned + unpinned
+    return {
+        "conversations": [
+            {"conversation_id": c.id, "sort_order": c.sort_order, "is_pinned": c.is_pinned}
+            for c in updated
+        ]
+    }
 
 
 @router.delete("/conversations/{conversation_id}")

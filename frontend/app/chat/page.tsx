@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Paperclip, Loader2, MessageSquare, Plus, Trash2, MoreVertical, Pin } from 'lucide-react'
+import { Send, Paperclip, Loader2, MessageSquare, Plus, Trash2, MoreVertical, Pin, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import AppLayout from '@/components/AppLayout'
@@ -13,6 +13,7 @@ import {
   deleteChatHistory,
   togglePinConversation,
   deleteConversation,
+  reorderConversation,
   type ChatMessage,
   type ConversationItem,
 } from '@/lib/chat-api'
@@ -184,6 +185,30 @@ function ChatContent() {
     }
   }
 
+  const handleReorder = async (conversationId: string, action: 'top' | 'bottom' | 'up' | 'down') => {
+    try {
+      const result = await reorderConversation(conversationId, action)
+      if (result.conversations) {
+        // Merge sort_order back into conversation list
+        setConversations(prev => {
+          const updated = prev.map(c => {
+            const match = result.conversations.find(r => r.conversation_id === c.conversation_id)
+            return match ? { ...c, is_pinned: match.is_pinned } : c
+          })
+          return updated.sort((a, b) => {
+            if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
+            const aMatch = result.conversations.find(r => r.conversation_id === a.conversation_id)
+            const bMatch = result.conversations.find(r => r.conversation_id === b.conversation_id)
+            return (aMatch?.sort_order ?? 0) - (bMatch?.sort_order ?? 0)
+          })
+        })
+      }
+      setOpenMenuId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reorder conversation')
+    }
+  }
+
   const handleSend = async () => {
     if (!message.trim() || sending) return
 
@@ -306,7 +331,7 @@ function ChatContent() {
 
                       {/* Dropdown menu */}
                       {openMenuId === conv.conversation_id && (
-                        <div className="absolute right-0 top-10 z-50 bg-white border border-[#EDE3FF] rounded-xl shadow-[0_8px_24px_rgba(107,38,234,0.15)] py-1 min-w-[160px]">
+                        <div className="absolute right-0 top-10 z-50 bg-white border border-[#EDE3FF] rounded-xl shadow-[0_8px_24px_rgba(107,38,234,0.15)] py-1 min-w-[180px]">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -316,6 +341,47 @@ function ChatContent() {
                           >
                             <Pin size={12} className={conv.is_pinned ? 'fill-current text-[#6B26EA]' : 'text-[#8B898E]'} />
                             {conv.is_pinned ? 'Unpin' : 'Pin'}
+                          </button>
+                          <div className="mx-2 my-1 h-px bg-[#EDE3FF]" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReorder(conv.conversation_id, 'top')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <ChevronsUp size={12} className="text-[#8B898E]" />
+                            Move to top
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReorder(conv.conversation_id, 'up')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <ArrowUp size={12} className="text-[#8B898E]" />
+                            Move up
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReorder(conv.conversation_id, 'down')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <ArrowDown size={12} className="text-[#8B898E]" />
+                            Move down
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReorder(conv.conversation_id, 'bottom')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <ChevronsDown size={12} className="text-[#8B898E]" />
+                            Move to bottom
                           </button>
                           <div className="mx-2 my-1 h-px bg-[#EDE3FF]" />
                           <button

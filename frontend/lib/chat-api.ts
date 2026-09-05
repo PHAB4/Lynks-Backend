@@ -47,3 +47,10 @@ export async function togglePinConversation(conversationId: string) {
 export async function deleteConversation(conversationId: string) {
   return fetchAPI<{ success: boolean }>(`/chat/conversations/${conversationId}`, { method: 'DELETE' })
 }
+
+export async function reorderConversation(conversationId: string, action: 'top' | 'bottom' | 'up' | 'down') {
+  return fetchAPI<{ conversations: { conversation_id: string; sort_order: number; is_pinned: boolean }[] }>(
+    '/chat/conversations/reorder',
+    { method: 'POST', body: JSON.stringify({ conversation_id: conversationId, action }) },
+  )
+}
