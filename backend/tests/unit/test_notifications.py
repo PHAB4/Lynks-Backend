@@ -61,7 +61,10 @@ def _mock_db(scalars_result=None, scalar_result=None, rowcount: int = 0):
 
     if scalars_result is not None:
         mock_result.scalars.return_value.all.return_value = scalars_result
-    if scalar_result is not None:
+
+    # Always set scalar() return — use a sentinel to detect "not provided"
+    _SENTINEL = object()
+    if scalar_result is not _SENTINEL:
         mock_result.scalar.return_value = scalar_result
 
     mock_result.rowcount = rowcount
