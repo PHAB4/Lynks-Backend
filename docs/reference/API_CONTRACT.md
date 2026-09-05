@@ -119,6 +119,27 @@ Response 201: (same shape as POST /roadmap/generate)
 
 ---
 
+
+### PATCH /roadmap/tasks/{task_id}/complete
+Marks a task as complete from the Roadmap page (e.g., clicking a checkbox).
+Validates that the task belongs to the user's active roadmap. Idempotent — completing an already-complete task returns success.
+```
+Response 200: {
+  "success": true,
+  "task_id": "uuid",
+  "title": "Complete Python course on Coursera",
+  "message": "Task 'Complete Python course on Coursera' marked as complete!"
+}
+
+Errors:
+  404 — task_not_found: No task with that ID
+  403 — not_your_task: Task doesn't belong to user's active roadmap
+  403 — roadmap_inactive: Cannot complete tasks on an inactive roadmap
+```
+> **Note:** Step status is computed dynamically from child tasks — completing a task may change the parent step's status in subsequent GET /roadmap responses.
+
+---
+
 ### POST /tasks/{task_id}/evidence
 Uploads an evidence file for a task. Uses `multipart/form-data`.
 The file is validated, uploaded to Supabase Storage, and verified by Gemini 3.5 Flash (vision model via Google AI Studio).
