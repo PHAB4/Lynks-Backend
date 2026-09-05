@@ -14,6 +14,15 @@ import os
 import httpx
 import pytest
 
+
+@pytest.fixture(scope="module", autouse=True)
+def _check_server():
+    """Skip the entire module if the server is unreachable."""
+    try:
+        httpx.get(f"{BASE_URL}/docs", timeout=10.0)
+    except httpx.ConnectError:
+        pytest.skip(f"Cannot reach server at {BASE_URL} — is it running?")
+
 # Skip entire module if no server / auth available
 BASE_URL = os.getenv("BASE_URL", "https://lynks-backend-production.up.railway.app")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
@@ -129,8 +138,12 @@ class TestCompleteTask:
 
     def test_complete_task_unauthenticated(self):
         """No token → 401."""
-        resp = httpx.patch(
-            f"{BASE_URL}/roadmap/tasks/{__import__('uuid').uuid4()}/complete",
-            timeout=HTTP_TIMEOUT,
-        )
-        assert resp.status_code == 401
+        import uuid
+        try:
+            resp = httpx.patch(
+                f"{BASE_URL}/roadmap/tasks/{str(uuid.uuid4())}/complete",
+                timeout=HTTP_TIMEOUT,
+            )
+            assert resp.status_code == 401
+        except httpx.ConnectError:
+            pytest.skip(f"Cannot reach server at {BASE_URL}")
