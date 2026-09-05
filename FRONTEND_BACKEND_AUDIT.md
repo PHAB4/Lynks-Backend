@@ -18,9 +18,7 @@ All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are 
 ```
 ┌─── Backend API Connected ────────────────────────────────┐
 │                                                          │
-│  ✅ Dashboard    — 5 API calls (profile, roadmap,        │
-│                    opportunities, notifications/count,    │
-│                    portfolio)                             │
+│  ✅ Dashboard    — single API call via dashboard/summary  │
 │  ✅ Roadmap      — generate, regenerate, get, task       │
 │                    complete, task update                  │
 │  ✅ Chat         — send message, conversations CRUD,     │
@@ -39,7 +37,7 @@ All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are 
 │  ✅ Auth (signup/login/logout) — correct, stays Supabase │
 │  ✅ SecurityTab (password, email verify, delete)          │
 │  ⚠️ Onboarding — writes profile via Supabase directly    │
-│  ⚠️ AppLayout — reads user name from Supabase            │
+│  ✅ AppLayout — reads user name from GET /profile         │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 
@@ -132,7 +130,7 @@ All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are 
 | `GET /notifications/unread/count` | `GET /notifications/unread/count` | ✅ Working |
 | `GET /portfolio` | `GET /portfolio` | ✅ Working |
 
-**Optimization available:** Backend has `GET /dashboard/summary` which could replace all 5 calls with a single request.
+**Note:** Dashboard uses `GET /dashboard/summary` (single-call aggregation). ✅ Optimized.
 
 **Field visibility on dashboard:**
 - `name` ✅
@@ -440,8 +438,8 @@ The left sidebar icon rail contains these items (always visible):
 
 | # | Issue | Details | Effort |
 |---|---|---|---|
-| 9 | **Dashboard: consolidate API calls** | Could use `GET /dashboard/summary` instead of 5 separate calls | Small |
-| 10 | **AppLayout: Supabase direct read** | Sidebar reads user name from Supabase instead of `GET /profile` | Small |
+| 9 | ~~**Dashboard: consolidate API calls**~~ | ✅ **RESOLVED** — Dashboard uses `GET /dashboard/summary` | Done |
+| 10 | ~~**AppLayout: Supabase direct read**~~ | ✅ **RESOLVED** — Sidebar reads user name from `GET /profile` | Done |
 | 11 | **Opportunity "Personal matches" tab** | Backend has `GET /opportunities/matches` — verify frontend "Saved" tab doesn't conflate this | Small |
 
 ---
@@ -450,8 +448,8 @@ The left sidebar icon rail contains these items (always visible):
 
 | Endpoint | What It Does | Frontend Status |
 |---|---|---|
-| `GET /dashboard/summary` | Single-call dashboard aggregation | ❌ Dashboard uses 5 separate calls |
-| `PATCH /resume` | Edit resume content | ❌ Resume page has no editing UI |
+| `GET /dashboard/summary` | Single-call dashboard aggregation | ✅ Dashboard uses this (single call) |
+| `PATCH /resume` | Edit resume content | ✅ Resume editing UI wired (built by teammate) |
 | `GET /resume/download` | Download resume as PDF | ⚠️ Button exists — verify it actually triggers download |
 | `GET /notifications` | Full notification list | ❌ No notification page |
 | `GET /notifications/{id}` | Single notification detail | ❌ No notification page |
@@ -519,7 +517,7 @@ The left sidebar icon rail contains these items (always visible):
 
 7. **🟢 Wire onboarding to `PATCH /profile`** — For consistency and future-proofing.
 
-8. **🟢 Use `GET /dashboard/summary`** — Replace 5 API calls with 1.
+8. ~~**🟢 Use `GET /dashboard/summary`**~~ — ✅ **RESOLVED** — Dashboard already uses the summary endpoint.
 
 ---
 

@@ -73,7 +73,7 @@
 | Priority | Gap | Effort |
 |---|---|---|
 | 🟡 Medium | Onboarding bypasses backend — writes to Supabase directly | Should call `PATCH /profile` instead |
-| 🟢 Low | Dashboard could use `/dashboard/summary` | Currently 5 API calls — could be 1 |
+| ~~🟢 Low~~ | ~~Dashboard could use `/dashboard/summary`~~ | ✅ **RESOLVED** — Dashboard already uses summary endpoint |
 | ✅ Done | Scheduled opportunity scraping | ✅ Done — asyncio background task every 6h, auto-generates notifications |
 | ✅ Done | Resume editing UI | ✅ Built by frontend teammate — live but needs end-to-end verification |
 | ⏸️ Post-competition | Portfolio/Evidence page | Postponed until after competition — backend endpoints ready |
