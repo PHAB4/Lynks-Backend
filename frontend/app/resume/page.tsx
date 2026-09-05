@@ -1,93 +1,112 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText } from 'lucide-react'
-import AppLayout from '@/components/AppLayout'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
+import { resume } from '@/lib/api'
+import DashboardLayout from '@/components/DashboardLayout'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft, FileText, Loader2, Download, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
 
 export default function ResumePage() {
-  const [user, setUser] = useState({ name: '', email: '', education: '', interests: [] as string[] })
+  const { user } = useAuth()
+  const [resumeData, setResumeData] = useState<{ resume_id: string; content: string; created_at: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const load = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (authUser) {
-        const { data } = await supabase.from('users').select('name, email, education_level, interests').eq('id', authUser.id).single()
-        if (data) {
-          setUser({
-            name: data.name || '',
-            email: data.email || authUser.email || '',
-            education: data.education_level || '',
-            interests: data.interests || [],
-          })
-        }
-      }
-    }
-    load()
+    resume.get()
+      .then(data => setResumeData(data))
+      .catch(() => setResumeData(null))
+      .finally(() => setLoading(false))
   }, [])
 
+  const handleGenerate = async () => {
+    try {
+      setGenerating(true)
+      setError('')
+      const data = await resume.generate()
+      setResumeData(data)
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to generate resume')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const handleDownload = () => {
+    if (!resumeData?.content) return
+    const blob = new Blob([resumeData.content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `lynks-resume-${new Date().toISOString().split('T')[0]}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   return (
-    <AppLayout>
-      <div className="flex h-screen bg-[#F0EFF2]">
-        {/* Resume preview */}
-        <div className="flex-1 flex items-start justify-center pt-8 px-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-sm w-[600px] min-h-[800px] p-10 border border-[#EDE3FF]">
-            <div className="flex items-center gap-4 mb-8 pb-6 border-b border-[#EDE3FF]">
-              <div className="w-16 h-16 rounded-full bg-[#EADFFF] flex items-center justify-center">
-                <span className="text-[#6B26EA] font-bold text-2xl">{user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-[#0D0026]">{user.name || 'Your Name'}</h2>
-                <p className="text-sm text-[#8B898E]">{user.email || 'your@email.com'}</p>
-              </div>
-            </div>
+    <DashboardLayout>
+      <div className="max-w-3xl mx-auto p-6">
+        <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700 font-medium mb-6">
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+        </Link>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xs font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-3">EXPERIENCE</h3>
-                <p className="text-sm text-[#A8A8A8]">No experience added yet. Complete tasks on your roadmap to build your resume automatically.</p>
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-3">EDUCATION</h3>
-                {user.education ? (
-                  <p className="text-sm text-[#0D0026]">{user.education}</p>
-                ) : (
-                  <p className="text-sm text-[#A8A8A8]">No education added yet.</p>
-                )}
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-3">SKILLS</h3>
-                {user.interests.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {user.interests.map((skill, i) => (
-                      <span key={i} className="py-1.5 px-3 rounded-full bg-[#F9F5FF] border border-[#EDE3FF] text-xs font-semibold text-[#6B26EA]">{skill}</span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-[#A8A8A8]">No skills added yet. AI will suggest skills based on your career journey.</p>
-                )}
-              </div>
-            </div>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Resume</h1>
+            <p className="text-sm text-gray-500 mt-1">AI-generated resume based on your profile and completed tasks</p>
+          </div>
+          <div className="flex gap-2">
+            {resumeData && (
+              <Button onClick={handleDownload} variant="outline" className="border-gray-200">
+                <Download className="w-4 h-4 mr-2" /> Download
+              </Button>
+            )}
+            <Button onClick={handleGenerate} disabled={generating} className="bg-purple-600 hover:bg-purple-700 text-white">
+              {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              {resumeData ? 'Regenerate' : 'Generate Resume'}
+            </Button>
           </div>
         </div>
 
-        {/* Export sidebar */}
-        <div className="hidden lg:flex flex-col w-[280px] bg-[#F0EFF2] shrink-0 p-4">
-          <div className="flex-1" />
-          <div className="space-y-3">
-            <div className="h-px bg-[#918E8E]" />
-            <button className="w-full py-3 rounded-[10px] border border-[rgba(0,0,0,0.43)] bg-[#EADFFF] text-sm font-medium text-[#000] hover:bg-[#D4C4F7] transition-colors flex items-center justify-center gap-2" style={{ fontFamily: "'Inter', sans-serif" }}>
-              <FileText size={14} /> Word
-            </button>
-            <button className="w-full py-3 rounded-xl bg-[#6B26EA] text-sm font-semibold text-white hover:bg-[#5A1FD0] transition-colors flex items-center justify-center gap-2" style={{ fontFamily: "'Inter', sans-serif" }}>
-              <FileText size={14} /> PDF
-            </button>
-            <button className="w-full py-3 rounded-[10px] border border-[rgba(0,0,0,0.43)] bg-[#EADFFF] text-sm font-medium text-[#000] hover:bg-[#D4C4F7] transition-colors" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Edit resume
-            </button>
+        {error && <p className="text-red-500 text-sm mb-4 bg-red-50 p-3 rounded-lg">{error}</p>}
+
+        {resumeData ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-8">
+            <div className="flex items-center gap-2 mb-4 text-sm text-gray-400">
+              <FileText className="w-4 h-4" />
+              Last generated: {new Date(resumeData.created_at).toLocaleDateString()}
+            </div>
+            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap font-[family-name:var(--font-geist-sans)]">
+              {resumeData.content}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+            <FileText className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">No resume yet</h2>
+            <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+              Generate a professional resume using your profile information, completed roadmap tasks, and uploaded evidence.
+            </p>
+            <Button onClick={handleGenerate} disabled={generating} className="bg-purple-600 hover:bg-purple-700 text-white">
+              {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {generating ? 'Generating...' : 'Generate My Resume'}
+            </Button>
+          </div>
+        )}
       </div>
-    </AppLayout>
+    </DashboardLayout>
   )
 }
