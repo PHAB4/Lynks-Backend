@@ -17,7 +17,7 @@
 | **Memory Extractor** (long-term user facts) | ✅ `memory_extractor.py` | ✅ `GET /memory`, `POST /memory`, `PATCH /memory/{id}`, `DELETE /memory/{id}` | Auto-extracts during chat + manual CRUD |
 | **Profile** | ✅ DB model | ✅ `GET /profile`, `PATCH /profile`, `PATCH /profile/career-path`, `POST /profile/avatar`, `GET /profile/suggested-interests` | Fully wired — includes dynamic interest suggestions (14 career domains) and avatar upload |
 | **Notifications** | ✅ `notifications.py` service | ✅ Full CRUD (`GET`, `GET /unread/count`, `GET /{id}`, `POST`, `PATCH /{id}/read`, `POST /read-all`) | Fully wired |
-| **Resume** | ✅ `portfolio_manager.py` agent | ✅ `POST /resume/generate`, `GET /resume` | Fully wired |
+| **Resume** | ✅ `portfolio_manager.py` agent | ✅ `POST /resume/generate`, `GET /resume`, `PATCH /resume`, `GET /resume/download` | Fully wired — editing UI built by frontend teammate |
 
 ---
 
@@ -28,7 +28,7 @@
 | **`/dashboard`** | ✅ **Connected** | Calls backend via 5 separate API calls (`getProfile`, `getRoadmap`, `getOpportunities`, `getUnreadNotificationCount`, `getPortfolio`). Has tab navigation (Overview, Skills, Experience, Goals, Resources). Could be consolidated into 1 call to `GET /dashboard/summary`. |
 | **`/roadmap`** | ✅ **Connected** | Uses `roadmap-api.ts` — fetches roadmap, generates, regenerates. Task completion wired. |
 | **`/opportunities`** | ✅ **Connected** | Full backend integration — fetching, filtering, save/unsave, new count badge, refresh all wired via backend API. No more hardcoded data. |
-| **`/resume`** | ✅ **Connected** | Uses backend API (`GET /resume`, `POST /resume/generate`). Displays generated resume with content. |
+| **`/resume`** | ✅ **Connected** | Uses backend API (`GET /resume`, `POST /resume/generate`, `PATCH /resume`). Editing UI built by frontend teammate. Download PDF available. |
 | **`/settings`** | ✅ **Connected** | Reads/writes profile via backend API (`GET /profile`, `PATCH /profile`, `PATCH /profile/career-path`). Suggested interests are **dynamic** — fetched from `GET /profile/suggested-interests` based on user's career path. No more hardcoded `CAREER_INTERESTS` array. |
 | **`/chat`** | ✅ **Connected** | Full backend integration — send/receive messages, pin/unpin, reorder, delete conversations, clear history. No conversations list screen — loads last conversation or starts new. Conversation management in expanded sidebar with 3-dot menus. |
 | **`/onboarding`** | ⚠️ **Partial** | Writes to Supabase directly via client SDK, not through backend. Backend `PATCH /profile` not called. 7 steps: name, country, age, employment, education, career path, interests. |
@@ -75,3 +75,6 @@
 | 🟡 Medium | Onboarding bypasses backend — writes to Supabase directly | Should call `PATCH /profile` instead |
 | 🟢 Low | Dashboard could use `/dashboard/summary` | Currently 5 API calls — could be 1 |
 | ✅ Done | Scheduled opportunity scraping | ✅ Done — asyncio background task every 6h, auto-generates notifications |
+| ✅ Done | Resume editing UI | ✅ Built by frontend teammate — live but needs end-to-end verification |
+| ⏸️ Post-competition | Portfolio/Evidence page | Postponed until after competition — backend endpoints ready |
+| ⏸️ Post-competition | Notifications page (bell icon, list, mark-as-read) | Backend 100% ready, frontend UI deferred |

@@ -9,7 +9,7 @@
 
 ## TL;DR
 
-All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are connected to the backend API and working. Two pages that exist in the PRD (**Notifications list** and **Portfolio/Evidence**) return **404** — they have no frontend routes. The backend has endpoints for both, so the gap is **frontend-only**. Several smaller gaps exist around fields, editing, and data flow that this document details.
+All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are connected to the backend API and working. The **Notifications list** page returns **404** — no frontend route. The **Portfolio/Evidence** page has been **POSTPONED until after the competition** — no frontend work needed for now. The **Resume editing UI** has been built by the frontend teammate and is live on the site. Several smaller gaps exist around fields, data flow, and wiring that this document details.
 
 ---
 
@@ -46,8 +46,8 @@ All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are 
 ┌─── Missing Frontend Routes ──────────────────────────────┐
 │                                                          │
 │  ❌ /notifications — 404 (backend has 6 endpoints)       │
-│  ❌ /portfolio     — 404 (backend has GET /portfolio)     │
-│  ❌ /evidence      — 404 (backend has POST evidence)     │
+│  ⏸️ /portfolio     — POSTPONED (after competition)       │
+│  ⏸️ /evidence      — POSTPONED (after competition)       │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -264,10 +264,12 @@ All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are 
 | Download PDF | `GET /resume/download` | ✅ "Download PDF" button present |
 
 **Gaps identified:**
-1. **No resume editing UI** — The PRD says "Allow user to review/edit AI-generated resume content" and the API contract has `PATCH /resume` for editing. The frontend only has "Regenerate" and "Download PDF" — **no inline editing or edit fields**. This is a frontend gap.
-2. **`PATCH /resume` endpoint** — Exists in the API contract but is not wired in the frontend.
+1. ~~**No resume editing UI**~~ ✅ **RESOLVED** — Frontend teammate has built and deployed the resume editing UI (live on the site as of competition deadline push). The `PATCH /resume` endpoint is now wired.
+2. **`PATCH /resume` endpoint** — Exists in the API contract and is now connected to the frontend editing UI.
 
-**Backend action needed:** None — `PATCH /resume` exists. Frontend needs to add editing UI.
+**Note:** The resume editing UI is live but **has not been fully verified end-to-end**. The backend `PATCH /resume` endpoint should be tested to confirm it saves edits correctly.
+
+**Backend action needed:** Verify `PATCH /resume` works correctly with the new frontend editing UI.
 
 ---
 
@@ -350,7 +352,9 @@ All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are 
 
 ---
 
-### 10. Portfolio / Evidence Page ❌ Missing Frontend Route
+### 10. Portfolio / Evidence Page — ⏸️ POSTPONED (After Competition)
+
+> **Status:** This feature has been **postponed until after the competition**. The frontend will NOT be built before the deadline. The backend endpoints remain fully functional and ready for when this is revisited.
 
 **Backend has:**
 | Endpoint | Purpose |
@@ -373,12 +377,7 @@ All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are 
 - AI-powered evidence verification (dual-provider: Groq text + Gemini Flash vision)
 - Portfolio aggregation endpoint
 
-**Action needed:** 🔴 **Build portfolio/evidence page** — needs:
-1. Portfolio page showing completed tasks with attached evidence
-2. Evidence upload modal (file picker, file type selection)
-3. Verification status display (pending/verified/rejected + reason)
-4. Re-verification request button
-5. Navigation entry in sidebar
+**Action needed:** ⏸️ **POSTPONED** — Not being built before the competition deadline. Revisit after the competition ends.
 
 ---
 
@@ -407,7 +406,7 @@ The left sidebar icon rail contains these items (always visible):
 
 **Missing from sidebar:**
 - 🔴 Notifications (bell icon) — no entry point
-- 🔴 Portfolio/Evidence — no entry point
+- ⏸️ Portfolio/Evidence — POSTPONED (after competition)
 - 🟡 Opportunities — no sidebar icon (accessed via dashboard "Browse opportunities" button or top bar)
 
 **Top bar icons (per page):**
@@ -424,8 +423,8 @@ The left sidebar icon rail contains these items (always visible):
 | # | Issue | Frontend Gap | Backend Status | Effort |
 |---|---|---|---|---|
 | 1 | **Notifications page** — `/notifications` returns 404 | No route, no bell icon, no list UI | ✅ 6 endpoints ready | Medium |
-| 2 | **Portfolio/Evidence page** — `/portfolio` and `/evidence` return 404 | No routes, no upload UI, no verification display | ✅ Upload + verification endpoints ready | Large |
-| 3 | **Resume editing** — PRD requires "review/edit AI-generated resume" | No editing UI, only regenerate/download | ✅ `PATCH /resume` exists | Medium |
+| 2 | ~~**Portfolio/Evidence page**~~ | ⏸️ **POSTPONED** — not being built before competition | ✅ Backend endpoints ready | Post-competition |
+| 3 | ~~**Resume editing**~~ | ✅ **RESOLVED** — teammate built editing UI and deployed | ✅ `PATCH /resume` exists | Done |
 
 ### 🟡 Should Fix (Wiring / Field Gaps)
 
@@ -484,11 +483,11 @@ The left sidebar icon rail contains these items (always visible):
 | Present roadmap as steps/tasks | ✅ Nested structure | ✅ Timeline + task list | ✅ |
 | Regenerate roadmap | ✅ `POST /roadmap/regenerate` | ✅ Regenerate button | ✅ |
 | Mark task complete | ✅ `PATCH /tasks/{id}/complete` | ✅ Checkbox UI | ✅ |
-| Upload evidence for task | ✅ `POST /tasks/{id}/evidence` | ❌ **No upload UI** | ❌ |
-| AI-verify certificates | ✅ Portfolio Manager agent | ❌ **No verification display** | ❌ |
-| Store evidence in object storage | ✅ Supabase Storage | ❌ **No portfolio page** | ❌ |
+| Upload evidence for task | ✅ `POST /tasks/{id}/evidence` | ⏸️ **POSTPONED** — no upload UI before competition | Post-competition |
+| AI-verify certificates | ✅ Portfolio Manager agent | ⏸️ **POSTPONED** — no verification display before competition | Post-competition |
+| Store evidence in object storage | ✅ Supabase Storage | ⏸️ **POSTPONED** — no portfolio page before competition | Post-competition |
 | Auto-generate resume from tasks | ✅ `POST /resume/generate` | ✅ Generate button | ✅ |
-| Review/edit resume | ✅ `PATCH /resume` | ❌ **No editing UI** | ❌ |
+| Review/edit resume | ✅ `PATCH /resume` | ✅ Editing UI (built by teammate, live but unverified) | ✅ |
 | Browse opportunities (tabbed) | ✅ Full CRUD | ✅ Discover/Saved tabs | ✅ |
 | Filter by location/pay/age/experience | ✅ Query params | ✅ Category chips + search | ✅ |
 | Chat with mentor (persistent) | ✅ Full conversation CRUD | ✅ Chat page | ✅ |
@@ -508,9 +507,9 @@ The left sidebar icon rail contains these items (always visible):
 
 1. **🔴 Build Notifications UI** — The backend is 100% ready. Add a bell icon to the sidebar/top bar, create a notification list dropdown or page, wire to the 6 existing endpoints. This is the highest-value missing feature.
 
-2. **🔴 Build Portfolio/Evidence page** — The backend has upload, storage, and AI verification all working. The frontend needs a portfolio view (completed tasks + evidence), upload modal, and verification status display. This is a core PRD requirement.
+2. ~~**🔴 Build Portfolio/Evidence page**~~ — ⏸️ **POSTPONED** until after the competition. Backend endpoints remain ready for when this is revisited.
 
-3. **🔴 Add Resume Editing** — The API contract specifies `PATCH /resume` and the PRD requires "review/edit." The frontend currently only has regenerate + download. Add inline editing for resume sections.
+3. ~~**🔴 Add Resume Editing**~~ — ✅ **RESOLVED** — Frontend teammate has built and deployed the resume editing UI. Verify `PATCH /resume` works end-to-end.
 
 4. **🟡 Show salary on opportunity cards** — The `pay` field is in the API response but not displayed. One-line fix on the frontend.
 
