@@ -33,6 +33,7 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 - Roadmap is stored in the database (roadmaps → steps → tasks hierarchy)
 - User can regenerate their roadmap if goals change
 - Steps are marked complete when all child tasks are complete (computed, not stored)
+- Tasks can be marked complete via the Roadmap page checkbox (`PATCH /roadmap/tasks/{task_id}/complete`) or through the Mentor chatbot
 
 ### 4.3 Task Evidence & Verification (Portfolio Manager Agent)
 
