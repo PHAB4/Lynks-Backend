@@ -79,17 +79,17 @@ Response 200: { "career_path": "Software Development" }
 ### POST /profile/avatar
 Upload a profile picture. Replaces any existing avatar (old file is deleted).
 
-```http
-Content-Type: multipart/form-data
+**Request** — `multipart/form-data`:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| file | binary | yes | JPEG, PNG, or GIF, max 800KB |
 
-Request (form fields):
-  file: <binary image data>    // required — JPEG, PNG, or GIF, max 800KB
-
-Example (curl):
-  curl -X POST /profile/avatar \
-    -H "Authorization: Bearer <token>" \
-    -F "file=@profile.jpg"
 ```
+curl -X POST /profile/avatar \
+  -H "Authorization: Bearer <token>" \
+  -F "file=@profile.jpg"
+```
+
 ```json
 Response 200: { "avatar_url": "https://..." }
 Response 400: { "detail": "Invalid file type: ..." }
@@ -100,6 +100,7 @@ Response 400: { "detail": "File too large: ..." }
 
 ### DELETE /profile/avatar
 Remove the user's profile picture.
+
 ```json
 Request: (none)
 
@@ -160,7 +161,7 @@ Response 201: (same shape as POST /roadmap/generate)
 ### PATCH /roadmap/tasks/{task_id}/complete
 Marks a task as complete from the Roadmap page (e.g., clicking a checkbox).
 Validates that the task belongs to the user's active roadmap. Idempotent — completing an already-complete task returns success.
-```
+```json
 Response 200: {
   "success": true,
   "task_id": "uuid",
@@ -180,7 +181,7 @@ Errors:
 ### PATCH /roadmap/tasks/{task_id}
 General task update — change title, description, or status. Only includes fields you want to change (partial update).
 Validates ownership (task must belong to user's active roadmap).
-```
+```json
 Request: {
   "title": "string (optional)",
   "description": "string (optional)",
@@ -208,7 +209,7 @@ Errors:
 ### POST /tasks/{task_id}/evidence
 Uploads an evidence file for a task. Uses `multipart/form-data`.
 The file is validated, uploaded to Supabase Storage, and verified by Gemini 3.5 Flash (vision model via Google AI Studio).
-```
+```json
 Content-Type: multipart/form-data
 Body: file_type=<mime type>&file=<image file>
 
