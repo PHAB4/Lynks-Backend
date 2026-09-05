@@ -142,21 +142,25 @@ export default function DashboardPage() {
                     <p className="text-[12px] text-[#8B898E] truncate">{profile?.email}</p>
                   </div>
                 </div>
-                {profile?.career_path && (
-                  <div className="mb-3">
-                    <p className="text-[11px] text-[#8B898E] uppercase tracking-wider font-semibold mb-1">Career Path</p>
-                    <p className="text-[13px] text-[#0D0026]">{profile.career_path}</p>
-                  </div>
-                )}
+                <div className="mb-3">
+                  <p className="text-[11px] text-[#8B898E] uppercase tracking-wider font-semibold mb-1">Career Path</p>
+                  {profile?.career_path ? (
+                    <p className="text-[13px] text-[#0D0026] font-medium">{profile.career_path}</p>
+                  ) : (
+                    <button onClick={() => router.push('/settings')} className="text-[13px] text-[#6B26EA] hover:underline cursor-pointer">
+                      + Add career path
+                    </button>
+                  )}
+                </div>
                 {profile?.employment_status && (
                   <div className="mb-3">
                     <p className="text-[11px] text-[#8B898E] uppercase tracking-wider font-semibold mb-1">Role</p>
                     <p className="text-[13px] text-[#0D0026]">{profile.employment_status}</p>
                   </div>
                 )}
-                {profile?.interests && profile.interests.length > 0 && (
-                  <div>
-                    <p className="text-[11px] text-[#8B898E] uppercase tracking-wider font-semibold mb-2">Interests</p>
+                <div>
+                  <p className="text-[11px] text-[#8B898E] uppercase tracking-wider font-semibold mb-2">Interests</p>
+                  {profile?.interests && profile.interests.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {profile.interests.map((interest: string) => (
                         <span key={interest} className="py-1 px-2.5 rounded-full bg-[#F7F3FE] text-[11px] text-[#6B26EA] font-medium">
@@ -164,8 +168,12 @@ export default function DashboardPage() {
                         </span>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <button onClick={() => router.push('/settings')} className="text-[13px] text-[#6B26EA] hover:underline cursor-pointer">
+                      + Add interests
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={() => router.push('/settings')}
                   className="w-full mt-4 py-2 rounded-xl border border-[#EDE3FF] text-[13px] text-[#6B26EA] font-semibold hover:bg-[#F7F3FE] transition-colors"
