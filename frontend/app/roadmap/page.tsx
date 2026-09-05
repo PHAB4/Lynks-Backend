@@ -13,10 +13,27 @@ export default function RoadmapPage() {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
   const [activeStep, setActiveStep] = useState<string | null>(null)
+  const [startedSteps, setStartedSteps] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadRoadmap()
   }, [])
+
+  useEffect(() => {
+    const stored = localStorage.getItem('lynks_started_steps')
+    if (stored) {
+      try { setStartedSteps(new Set(JSON.parse(stored))) } catch {}
+    }
+  }, [])
+
+  const markStepStarted = (stepId: string) => {
+    setStartedSteps(prev => {
+      const next = new Set(prev)
+      next.add(stepId)
+      localStorage.setItem('lynks_started_steps', JSON.stringify([...next]))
+      return next
+    })
+  }
 
   useEffect(() => {
     if (roadmap?.steps && roadmap.steps.length > 0 && !activeStep) {
@@ -249,13 +266,17 @@ export default function RoadmapPage() {
                             })}
                           </div>
 
-                          {/* Begin Working on Step — shown when step is active */}
+                          {/* Begin / Continue Working on Step — shown when step is active */}
                           {isActive && (
                             <div className="flex justify-center mt-6" style={{ transform: `translateX(${stepOffsetX}px)` }}>
                               <button
                                 onClick={() => {
+                                  markStepStarted(step.step_id)
                                   const taskList = sortedTasks.map((t, i) => `${i + 1}. ${t.title}`).join('\n')
-                                  const prompt = `I want to begin working on Step ${stepIndex + 1}: "${step.title}"\n\nHere are the tasks I need to complete:\n${taskList}\n\nPlease help me get started. Break down the first task into actionable steps and guide me through it.`
+                                  const alreadyStarted = startedSteps.has(step.step_id)
+                                  const prompt = alreadyStarted
+                                    ? `I want to continue working on Step ${stepIndex + 1}: "${step.title}"\n\nHere are the tasks I need to complete:\n${taskList}\n\nPlease help me pick up where I left off and continue with the next task.`
+                                    : `I want to begin working on Step ${stepIndex + 1}: "${step.title}"\n\nHere are the tasks I need to complete:\n${taskList}\n\nPlease help me get started. Break down the first task into actionable steps and guide me through it.`
                                   const params = new URLSearchParams({ roadmap_step: prompt })
                                   window.location.href = `/chat?${params.toString()}`
                                 }}
@@ -264,7 +285,7 @@ export default function RoadmapPage() {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                                 </svg>
-                                Begin Working on Step
+                                {startedSteps.has(step.step_id) ? 'Continue Working on Step' : 'Begin Working on Step'}
                               </button>
                             </div>
                           )}
