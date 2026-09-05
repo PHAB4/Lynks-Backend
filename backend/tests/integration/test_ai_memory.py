@@ -381,8 +381,7 @@ def test_conversations_list_after_chat():
 def test_conversation_messages():
     """GET /chat/conversations/{id} — returns messages for a specific conversation."""
     if not _state["test_conversation_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no test_conversation_id){Colors.RESET}")
-        return False
+        pytest.skip("No test_conversation_id available — test_chat_creates_conversation may have failed")
 
     resp = httpx.get(
         f"{BASE_URL}/chat/conversations/{_state['test_conversation_id']}",
