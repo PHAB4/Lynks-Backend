@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Map, Briefcase, MessageSquare, FileText, Bell, ChevronRight, Sparkles, ArrowRight, TrendingUp, BookOpen } from 'lucide-react'
+import { Map, Briefcase, MessageSquare, FileText, Bell, ChevronRight, ArrowRight, TrendingUp, BookOpen } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getProfile, getOpportunities, getUnreadNotificationCount, getPortfolio, DashboardProfile } from '@/lib/dashboard-api'
@@ -145,6 +145,12 @@ export default function DashboardPage() {
                     <p className="text-[12px] text-[#8B898E] truncate">{profile?.email}</p>
                   </div>
                 </div>
+                {profile?.career_path && (
+                  <div className="mb-3">
+                    <p className="text-[11px] text-[#8B898E] uppercase tracking-wider font-semibold mb-1">Career Path</p>
+                    <p className="text-[13px] text-[#0D0026]">{profile.career_path}</p>
+                  </div>
+                )}
                 {profile?.employment_status && (
                   <div className="mb-3">
                     <p className="text-[11px] text-[#8B898E] uppercase tracking-wider font-semibold mb-1">Role</p>
@@ -221,30 +227,27 @@ export default function DashboardPage() {
               <div className="bg-gradient-to-br from-[#6B26EA] to-[#4C1D95] rounded-2xl p-6 text-white">
                 <div className="flex items-start gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                    <Sparkles size={18} />
+                    <Map size={18} />
                   </div>
                   <div>
-                    <p className="text-[15px] font-semibold mb-0.5">Getting Started with LYNKS</p>
-                    <p className="text-[13px] text-white/70">Complete these steps to unlock your personalized experience</p>
+                    <p className="text-[15px] font-semibold mb-0.5">Your Roadmap</p>
+                    <p className="text-[13px] text-white/70">{roadmapProgress.total > 0 ? `${roadmapProgress.completed} of ${roadmapProgress.total} tasks completed` : 'No roadmap yet — generate one to get started'}</p>
                   </div>
                 </div>
-                <div className="space-y-2.5">
-                  {[
-                    { label: 'Complete your onboarding profile', done: !!profile?.education_level },
-                    { label: 'Start a conversation with LYNKS AI', done: false },
-                    { label: 'Generate your career roadmap', done: roadmapProgress.total > 0 },
-                    { label: 'Browse available opportunities', done: false },
-                  ].map((step, i) => (
-                    <div key={i} className="flex items-center gap-3 py-2 px-3 rounded-xl bg-white/10">
-                      <div className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0',
-                        step.done ? 'bg-white text-[#6B26EA]' : 'border border-white/30 text-white/60'
-                      )}>
-                        {step.done ? '✓' : i + 1}
-                      </div>
-                      <p className={cn('text-[13px]', step.done ? 'text-white/60 line-through' : 'text-white')}>{step.label}</p>
+                {roadmapProgress.total > 0 ? (
+                  <div>
+                    <div className="w-full bg-white/20 rounded-full h-2.5 mb-3">
+                      <div className="bg-white rounded-full h-2.5 transition-all" style={{ width: `${roadmapProgress.percent}%` }} />
                     </div>
-                  ))}
-                </div>
+                    <button onClick={() => router.push('/roadmap')} className="text-[13px] font-semibold text-white/90 hover:text-white flex items-center gap-1 transition-colors">
+                      View roadmap <ArrowRight size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => router.push('/roadmap')} className="text-[13px] font-semibold text-white/90 hover:text-white flex items-center gap-1 transition-colors">
+                    Generate roadmap <ArrowRight size={14} />
+                  </button>
+                )}
               </div>
               <div className="bg-white rounded-2xl border border-[#EDE3FF] p-5">
                 <div className="flex items-center justify-between mb-4">
