@@ -1,9 +1,9 @@
 # Lynks Backend — Development Progress Record
 
-**Last Updated:** August 28, 2026
+**Last Updated:** August 31, 2026
 **Prepared By:** Jordan (Project Lead) + Shogo AI Agent
 **Branch:** `main`
-**Total Tests:** 134 unit tests + 26 integration tests = 160 passing
+**Total Tests:** 156 unit tests + 41 integration tests = 197 passing
 
 ---
 
@@ -440,31 +440,45 @@ Replaced generic `except Exception` with specific exception types across 9 files
 
 ---
 
+---
+
+### August 31, 2026 — AI Evidence Verification System
+
+| Time (est.) | Activity |
+|---|---|
+| Afternoon | Reviewed existing evidence verification code. Found `verify_evidence_with_llm()` in `portfolio_manager.py` — sends images to `openai/gpt-oss-120b` (text-only model). **Broken: model can't see images.** |
+| Afternoon | Researched vision models on Groq. Old Llama 3.2 Vision models deprecated. Qwen 3.6-27b listed but status unclear. |
+| Afternoon | Decided on **dual-provider architecture**: Groq stays for text tasks, Google Gemini Flash (free tier) for vision verification. |
+| Afternoon | Created formal plan at `docs/plans/ai-evidence-verification.md`. |
+| Afternoon | Implemented: `verifier.py` (Gemini), updated `config.py` (new env vars), `db_models.py` (3 new columns), `portfolio.py` (2 new endpoints + career context), `portfolio_manager.py` (replaced broken function), `requirements.txt` (google-genai). |
+| Afternoon | Created `tests/unit/test_evidence_verification.py` (22 unit tests) and `tests/integration/test_verification.py` (15 integration tests). |
+| Afternoon | Reorganized tests into `tests/integration/` and `tests/unit/` folders. |
+| Afternoon | Integration test debugging: found `google-genai` missing from requirements.txt, `gemini-2.5-flash` deprecated (shut down June 17, 2026), updated to `gemini-3.5-flash`. |
+| Afternoon | **Final: 15/15 integration tests + 22/22 unit tests passing.** |
+| Afternoon | Updated docs: API_CONTRACT.md, PRD.md, TECH_STACK.md, PROGRESS_RECORD.md. |
+
 ### Before Merge
-1. ✅ All 160 tests passing
-2. ✅ All documentation updated
-3. ✅ CI/CD workflows (lint, tests, security, Dependabot)
-4. ✅ All lint/format/type errors fixed
-5. Teammate code review
-6. Merge to main
+1. ✅ All 160 tests passing (existing)
+2. ✅ AI verification system built and tested (22 unit + 15 integration = 37 new tests)
+3. ✅ All documentation updated
+4. ✅ CI/CD workflows (lint, tests, security, Dependabot)
+5. ✅ All lint/format/type errors fixed
+6. Teammate code review
+7. Merge `feature/ai-evidence-verification` to main
 
 ### High Priority (Post-Merge)
 1. Frontend dev builds opportunities page UI (FRONTEND_HANDOFF.md has complete guide)
-2. Run migration SQL for new opportunities columns in Supabase
-3. Railway deployment verification
+2. Edge case & security tests (see `.shogo/plans/edge-case--security-tests_*.plan.md`)
 
 ### Medium Priority
-4. Edge case & security tests (see `.shogo/plans/edge-case--security-tests_*.plan.md`)
-5. Memory extraction in production
-6. Conversation auto-titling
+3. Conversation auto-titling
+4. Full code walkthrough (see `.shogo/plans/code-walkthrough-plan_*.plan.md`)
 
 ### Lower Priority (Post-Competition)
-7. Cursor-based pagination
-8. Web push notifications (replaces polling)
-9. Social media scraping (Facebook, Instagram)
-10. Admin source health dashboard
-11. Evidence verification (AI-powered)
-12. Full code walkthrough (see `.shogo/plans/code-walkthrough-plan_*.plan.md`)
+5. Cursor-based pagination
+6. Web push notifications (replaces polling)
+7. Social media scraping (Facebook, Instagram)
+8. Admin source health dashboard
 
 ---
 

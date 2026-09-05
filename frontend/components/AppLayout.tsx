@@ -1,15 +1,23 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Home, Briefcase, MessageSquare, Map, FileText,
   ChevronLeft, ChevronRight, LogOut, Settings, User,
-  ListChecks, Loader2, Maximize2,
+  ListChecks, Loader2, Maximize2, Plus, Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
+import {
+  sendMessage,
+  listConversations,
+  getConversationMessages,
+  deleteChatHistory,
+  type ChatMessage,
+  type ConversationItem,
+} from '@/lib/chat-api'
 
 export type PanelId = 'chat' | 'steps' | 'resume' | 'roadmap'
 
@@ -458,59 +466,267 @@ function LoadingPanel() {
 
 function ChatPanel() {
   const [message, setMessage] = useState('')
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; content: string; time: string }>>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [conversations, setConversations] = useState<ConversationItem[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+  const [loadingConversations, setLoadingConversations] = useState(true)
+  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [error, setError] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const formatTime = () => {
-    return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
+
+  useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
+
+  useEffect(() => {
+    loadConversations()
+  }, [])
+
+  const loadConversations = async () => {
+    setLoadingConversations(true)
+    try {
+      const result = await listConversations()
+      setConversations(result.conversations || [])
+    } catch { /* ignore */ }
+    finally { setLoadingConversations(false) }
   }
 
-  const handleSend = () => {
-    if (!message.trim()) return
-    setMessages(prev => [...prev, { role: 'user', content: message, time: formatTime() }])
+  const loadMessages = async (conversationId: string) => {
+    setLoadingMessages(true)
+    setError('')
+    try {
+      const result = await getConversationMessages(conversationId)
+      setMessages(result.messages || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load messages')
+    } finally { setLoadingMessages(false) }
+  }
+
+  const handleSelectConversation = (conversationId: string) => {
+    setActiveConversationId(conversationId)
+    loadMessages(conversationId)
+  }
+
+  const handleNewChat = () => {
+    setActiveConversationId(null)
+    setMessages([])
+    setError('')
+  }
+
+  const handleClearHistory = async () => {
+    try {
+      await deleteChatHistory()
+      setConversations([])
+      setMessages([])
+      setActiveConversationId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clear history')
+    }
+  }
+
+  const handleSend = async () => {
+    if (!message.trim() || sending) return
+
+    const userMessage: ChatMessage = { role: 'user', content: message.trim() }
+    setMessages(prev => [...prev, userMessage])
+    const currentMessage = message.trim()
     setMessage('')
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'ai', content: "I'm analyzing your request. LYNKS will have a response ready soon.", time: formatTime() }])
-    }, 1000)
+    setSending(true)
+    setError('')
+
+    try {
+      const result = await sendMessage(currentMessage, activeConversationId || undefined)
+
+      if (!activeConversationId && result.conversation_id) {
+        setActiveConversationId(result.conversation_id)
+        loadConversations()
+      }
+
+      const aiMessage: ChatMessage = {
+        role: 'assistant',
+        content: result.response,
+        tool_calls: result.tool_calls ? { calls: result.tool_calls } : null,
+      }
+      setMessages(prev => [...prev, aiMessage])
+
+      if (result.summary_updated) loadConversations()
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to send message'
+      if (errorMsg === 'Not authenticated') {
+        setError('Session expired. Please refresh the page.')
+      } else {
+        setError(errorMsg || 'Something went wrong.')
+      }
+    } finally { setSending(false) }
+  }
+
+  const TOOL_LABELS: Record<string, string> = {
+    generate_roadmap: 'Generating your roadmap...',
+    get_portfolio: 'Looking up your portfolio...',
+    find_opportunities: 'Searching for opportunities...',
+    complete_task: 'Updating your task...',
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <p className="text-[13px] text-[#8B898E]">Ask LYNKS anything about your career journey.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {messages.map((msg, i) => (
-              <div key={i} className={cn('flex gap-2', msg.role === 'user' && 'flex-row-reverse')}>
-                <div className={cn(
-                  'rounded-2xl px-3 py-2 text-[13px] max-w-[85%]',
-                  msg.role === 'user' ? 'bg-[#6B26EA] text-white' : 'bg-[#F7F3FE] text-[#1E1E1E]'
-                )}>
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Conversation list header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[#EDE3FF] shrink-0">
+        <button
+          onClick={handleNewChat}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#6B26EA] text-white text-[11px] font-medium hover:bg-[#5A1FD0] transition-colors"
+        >
+          <Plus size={12} />
+          New Chat
+        </button>
+        {conversations.length > 0 && (
+          <button
+            onClick={handleClearHistory}
+            className="flex items-center gap-1 text-[10px] text-[#8B898E] hover:text-[#D14444] transition-colors"
+          >
+            <Trash2 size={10} />
+          </button>
         )}
       </div>
-      <div className="p-3 border-t border-[#EDE3FF]">
+
+      {/* Conversation list */}
+      {!activeConversationId && messages.length === 0 && (
+        <div className="flex-1 overflow-y-auto px-2 py-1">
+          {loadingConversations && (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 size={14} className="text-[#6B26EA] animate-spin" />
+            </div>
+          )}
+          {!loadingConversations && conversations.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <p className="text-[13px] text-[#8B898E]">Ask LYNKS anything about your career journey.</p>
+            </div>
+          )}
+          {conversations.map((conv) => (
+            <button
+              key={conv.conversation_id}
+              onClick={() => handleSelectConversation(conv.conversation_id)}
+              className="w-full text-left px-3 py-2 rounded-lg text-[12px] text-[#0D0026] hover:bg-[#F7F3FE] transition-colors truncate"
+            >
+              <div className="flex items-center gap-1.5 truncate">
+                <MessageSquare size={10} className="shrink-0 opacity-50" />
+                <span className="truncate">{conv.title || 'New conversation'}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Messages area */}
+      {(activeConversationId || messages.length > 0) && (
+        <>
+          <div className="flex-1 overflow-y-auto px-3 py-3">
+            {loadingMessages ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 size={16} className="text-[#6B26EA] animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {messages.map((msg, i) => (
+                  <div key={i} className="flex gap-2">
+                    {msg.role === 'assistant' && (
+                      <div className="w-6 h-6 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
+                        <span className="text-[#6B26EA] text-[9px] font-bold">L</span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      {msg.tool_calls?.calls && msg.tool_calls.calls.length > 0 && (
+                        <div className="flex items-center gap-1.5 mb-0.5 px-0.5">
+                          <Loader2 size={10} className="text-[#6B26EA] animate-spin" />
+                          <span className="text-[10px] text-[#6B26EA]">
+                            {TOOL_LABELS[msg.tool_calls.calls[0]] || 'Working on it...'}
+                          </span>
+                        </div>
+                      )}
+                      <div className={cn(
+                        'rounded-2xl px-3 py-2 text-[12px] max-w-[90%]',
+                        msg.role === 'user'
+                          ? 'bg-[#6B26EA] text-white ml-auto'
+                          : 'bg-[#F7F3FE] text-[#1E1E1E]'
+                      )}>
+                        <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</p>
+                      </div>
+                      {msg.created_at && (
+                        <p className="text-[9px] text-[rgba(30,30,30,0.4)] mt-0.5 px-0.5">
+                          {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                        </p>
+                      )}
+                    </div>
+                    {msg.role === 'user' && (
+                      <div className="w-6 h-6 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
+                        <span className="text-[#6B26EA] text-[9px] font-bold">U</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {sending && messages[messages.length - 1]?.role === 'user' && (
+                  <div className="flex gap-2">
+                    <div className="w-6 h-6 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
+                      <span className="text-[#6B26EA] text-[9px] font-bold">L</span>
+                    </div>
+                    <div className="bg-[#F7F3FE] rounded-2xl px-3 py-2">
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="flex justify-center">
+                    <p className="text-[11px] text-[#D14444] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-1.5">
+                      {error}
+                    </p>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+
+          {/* Back to conversations */}
+          {activeConversationId && (
+            <div className="px-3 pb-1 shrink-0">
+              <button
+                onClick={handleNewChat}
+                className="text-[10px] text-[#6B26EA] hover:text-[#5A1FD0] transition-colors"
+              >
+                ← New conversation
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Input */}
+      <div className="p-3 border-t border-[#EDE3FF] shrink-0">
         <div className="flex items-center gap-2 rounded-xl border border-[#EDE3FF] bg-[#F9F5FF] px-3 py-2">
           <input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onKeyDown={(e) => e.key === 'Enter' && !sending && handleSend()}
             placeholder="Ask anything..."
-            className="flex-1 bg-transparent text-[13px] text-[#0D0026] placeholder:text-[rgba(0,0,0,0.31)] focus:outline-none"
+            disabled={sending}
+            className="flex-1 bg-transparent text-[12px] text-[#0D0026] placeholder:text-[rgba(0,0,0,0.31)] focus:outline-none disabled:opacity-50"
           />
           <button
             onClick={handleSend}
-            disabled={!message.trim()}
+            disabled={!message.trim() || sending}
             className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#6B26EA] text-white hover:bg-[#5A1FD0] transition-colors disabled:opacity-40 shrink-0"
           >
-            <MessageSquare size={12} />
+            {sending ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />}
           </button>
         </div>
       </div>

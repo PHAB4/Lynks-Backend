@@ -1,6 +1,6 @@
 # Lynks API Contract
 
-> **Last updated:** August 28, 2026
+> **Last updated:** August 31, 2026
 > **Base URL:** `http://localhost:8000` (local) / `https://lynks-backend-production.up.railway.app` (production)
 > **Auth:** Bearer token in `Authorization` header (Supabase JWT)
 > **Content-Type:** `application/json` (except evidence upload: `multipart/form-data`)
@@ -121,15 +121,20 @@ Response 201: (same shape as POST /roadmap/generate)
 
 ### POST /tasks/{task_id}/evidence
 Uploads an evidence file for a task. Uses `multipart/form-data`.
+The file is validated, uploaded to Supabase Storage, and verified by Gemini 3.5 Flash (vision model via Google AI Studio).
 ```
 Content-Type: multipart/form-data
-Body: file=<image file>
+Body: file_type=<mime type>&file=<image file>
 
 Response 201: {
   "id": "uuid",
+  "task_id": "uuid",
   "file_url": "https://...",
   "file_type": "image/png",
-  "verification_status": "pending",
+  "verification_status": "pending | verified | rejected",
+  "verification_reason": "Legitimate Coursera certificate for Python course",
+  "verification_confidence": "high | medium | low",
+  "verified_at": "datetime | null",
   "uploaded_at": "datetime"
 }
 ```
@@ -149,12 +154,53 @@ Response 200: [
         "file_url": "https://...",
         "file_type": "image/png",
         "verification_status": "pending | verified | rejected",
+        "verification_reason": "Legitimate Coursera certificate",
+        "verification_confidence": "high",
+        "verified_at": "2026-08-28T12:00:00Z",
         "uploaded_at": "datetime"
       }
     ]
   }
 ]
 ```
+
+---
+
+### GET /evidence/{evidence_id}/verification
+Returns the full verification details for a single piece of evidence.
+```json
+Response 200: {
+  "evidence_id": "uuid",
+  "verification_status": "verified",
+  "verification_reason": "Legitimate Coursera certificate for Python course",
+  "verification_confidence": "high",
+  "verified_at": "2026-08-28T12:00:00Z"
+}
+```
+
+Errors:
+- 404: `evidence_not_found` — evidence doesn't exist
+- 403: `forbidden` — evidence doesn't belong to the user
+
+---
+
+### POST /evidence/{evidence_id}/re-verify
+Re-runs AI verification on existing evidence. Useful when an image was wrongly rejected.
+Fetches the file from Supabase Storage and sends it to Gemini 3.5 Flash again.
+```json
+Response 200: {
+  "id": "uuid",
+  "verification_status": "verified",
+  "verification_reason": "On re-analysis, this is a legitimate AWS certificate",
+  "verification_confidence": "medium",
+  "verified_at": "2026-08-28T12:05:00Z"
+}
+```
+
+Errors:
+- 404: `evidence_not_found`
+- 403: `forbidden`
+- 502: `verification_failed` — Gemini API error during re-verification
 
 ---
 
@@ -612,101 +658,3 @@ All errors follow:
 | 403 | Forbidden |
 | 404 | Resource not found |
 | 500 | Internal server error |
-
-
----
-
-## Notifications
-
-Notifications provide an in-app notification center — alerts for new opportunities, task milestones, badges, and reminders.
-
-### GET /notifications
-
-List all notifications for the authenticated user.
-
-**Query Parameters:**
-
-| Param | Type | Default | Description |
-|---|---|---|---|
-| `type` | string | null | Filter by type (`opportunity`, `task`, `badge`, `reminder`) |
-| `is_read` | bool | null | Filter by read status |
-| `limit` | int | 50 | Results per page (1–100) |
-| `offset` | int | 0 | Pagination offset |
-
-**Response 200:**
-```json
-{
-  "notifications": [
-    {
-      "id": "uuid",
-      "title": "New opportunity: Software Engineer at Acme",
-      "body": "A new opportunity matching your profile has been found.",
-      "type": "opportunity",
-      "link": { "type": "opportunity", "id": "opp-123" },
-      "is_read": false,
-      "created_at": "2026-08-30T12:00:00Z"
-    }
-  ],
-  "unread_count": 3
-}
-```
-
-### GET /notifications/unread/count
-
-Get count of unread notifications (for badge display).
-
-**Response 200:**
-```json
-{ "unread_count": 3 }
-```
-
-### GET /notifications/{notification_id}
-
-Get a specific notification by ID.
-
-**Response 200:** Single `NotificationResponse` object.
-
-**Response 404:** `{"detail": "Notification not found"}`
-
-### POST /notifications
-
-Create a new notification (admin/utility use).
-
-**Request Body:**
-```json
-{
-  "title": "Roadmap milestone reached!",
-  "body": "You've completed 50% of your career roadmap.",
-  "type": "task",
-  "link": { "type": "roadmap", "id": "roadmap-123" }
-}
-```
-
-| Field | Type | Required | Default |
-|---|---|---|---|
-| `title` | string | ✅ | — |
-| `body` | string | ✅ | — |
-| `type` | string | ❌ | `"info"` |
-| `link` | string or object | ❌ | `null` |
-
-**Response 201:** Single `NotificationResponse` object.
-
-### PATCH /notifications/{notification_id}/read
-
-Mark a single notification as read.
-
-**Response 200:**
-```json
-{ "status": "ok", "message": "Notification marked as read" }
-```
-
-**Response 404:** `{"detail": "Notification not found"}`
-
-### POST /notifications/read-all
-
-Mark all notifications for the current user as read.
-
-**Response 200:**
-```json
-{ "status": "ok", "message": "Marked 5 notifications as read" }
-```

@@ -1,6 +1,6 @@
 # Lynks — Product Requirement Document
 
-**Last updated:** August 27, 2026
+**Last updated:** August 31, 2026
 
 ## 1. Problem Statement
 
@@ -36,11 +36,17 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 
 ### 4.3 Task Evidence & Verification (Portfolio Manager Agent)
 
-- Users mark tasks as complete and upload evidence (certificates, photos, links)
-- AI verifies uploaded evidence using Llama 3 Vision (synchronous on upload)
-- Verification result: `verified`, `rejected`, or `pending`
+- Users mark tasks as complete and upload evidence (certificates, photos, screenshots, project demos)
+- AI verifies uploaded evidence using **Google Gemini 3.5 Flash** (vision model, free tier) via the Google AI Studio API
+- **Dual-provider architecture:** Groq handles text tasks (chat, roadmap, resume), Google Gemini handles vision tasks (evidence verification) — each with its own API key and environment variable
+- **Verification is career-context-aware:** the AI receives the user's career path and task description alongside the image, so it can judge relevance (e.g., a Python certificate is valid for a software dev task, but a cooking cert is not)
+- **Three-tier analysis:** (1) document type — real certificate vs. fake/blank, (2) content legitimacy — realistic elements like issuer, date, recipient, (3) career relevance — does it match the user's career path and the specific task
+- **Lenient verification:** only rejects obviously fake, blank, or completely unrelated images. Ambiguous evidence gets `verified` with `medium` confidence.
+- Verification result: `verified`, `rejected`, or `pending` (with `reason` and `confidence` level)
 - Evidence is stored in Supabase Storage (public `evidence` bucket)
 - Portfolio page shows all completed tasks with verified evidence
+- Users can request re-verification (`POST /evidence/{id}/re-verify`) if evidence was wrongly rejected
+- **Graceful degradation:** if the vision API is down, evidence stays `pending` and can be retried — uploads never fail due to verification errors
 
 ### 4.4 Career Opportunities (Job Scout Agent)
 
@@ -55,43 +61,37 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 
 ### 4.5 Career Opportunities Page — UX Pattern
 
-The career opportunities page uses a two-tab filter system with a VIEW mode selector:
-
-**VIEW Mode (top right dropdown):**
-
-| Mode | Description |
-|---|---|
-| **Career** | Shows ONLY job opportunities |
-| **General** | Shows ALL scraped opportunities — jobs, internships, youth groups, grants, education, etc. |
-
-**Filter Tabs (below search bar):**
+The career opportunities page has two tabs:
 
 | Tab | Description |
 |---|---|
-| **All Web-scraped** | All opportunities in the current VIEW mode |
-| **Personal matches** | Opportunities tailored to the user's profile (scoped to current VIEW mode) |
+| **For You** (default) | Opportunities matched to the user's profile, sorted by relevance. Uses rule-based matching against career path, country, age, education level. No AI required. |
+| **Browse All** | Full catalog of all opportunities with filters. |
 
-**Additional Controls:**
+**Filters available:**
 
-| Control | Options | Notes |
-|---|---|---|
-| Search bar | Text input | Filters by title and company name |
-| Time filter | Today, This Week, This Month | Dropdown to the right of search bar |
-| Save icon | Toggle | When clicked, shows only bookmarked opportunities |
+| Filter | Options |
+|---|---|
+| Category | Job, Competition, Club, Scholarship, Event, Volunteer |
+| Timeframe | Within Week, Within Month, Within Quarter, All Time |
+| Sort | Relevance, Recent, Salary |
+| Page | Offset pagination (default 20 per page, max 50) |
 
 **Opportunity Card Fields:**
 
 | Field | Type | Notes |
 |---|---|---|
-| Company initial | Avatar | Circular avatar with company first letter |
 | Title | string | Opportunity name |
-| Type badge | string | Category label (Job, Internship, Youth Group, Grant) — shown on General view |
 | Company/Organization | string | Hosting organization |
+| Category | string | Job, scholarship, competition, etc. |
 | Location | string | Physical location or "Remote" |
 | Salary | object | `{ min, max, currency }` for jobs; `null` for others. Currency auto-detected (22+ ISO 4217 codes), source-context-aware. |
-| Recency number | int | Top right — scrape order (1 = most recent) |
-| Save/Unsave | icon | Bookmark icon — fills with `#6B26EA` when saved |
-| Go to source | link | Purple `#6B26EA` button linking to the original opportunity page |
+| Description | string | Brief description |
+| Image | string (URL) | Thumbnail/preview image |
+| Posted At | datetime | When originally posted |
+| Source | string | Where it was scraped from (devpost, eventbrite, curated, etc.) |
+| Go To Source | link | URL to the original opportunity page |
+| Save/Unsave | button | Bookmark for later |
 
 **"Ask About This" Button:**
 
@@ -134,7 +134,7 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 | Agent | Purpose | Input | Output |
 |---|---|---|---|
 | Career Architect | Generates personalized career roadmaps | User profile (career path, education, country, age) | Roadmap JSON (steps + tasks) |
-| Portfolio Manager | Verifies task evidence, manages portfolio | Uploaded files (certificates, images) | Verification result (verified/rejected/pending) |
+| Portfolio Manager | Verifies task evidence using Gemini 3.5 Flash (vision), manages portfolio | Uploaded files (certificates, images) + user career context | Verification result (verified/rejected/pending) with reason and confidence |
 | Job Scout | Sources Caribbean-relevant opportunities | Internet scraping + curated database | Matched opportunities list |
 | Mentor-Orchestrator | Conversational assistant + agent router | User chat messages | Natural language response (possibly agent-assisted) |
 | Memory Extractor | Extracts key user facts from conversations | Conversation messages + existing memories | New user memories (up to 5 per extraction) |
@@ -145,8 +145,10 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 - **Backend:** Python 3.11+, FastAPI, async/await
 - **Database:** PostgreSQL (via Supabase), SQLAlchemy ORM
 - **Auth:** Supabase Auth — backend only verifies JWTs, never issues them
-- **LLM:** OpenAI-compatible API (currently Groq free tier)
+- **LLM (text):** Groq (openai/gpt-oss-120b) via OpenAI-compatible API — roadmap generation, chat, resume, opportunity extraction
+- **LLM (vision):** Google Gemini 3.5 Flash via Google AI Studio API (free tier, 1,500 RPD) — evidence verification
 - **File Storage:** Supabase Storage (public `evidence` bucket)
+- **Note:** Impala/Highrise AI gateway is no longer accessible — all LLM calls go directly to Groq or Google AI Studio
 - **All UUIDs, all snake_case**
 - **Error shape:** `{"error": {"code": "...", "message": "..."}}`
 
@@ -172,7 +174,7 @@ Implemented via FastAPI middleware in `app/middleware.py`:
 | 2 | How often should the Job Scout scrape for new opportunities? | **Resolved** — in-memory cache with 1-hour TTL, on-demand refresh |
 | 3 | Should notifications be real-time or check-on-load? | **Resolved** — polling via `/opportunities/new-count` and `/notifications/unread/count` |
 | 4 | What LLM model to use for the Mentor chatbot? | **Resolved** — Groq (Llama 3 70B) for now |
-| 5 | How should evidence verification handle ambiguous uploads? | **Proposed** — status stays `pending`, doesn't block the upload |
+| 5 | How should evidence verification handle ambiguous uploads? | **Resolved** — lenient verification with `pending` fallback. Gemini 3.5 Flash (free tier) with career-context-aware analysis. Status stays `pending` if API is down. |
 | 6 | Social media scraping feasibility? | **Open** — deferred post-competition, public page scraping as stretch goal |
 
 ## 8. Deployment
