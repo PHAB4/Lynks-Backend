@@ -165,3 +165,89 @@ async def post_roadmap_regenerate(
         )
 
     return result
+
+
+# ── PATCH /roadmap/tasks/{task_id}/complete ──────────────────────────────
+
+
+@router.patch("/tasks/{task_id}/complete")
+async def complete_task(
+    task_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Mark a task as complete from the Roadmap page (e.g., checkbox click).
+    Validates ownership: the task must belong to the user's active roadmap.
+    Idempotent: completing an already-complete task returns success.
+    """
+    # 1. Load task by ID
+    result = await db.execute(select(Task).where(Task.id == task_id))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "code": "task_not_found",
+                    "message": f"No task found with ID {task_id}",
+                }
+            },
+        )
+
+    # 2. Load task's step → step's roadmap
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Step)
+        .where(Step.id == task.step_id)
+        .options(selectinload(Step.roadmap))
+    )
+    step = result.scalar_one_or_none()
+    roadmap = step.roadmap if step else None
+
+    # 3. Verify ownership and active status
+    if not roadmap or roadmap.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": {
+                    "code": "not_your_task",
+                    "message": "This task does not belong to your active roadmap.",
+                }
+            },
+        )
+
+    if not roadmap.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": {
+                    "code": "roadmap_inactive",
+                    "message": "Cannot complete tasks on an inactive roadmap.",
+                }
+            },
+        )
+
+    # 4. Idempotent — already complete is fine
+    if task.status == "complete":
+        return {
+            "success": True,
+            "task_id": task.id,
+            "title": task.title,
+            "message": f"Task '{task.title}' marked as complete!",
+        }
+
+    # 5. Mark complete
+    from datetime import datetime, timezone
+    task.status = "complete"
+    task.completed_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(task)
+
+    return {
+        "success": True,
+        "task_id": task.id,
+        "title": task.title,
+        "message": f"Task '{task.title}' marked as complete!",
+    }
