@@ -78,16 +78,19 @@ Response 200: { "career_path": "Software Development" }
 
 ### POST /profile/avatar
 Upload a profile picture. Replaces any existing avatar (old file is deleted).
+
+**Request** — `multipart/form-data`:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| file | binary | yes | JPEG, PNG, or GIF, max 800KB |
+
+```
+curl -X POST /profile/avatar \
+  -H "Authorization: Bearer <token>" \
+  -F "file=@profile.jpg"
+```
+
 ```json
-Request: multipart/form-data
-
-  file: <binary image data>    // required — JPEG, PNG, or GIF, max 800KB
-
-  Example (curl):
-    curl -X POST /profile/avatar \
-      -H "Authorization: Bearer <token>" \
-      -F "file=@profile.jpg"
-
 Response 200: { "avatar_url": "https://..." }
 Response 400: { "detail": "Invalid file type: ..." }
 Response 400: { "detail": "File too large: ..." }
@@ -97,9 +100,8 @@ Response 400: { "detail": "File too large: ..." }
 
 ### DELETE /profile/avatar
 Remove the user's profile picture.
-```json
-Request: (none)
 
+```json
 Response 200: { "message": "Profile picture removed" }
 Response 404: { "detail": "No profile picture to remove" }
 ```
