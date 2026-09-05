@@ -5,17 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Map, Briefcase, MessageSquare, FileText, Bell, ChevronRight, Sparkles, ArrowRight, TrendingUp, BookOpen } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
-import { getProfile, getOpportunities, getUnreadNotificationCount, getPortfolio } from '@/lib/dashboard-api'
+import { getProfile, getOpportunities, getUnreadNotificationCount, getPortfolio, DashboardProfile } from '@/lib/dashboard-api'
 import { getRoadmap } from '@/lib/roadmap-api'
-
-interface DashboardProfile {
-  name: string
-  email: string
-  career_path: string | null
-  interests: string[] | null
-  education_level: string | null
-  employment_status: string | null
-}
 
 export default function DashboardPage() {
   const router = useRouter()
