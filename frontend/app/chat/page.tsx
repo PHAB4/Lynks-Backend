@@ -43,6 +43,7 @@ function ChatContent() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState('')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [userName, setUserName] = useState(() => {
@@ -227,6 +228,7 @@ function ChatContent() {
   }
 
   return (
+    <>
       <AppLayout>
       <div className="flex h-screen bg-[#F7F3FE]">
         <div className="flex-1 flex flex-col min-w-0">
@@ -238,7 +240,7 @@ function ChatContent() {
                 <p className="text-[11px] text-[rgba(0,0,0,0.30)] font-semibold uppercase tracking-wider">Conversations</p>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={handleClearHistory}
+                    onClick={() => setShowClearConfirm(true)}
                     className="flex items-center gap-1 text-[10px] text-[#8B898E] hover:text-[#D14444] transition-colors"
                   >
                     <Trash2 size={10} />
@@ -414,7 +416,8 @@ function ChatContent() {
             </>
           )}
 
-          {/* Chat input */}
+          {/* Chat input — only show when in active conversation */}
+          {(activeConversationId || messages.length > 0) && (
           <div className="px-4 md:px-6 pb-4 md:pb-6 shrink-0">
             <div className="flex items-center gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] mx-auto shadow-[0_0_5px_rgba(0,0,0,0.05)]">
               <input
@@ -436,8 +439,41 @@ function ChatContent() {
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
     </AppLayout>
+
+      {/* Clear All confirmation dialog */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.15)] p-6 max-w-[340px] w-full mx-4">
+            <h3 className="text-[15px] font-semibold text-[#0D0026] mb-2" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+              Clear all conversations?
+            </h3>
+            <p className="text-[13px] text-[#8B898E] mb-5">
+              This will permanently delete all your conversations. This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#EDE3FF] text-[13px] font-medium text-[#4A3572] hover:bg-[#F9F5FF] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await handleClearHistory()
+                  setShowClearConfirm(false)
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-[#D14444] text-white text-[13px] font-medium hover:bg-[#B83333] transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
