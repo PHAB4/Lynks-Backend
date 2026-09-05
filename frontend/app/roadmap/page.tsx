@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Map, Loader2, RefreshCw, CheckCircle2, Circle, Sparkles, ChevronDown, ChevronRight } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Map, Loader2, RefreshCw, CheckCircle2, Circle, Sparkles, ChevronDown, ChevronRight, Lock } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getRoadmap, generateRoadmap, regenerateRoadmap, type Roadmap, type RoadmapStep } from '@/lib/roadmap-api'
@@ -12,11 +12,19 @@ export default function RoadmapPage() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
-  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set())
+  const [activeStep, setActiveStep] = useState<string | null>(null)
 
   useEffect(() => {
     loadRoadmap()
   }, [])
+
+  useEffect(() => {
+    if (roadmap?.steps && roadmap.steps.length > 0 && !activeStep) {
+      const sorted = [...roadmap.steps].sort((a, b) => a.order - b.order)
+      const inProgress = sorted.find(s => s.status === 'pending' && s.tasks?.some(t => t.status === 'pending'))
+      setActiveStep(inProgress?.step_id || sorted[0].step_id)
+    }
+  }, [roadmap, activeStep])
 
   const loadRoadmap = async () => {
     setLoading(true)
@@ -24,9 +32,6 @@ export default function RoadmapPage() {
     try {
       const data = await getRoadmap()
       setRoadmap(data)
-      if (data?.steps) {
-        setExpandedSteps(new Set(data.steps.map((s) => s.step_id)))
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load roadmap')
     } finally {
@@ -38,7 +43,6 @@ export default function RoadmapPage() {
     setGenerating(true)
     setError('')
     try {
-      // Check profile completeness before calling the LLM-heavy generate endpoint
       try {
         const profile = await fetchAPI('/profile')
         const missing: string[] = []
@@ -50,15 +54,10 @@ export default function RoadmapPage() {
           setGenerating(false)
           return
         }
-      } catch {
-        // If profile fetch fails (e.g. 401), let generateRoadmap handle it
-      }
+      } catch {}
 
       const data = await generateRoadmap()
       setRoadmap(data)
-      if (data?.steps) {
-        setExpandedSteps(new Set(data.steps.map((s) => s.step_id)))
-      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to generate roadmap'
       if (msg.includes('profile_incomplete') || msg.includes('Not authenticated')) {
@@ -77,9 +76,6 @@ export default function RoadmapPage() {
     try {
       const data = await regenerateRoadmap()
       setRoadmap(data)
-      if (data?.steps) {
-        setExpandedSteps(new Set(data.steps.map((s) => s.step_id)))
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to regenerate roadmap')
     } finally {
@@ -87,190 +83,268 @@ export default function RoadmapPage() {
     }
   }
 
-  const toggleStep = (stepId: string) => {
-    setExpandedSteps((prev) => {
-      const next = new Set(prev)
-      if (next.has(stepId)) next.delete(stepId)
-      else next.add(stepId)
-      return next
-    })
-  }
-
   const allTasks = roadmap?.steps?.flatMap((s) => s.tasks || []) || []
   const completedTasks = allTasks.filter((t) => t.status === 'complete').length
   const totalTasks = allTasks.length
-  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+  const sortedSteps = roadmap?.steps ? [...roadmap.steps].sort((a, b) => a.order - b.order) : []
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-[#F7F3FE] overflow-y-auto">
-        <div className="max-w-[800px] mx-auto px-4 md:px-8 py-8 md:py-12">
-          <div className="mb-8">
-            <h1 className="text-[28px] md:text-[36px] font-semibold text-[#0D0026] leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-              Your Career Roadmap
-            </h1>
-            <p className="text-sm text-[#8B898E] mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-              A personalized, step-by-step plan to reach your career goals.
-            </p>
-          </div>
-
-          {loading && (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-4 mb-6">
-              <p className="text-[13px] text-[#D14444]">{error}</p>
-            </div>
-          )}
-
-          {!loading && !roadmap && !generating && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#EADFFF] flex items-center justify-center mb-4">
-                <Map size={24} className="text-[#6B26EA]" />
-              </div>
-              <p className="text-lg font-semibold text-[#0D0026] mb-2" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                No roadmap yet
-              </p>
-              <p className="text-sm text-[#8B898E] max-w-md mb-6" style={{ fontFamily: "'Inter', sans-serif" }}>
-                Let LYNKS AI create a personalized career roadmap based on your profile, career path, and education level.
-              </p>
-              <button
-                onClick={handleGenerate}
-                className="flex items-center gap-2 py-3 px-8 rounded-xl bg-[#6B26EA] text-white text-sm font-semibold hover:bg-[#5A1FD0] transition-colors"
-              >
-                <Sparkles size={16} />
-                Generate My Roadmap
-              </button>
-            </div>
-          )}
-
-          {generating && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Loader2 size={32} className="text-[#6B26EA] animate-spin mb-4" />
-              <p className="text-[15px] font-semibold text-[#0D0026] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-                Generating your roadmap...
-              </p>
-              <p className="text-[13px] text-[#8B898E]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                This takes 5-15 seconds. LYNKS is creating a personalized plan for you.
-              </p>
-            </div>
-          )}
-
-          {!loading && roadmap && !generating && (
-            <>
-              {/* Progress bar */}
-              <div className="bg-white rounded-2xl border border-[#EDE3FF] p-5 mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[13px] font-semibold text-[#0D0026]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    Overall Progress
-                  </p>
-                  <p className="text-[13px] font-bold text-[#6B26EA]">{progressPercent}%</p>
-                </div>
-                <div className="w-full h-2.5 rounded-full bg-[#EDE3FF] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#6B26EA] transition-all duration-500"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <p className="text-[12px] text-[#8B898E] mt-2">
-                  {completedTasks} of {totalTasks} tasks completed
+      <div className="min-h-screen bg-[#F7F3FE] overflow-hidden">
+        <div className="flex h-[calc(100vh-64px)]">
+          {/* Left panel — winding path */}
+          <div className="flex-1 relative overflow-y-auto overflow-x-hidden">
+            <div className="flex flex-col items-center py-8 px-4">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <h1 className="text-[28px] md:text-[36px] font-semibold text-[#0D0026] leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                  Steps
+                </h1>
+                <p className="text-[13px] text-[#8B898E] mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  Tap a step to see what's inside
                 </p>
               </div>
 
-              {/* Steps */}
-              <div className="space-y-3">
-                {roadmap.steps
-                  .sort((a, b) => a.order - b.order)
-                  .map((step, index) => (
-                    <StepCard
-                      key={step.step_id}
-                      step={step}
-                      index={index}
-                      expanded={expandedSteps.has(step.step_id)}
-                      onToggle={() => toggleStep(step.step_id)}
-                    />
-                  ))}
-              </div>
+              {loading && (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
+                </div>
+              )}
 
-              {/* Regenerate */}
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={handleRegenerate}
-                  className="flex items-center gap-2 py-2.5 px-6 rounded-xl border border-[#EDE3FF] text-[13px] text-[#6B26EA] font-semibold hover:bg-[#F7F3FE] transition-colors"
-                >
-                  <RefreshCw size={14} />
-                  Regenerate Roadmap
-                </button>
-              </div>
-            </>
-          )}
+              {error && (
+                <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-4 mb-6 max-w-md">
+                  <p className="text-[13px] text-[#D14444]">{error}</p>
+                </div>
+              )}
+
+              {!loading && !roadmap && !generating && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-16 h-16 rounded-full bg-[#EADFFF] flex items-center justify-center mb-4">
+                    <Map size={24} className="text-[#6B26EA]" />
+                  </div>
+                  <p className="text-lg font-semibold text-[#0D0026] mb-2" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                    No roadmap yet
+                  </p>
+                  <p className="text-sm text-[#8B898E] max-w-md mb-6" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Let LYNKS AI create a personalized career roadmap based on your profile.
+                  </p>
+                  <button
+                    onClick={handleGenerate}
+                    className="flex items-center gap-2 py-3 px-8 rounded-xl bg-[#6B26EA] text-white text-sm font-semibold hover:bg-[#5A1FD0] transition-colors"
+                  >
+                    <Sparkles size={16} />
+                    Generate My Roadmap
+                  </button>
+                </div>
+              )}
+
+              {generating && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <Loader2 size={32} className="text-[#6B26EA] animate-spin mb-4" />
+                  <p className="text-[15px] font-semibold text-[#0D0026] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Generating your roadmap...
+                  </p>
+                  <p className="text-[13px] text-[#8B898E]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    This takes 5-15 seconds. LYNKS is creating a personalized plan for you.
+                  </p>
+                </div>
+              )}
+
+              {!loading && roadmap && !generating && (
+                <div className="relative w-full max-w-[500px]">
+                  {/* Winding path visualization */}
+                  <div className="relative">
+                    {sortedSteps.map((step, index) => {
+                      const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
+                      const totalCount = step.tasks?.length || 0
+                      const allComplete = totalCount > 0 && completedCount === totalCount
+                      const isActive = activeStep === step.step_id
+                      const isPast = allComplete
+
+                      // Alternate left/right positioning for winding effect
+                      const isLeft = index % 2 === 0
+                      const marginLeft = isLeft ? '0%' : '25%'
+                      const marginRight = isLeft ? '25%' : '0%'
+
+                      return (
+                        <div key={step.step_id} className="relative" style={{ marginBottom: index < sortedSteps.length - 1 ? '16px' : '0' }}>
+                          {/* Connection line to next step */}
+                          {index < sortedSteps.length - 1 && (
+                            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '40px', height: '32px' }}>
+                              <svg width="2" height="32" className="overflow-visible">
+                                <line
+                                  x1="1" y1="0" x2="1" y2="32"
+                                  stroke={isPast ? '#22C55E' : '#EDE3FF'}
+                                  strokeWidth="2"
+                                  strokeDasharray={isPast ? 'none' : '4 4'}
+                                />
+                              </svg>
+                            </div>
+                          )}
+
+                          <div
+                            style={{ marginLeft, marginRight }}
+                            className="flex justify-center"
+                          >
+                            <button
+                              onClick={() => setActiveStep(step.step_id)}
+                              className={cn(
+                                'relative flex items-center justify-center rounded-full transition-all duration-300 cursor-pointer group',
+                                isActive && 'scale-110 ring-4 ring-[#EADFFF]',
+                                isPast ? 'bg-[#22C55E]' : 'bg-[#6B26EA]',
+                              )}
+                              style={{ width: '80px', height: '40px', borderRadius: '20px' }}
+                            >
+                              <span className="text-white text-[13px] font-bold" style={{ fontFamily: "'Inter', sans-serif" }}>
+                                {index + 1}
+                              </span>
+                            </button>
+                          </div>
+
+                          {/* Step label below */}
+                          <div
+                            style={{ marginLeft, marginRight }}
+                            className="flex justify-center mt-1"
+                          >
+                            <span className={cn(
+                              'text-[11px] font-medium text-center max-w-[100px] leading-tight',
+                              isActive ? 'text-[#6B26EA]' : isPast ? 'text-[#22C55E]' : 'text-[#8B898E]'
+                            )}>
+                              {step.title.length > 15 ? step.title.slice(0, 15) + '...' : step.title}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right panel — step details */}
+          <div className="w-[340px] bg-white border-l border-[#EDE3FF] flex flex-col overflow-hidden shrink-0">
+            {!loading && roadmap && !generating && (
+              <>
+                {/* Panel header */}
+                <div className="p-5 border-b border-[#EDE3FF]">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-[20px] font-semibold text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                      Steps
+                    </h2>
+                    <span className="text-[12px] font-bold text-[#6B26EA] bg-[#EADFFF] px-3 py-1 rounded-full">
+                      {completedTasks}/{totalTasks} DONE
+                    </span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full h-1.5 rounded-full bg-[#EDE3FF] mt-3 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#6B26EA] transition-all duration-500"
+                      style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Step list */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                  {sortedSteps.map((step, index) => {
+                    const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
+                    const totalCount = step.tasks?.length || 0
+                    const allComplete = totalCount > 0 && completedCount === totalCount
+                    const isActive = activeStep === step.step_id
+                    const isInProgress = !allComplete && step.tasks?.some(t => t.status === 'pending')
+
+                    return (
+                      <div key={step.step_id}>
+                        <button
+                          onClick={() => setActiveStep(isActive ? null : step.step_id)}
+                          className={cn(
+                            'w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all',
+                            isActive ? 'bg-[#F7F3FE]' : 'hover:bg-[#FAFAFA]'
+                          )}
+                        >
+                          <span className={cn(
+                            'text-[13px] font-semibold w-5 shrink-0',
+                            allComplete ? 'text-[#22C55E]' : isActive ? 'text-[#6B26EA]' : 'text-[#8B898E]'
+                          )}>
+                            {index + 1}.
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              'text-[13px] font-semibold truncate',
+                              allComplete ? 'text-[#22C55E]' : isActive ? 'text-[#0D0026]' : 'text-[#0D0026]'
+                            )}>
+                              {step.title}
+                            </p>
+                          </div>
+                          {isInProgress && !allComplete && (
+                            <span className="text-[10px] font-bold text-[#6B26EA] bg-[#EADFFF] px-2 py-0.5 rounded-full shrink-0">
+                              IN PROGRESS
+                            </span>
+                          )}
+                          {allComplete && (
+                            <CheckCircle2 size={14} className="text-[#22C55E] shrink-0" />
+                          )}
+                        </button>
+
+                        {/* Expanded task list */}
+                        {isActive && (
+                          <div className="ml-5 mt-1 mb-2 space-y-1.5 pl-3 border-l-2 border-[#EDE3FF]">
+                            {step.tasks
+                              ?.sort((a, b) => a.order - b.order)
+                              .map((task) => (
+                                <div
+                                  key={task.task_id}
+                                  className={cn(
+                                    'flex items-start gap-2.5 p-2.5 rounded-lg',
+                                    task.status === 'complete' ? 'bg-[#F0FDF4]' : 'bg-[#FAFAFA]'
+                                  )}
+                                >
+                                  {task.status === 'complete' ? (
+                                    <CheckCircle2 size={14} className="text-[#22C55E] shrink-0 mt-0.5" />
+                                  ) : (
+                                    <Circle size={14} className="text-[#D1D5DB] shrink-0 mt-0.5" />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className={cn(
+                                      'text-[12px] font-medium leading-snug',
+                                      task.status === 'complete' ? 'text-[#8B898E] line-through' : 'text-[#0D0026]'
+                                    )}>
+                                      {task.title}
+                                    </p>
+                                    <p className="text-[11px] text-[#8B898E] mt-0.5 leading-snug">
+                                      {task.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            }
+                            {(!step.tasks || step.tasks.length === 0) && (
+                              <p className="text-[12px] text-[#8B898E] py-2">No tasks in this step yet.</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Footer actions */}
+                <div className="p-4 border-t border-[#EDE3FF]">
+                  <button
+                    onClick={handleRegenerate}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#EDE3FF] text-[13px] text-[#6B26EA] font-semibold hover:bg-[#F7F3FE] transition-colors"
+                  >
+                    <RefreshCw size={14} />
+                    Regenerate Roadmap
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </AppLayout>
-  )
-}
-
-function StepCard({ step, index, expanded, onToggle }: { step: RoadmapStep; index: number; expanded: boolean; onToggle: () => void }) {
-  const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
-  const totalCount = step.tasks?.length || 0
-  const allComplete = totalCount > 0 && completedCount === totalCount
-
-  return (
-    <div className={cn('bg-white rounded-2xl border overflow-hidden transition-all', allComplete ? 'border-[#BBF7D0]' : 'border-[#EDE3FF]')}>
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-3 p-5 text-left"
-      >
-        <div className={cn(
-          'w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0',
-          allComplete ? 'bg-[#22C55E] text-white' : 'bg-[#EADFFF] text-[#6B26EA]'
-        )}>
-          {allComplete ? <CheckCircle2 size={16} /> : index + 1}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-semibold text-[#0D0026]">{step.title}</p>
-          <p className="text-[12px] text-[#8B898E] mt-0.5">
-            {completedCount}/{totalCount} tasks · {step.description.slice(0, 80)}{step.description.length > 80 ? '...' : ''}
-          </p>
-        </div>
-        {expanded ? <ChevronDown size={16} className="text-[#8B898E] shrink-0" /> : <ChevronRight size={16} className="text-[#8B898E] shrink-0" />}
-      </button>
-
-      {expanded && (
-        <div className="px-5 pb-5 pt-0">
-          <p className="text-[13px] text-[#8B898E] mb-3 leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
-            {step.description}
-          </p>
-          <div className="space-y-2">
-            {step.tasks
-              ?.sort((a, b) => a.order - b.order)
-              .map((task) => (
-                <div
-                  key={task.task_id}
-                  className={cn(
-                    'flex items-start gap-3 p-3 rounded-xl border',
-                    task.status === 'complete' ? 'bg-[#F0FDF4] border-[#BBF7D0]' : 'bg-[#FAFAFA] border-[rgba(30,30,30,0.06)]'
-                  )}
-                >
-                  {task.status === 'complete' ? (
-                    <CheckCircle2 size={16} className="text-[#22C55E] shrink-0 mt-0.5" />
-                  ) : (
-                    <Circle size={16} className="text-[#D1D5DB] shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1">
-                    <p className={cn('text-[13px] font-medium', task.status === 'complete' ? 'text-[#8B898E] line-through' : 'text-[#0D0026]')}>
-                      {task.title}
-                    </p>
-                    <p className="text-[12px] text-[#8B898E] mt-0.5">{task.description}</p>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-    </div>
   )
 }
