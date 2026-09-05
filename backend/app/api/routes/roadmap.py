@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.architect import generate_roadmap
 from app.core.security import get_current_user_id
 from app.db.postgres import get_db
-from app.models.db_models import Roadmap, Task, User
+from app.models.db_models import Roadmap, Step, Task, User
 
 router = APIRouter(prefix="/roadmap", tags=["roadmap"])
 
