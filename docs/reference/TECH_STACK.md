@@ -144,6 +144,16 @@ Ruff is configured in `backend/ruff.toml` with focused rules:
 - `GET /opportunities/saved` now includes `relevance_score` for each saved opportunity
 - Scoring engine: `backend/app/services/scoring.py` — pure functions, no DB, no network, no LLM
 
+### Scheduled Opportunity Scraping
+- Background scheduler runs on FastAPI startup via asyncio task (no external dependencies like APScheduler)
+- Scrapes all sources every 6 hours: Devpost, Eventbrite, RSS feeds, social media, curated list, LLM
+- Generates notifications for all users when new opportunities are discovered
+- `GET /opportunities/scheduler/status` — returns scheduler health, last run, next run, error state
+- Scheduler module: `backend/app/services/scheduler.py`
+- Notification generator: `backend/app/services/notification_service.py`
+- Configurable interval via `DEFAULT_INTERVAL_SECONDS` (default: 21600 = 6 hours)
+- Graceful startup (30s delay after boot) and shutdown (task cancellation)
+
 
 The scraper uses a **priority-based lookup table** (`_CURRENCY_TABLE`) to detect currencies from salary text. Detection priority:
 

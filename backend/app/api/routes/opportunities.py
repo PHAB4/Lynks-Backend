@@ -107,7 +107,6 @@ async def list_opportunities(
     return result
 
 
-@router.post("/refresh")
 @router.get("/matches")
 async def personal_matches(
     page: int = Query(1, ge=1, description="Page number"),
@@ -134,6 +133,7 @@ async def personal_matches(
     return result
 
 
+@router.post("/refresh")
 async def refresh_opportunities(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
@@ -156,6 +156,14 @@ async def refresh_opportunities(
             "sources": [],
             "message": f"Scrape failed: {e!s}",
         }
+
+
+@router.get("/scheduler/status")
+async def scheduler_status():
+    """Get status of the background opportunity scraper scheduler."""
+    from app.services.scheduler import get_scheduler
+    scheduler = get_scheduler()
+    return scheduler.get_status()
 
 
 @router.get("/new-count")

@@ -13,7 +13,7 @@
 | **Mentor Orchestrator** (chat) | ✅ `mentor.py` | ✅ `POST /chat/message`, `GET /chat/history`, `DELETE /chat/history`, `GET /chat/conversations`, `GET /chat/conversations/{id}`, `PATCH /chat/conversations/{id}`, `POST /chat/conversations/reorder`, `DELETE /chat/conversations/{id}` | Fully wired — includes pin, reorder, delete |
 | **Portfolio Manager** (evidence verification) | ✅ `portfolio_manager.py` | ✅ `POST /portfolio/tasks/{task_id}/evidence`, `GET /portfolio/portfolio` | Fully wired |
 | **Job Scout** (opportunity discovery) | ✅ `scout.py` | ✅ `GET /opportunities`, `GET /opportunities/matches`, `POST /opportunities/refresh`, `GET /opportunities/new-count`, `GET /opportunities/saved`, `POST /opportunities/{id}/save`, `DELETE /opportunities/{id}/save` | Fully wired — includes rule-based personal matching |
-| **Opportunity Scraper** (Devpost, Eventbrite, RSS, social media) | ✅ `opportunity_scraper.py` | ⚠️ Only via `POST /opportunities/refresh` | No scheduled/cron endpoint — must be manually triggered |
+| **Opportunity Scraper** (Devpost, Eventbrite, RSS, social media) | ✅ `opportunity_scraper.py` | ✅ `POST /opportunities/refresh` + `GET /opportunities/scheduler/status` | Auto-scrapes every 6h via asyncio background task + notifications |
 | **Memory Extractor** (long-term user facts) | ✅ `memory_extractor.py` | ✅ `GET /memory`, `POST /memory`, `PATCH /memory/{id}`, `DELETE /memory/{id}` | Auto-extracts during chat + manual CRUD |
 | **Profile** | ✅ DB model | ✅ `GET /profile`, `PATCH /profile`, `PATCH /profile/career-path`, `POST /profile/avatar`, `GET /profile/suggested-interests` | Fully wired — includes dynamic interest suggestions (14 career domains) and avatar upload |
 | **Notifications** | ✅ `notifications.py` service | ✅ Full CRUD (`GET`, `GET /unread/count`, `GET /{id}`, `POST`, `PATCH /{id}/read`, `POST /read-all`) | Fully wired |
@@ -74,4 +74,4 @@
 |---|---|---|
 | 🟡 Medium | Onboarding bypasses backend — writes to Supabase directly | Should call `PATCH /profile` instead |
 | 🟢 Low | Dashboard could use `/dashboard/summary` | Currently 5 API calls — could be 1 |
-| 🟢 Low | No scheduled opportunity scraping | Manual trigger only — add cron for auto-refresh |
+| ✅ Done | Scheduled opportunity scraping | ✅ Done — asyncio background task every 6h, auto-generates notifications |

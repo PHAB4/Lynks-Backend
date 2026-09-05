@@ -1,6 +1,6 @@
 # Lynks API Contract
 
-> **Last updated:** September 5, 2026 (end of day — added pin, reorder, delete conversation endpoints)
+> **Last updated:** September 6, 2026 (added scheduler status, refresh, opportunity matching endpoints)
 > **Base URL:** `http://localhost:8000` (local) / `https://lynks-backend-production.up.railway.app` (production)
 > **Auth:** Bearer token in `Authorization` header (Supabase JWT)
 > **Content-Type:** `application/json` (except evidence upload: `multipart/form-data`)
@@ -461,6 +461,63 @@ Response 200: { "success": true }
 **Errors:**
 - 404: `not_found` — this opportunity was not saved
 - 501: `table_not_found` — saved_opportunities table not created yet
+
+---
+
+### POST /opportunities/refresh
+Triggers a manual refresh of the opportunity database. Scrapes all sources (Devpost, Eventbrite, RSS feeds, social media, curated list, LLM).
+```json
+Response 200: {
+  "status": "ok",
+  "count": 42,
+  "sources": ["devpost_api", "eventbrite_api", "curated", "rss_jamaica_gleaner"],
+  "message": "Scraped 42 opportunities"
+}
+```
+
+```json
+Response 200 (partial failure): {
+  "status": "partial",
+  "count": 0,
+  "sources": [],
+  "message": "Scrape failed: Network timeout"
+}
+```
+
+---
+
+### GET /opportunities/scheduler/status
+Returns the status of the background opportunity scraper scheduler. No auth required (internal monitoring).
+```json
+Response 200: {
+  "running": true,
+  "interval_hours": 6.0,
+  "started_at": "2026-09-05T10:00:00Z",
+  "last_run_at": "2026-09-05T16:00:00Z",
+  "last_run_status": "ok",
+  "last_run_count": 42,
+  "last_run_sources": ["devpost_api", "curated"],
+  "last_error": null,
+  "next_run_at": "2026-09-05T22:00:00Z",
+  "total_runs": 12,
+  "total_opportunities_scraped": 504
+}
+```
+
+**Fields:**
+| Field | Type | Description |
+|-------|------|-------------|
+| running | bool | Whether the scheduler is active |
+| interval_hours | float | Hours between scrape runs |
+| started_at | string \| null | When the scheduler was started (ISO) |
+| last_run_at | string \| null | When the last scrape ran (ISO) |
+| last_run_status | string | "never" / "ok" / "error" |
+| last_run_count | int | Opportunities found in last run |
+| last_run_sources | string[] | Sources that returned results |
+| last_error | string \| null | Last error message (if any) |
+| next_run_at | string \| null | When the next scrape will run (ISO) |
+| total_runs | int | Total scrape attempts |
+| total_opportunities_scraped | int | Cumulative opportunities found |
 
 ---
 

@@ -31,7 +31,13 @@ from app.db.postgres import engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Start the background opportunity scraper scheduler
+    from app.services.scheduler import get_scheduler
+    scheduler = get_scheduler()
+    scheduler.start()
     yield
+    # Shutdown
+    await scheduler.stop()
     await engine.dispose()
 
 

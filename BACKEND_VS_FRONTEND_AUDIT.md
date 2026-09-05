@@ -204,9 +204,9 @@ Backend has `POST /profile/avatar` and `DELETE /profile/avatar` endpoints. Stora
 | 🟢 Low | Onboarding → `PATCH /profile` instead of Supabase direct | Small |
 | 🟢 Low | Dashboard → `GET /dashboard/summary` instead of 5 calls | Small |
 | 🟢 Low | Notification UI (bell, list, mark-read) | Medium |
-| 🟡 Medium | Scheduled opportunity scraping (cron) | Medium |
-| ✅ Done | Profile picture upload | ✅ Done |
-| ✅ Done | Opportunity personal matching scoring | ✅ Done — `GET /opportunities/matches` |
+| ✅ Done | Profile picture upload (endpoint + storage + UI) | ✅ Done — `POST /profile/avatar` + `DELETE /profile/avatar` |
+| ✅ Done | Opportunity personal matching scoring | ✅ Done — `GET /opportunities/matches` with rule-based scoring (23 unit tests) |
+| ✅ Done | Scheduled opportunity scraping (cron) | ✅ Done — asyncio background task, runs every 6 hours, generates notifications (9 unit tests) |
 | ✅ Done | Dynamic suggested interests | ✅ Done — `GET /profile/suggested-interests` |
 | ✅ Done | Signup flow (email + password, no name) | ✅ Done |
 | ✅ Done | Sidebar icons always visible, top bar filters | ✅ Done |
