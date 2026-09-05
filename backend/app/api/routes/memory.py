@@ -53,7 +53,14 @@ async def create_memory(
     db: AsyncSession = Depends(get_db),
 ):
     """Manually add a memory (e.g. from onboarding or user correction)."""
-    valid_categories = {"preference", "goal", "context", "milestone", "personality", "general"}
+    valid_categories = {
+        "preference",
+        "goal",
+        "context",
+        "milestone",
+        "personality",
+        "general",
+    }
     category = body.category if body.category in valid_categories else "general"
 
     memory = UserMemory(
@@ -93,7 +100,14 @@ async def update_memory(
     if body.fact is not None:
         memory.fact = body.fact
     if body.category is not None:
-        valid_categories = {"preference", "goal", "context", "milestone", "personality", "general"}
+        valid_categories = {
+            "preference",
+            "goal",
+            "context",
+            "milestone",
+            "personality",
+            "general",
+        }
         memory.category = body.category if body.category in valid_categories else "general"
 
     await db.commit()

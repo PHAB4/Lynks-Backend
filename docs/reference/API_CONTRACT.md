@@ -612,3 +612,101 @@ All errors follow:
 | 403 | Forbidden |
 | 404 | Resource not found |
 | 500 | Internal server error |
+
+
+---
+
+## Notifications
+
+Notifications provide an in-app notification center — alerts for new opportunities, task milestones, badges, and reminders.
+
+### GET /notifications
+
+List all notifications for the authenticated user.
+
+**Query Parameters:**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `type` | string | null | Filter by type (`opportunity`, `task`, `badge`, `reminder`) |
+| `is_read` | bool | null | Filter by read status |
+| `limit` | int | 50 | Results per page (1–100) |
+| `offset` | int | 0 | Pagination offset |
+
+**Response 200:**
+```json
+{
+  "notifications": [
+    {
+      "id": "uuid",
+      "title": "New opportunity: Software Engineer at Acme",
+      "body": "A new opportunity matching your profile has been found.",
+      "type": "opportunity",
+      "link": { "type": "opportunity", "id": "opp-123" },
+      "is_read": false,
+      "created_at": "2026-08-30T12:00:00Z"
+    }
+  ],
+  "unread_count": 3
+}
+```
+
+### GET /notifications/unread/count
+
+Get count of unread notifications (for badge display).
+
+**Response 200:**
+```json
+{ "unread_count": 3 }
+```
+
+### GET /notifications/{notification_id}
+
+Get a specific notification by ID.
+
+**Response 200:** Single `NotificationResponse` object.
+
+**Response 404:** `{"detail": "Notification not found"}`
+
+### POST /notifications
+
+Create a new notification (admin/utility use).
+
+**Request Body:**
+```json
+{
+  "title": "Roadmap milestone reached!",
+  "body": "You've completed 50% of your career roadmap.",
+  "type": "task",
+  "link": { "type": "roadmap", "id": "roadmap-123" }
+}
+```
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `title` | string | ✅ | — |
+| `body` | string | ✅ | — |
+| `type` | string | ❌ | `"info"` |
+| `link` | string or object | ❌ | `null` |
+
+**Response 201:** Single `NotificationResponse` object.
+
+### PATCH /notifications/{notification_id}/read
+
+Mark a single notification as read.
+
+**Response 200:**
+```json
+{ "status": "ok", "message": "Notification marked as read" }
+```
+
+**Response 404:** `{"detail": "Notification not found"}`
+
+### POST /notifications/read-all
+
+Mark all notifications for the current user as read.
+
+**Response 200:**
+```json
+{ "status": "ok", "message": "Marked 5 notifications as read" }
+```

@@ -24,7 +24,12 @@ RATE_LIMITS: dict[str, tuple[int, int]] = {
 }
 
 # Map path prefixes to rate limit groups
-LLM_PATHS = ("/chat/message", "/roadmap/generate", "/roadmap/regenerate", "/opportunities")
+LLM_PATHS = (
+    "/chat/message",
+    "/roadmap/generate",
+    "/roadmap/regenerate",
+    "/opportunities",
+)
 AUTH_PATHS = ("/auth",)
 
 
