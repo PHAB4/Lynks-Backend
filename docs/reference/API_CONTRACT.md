@@ -1,6 +1,6 @@
 # Lynks API Contract
 
-> **Last updated:** August 28, 2026
+> **Last updated:** August 31, 2026
 > **Base URL:** `http://localhost:8000` (local) / `https://lynks-backend-production.up.railway.app` (production)
 > **Auth:** Bearer token in `Authorization` header (Supabase JWT)
 > **Content-Type:** `application/json` (except evidence upload: `multipart/form-data`)
@@ -121,15 +121,20 @@ Response 201: (same shape as POST /roadmap/generate)
 
 ### POST /tasks/{task_id}/evidence
 Uploads an evidence file for a task. Uses `multipart/form-data`.
+The file is validated, uploaded to Supabase Storage, and verified by Gemini 3.5 Flash (vision model via Google AI Studio).
 ```
 Content-Type: multipart/form-data
-Body: file=<image file>
+Body: file_type=<mime type>&file=<image file>
 
 Response 201: {
   "id": "uuid",
+  "task_id": "uuid",
   "file_url": "https://...",
   "file_type": "image/png",
-  "verification_status": "pending",
+  "verification_status": "pending | verified | rejected",
+  "verification_reason": "Legitimate Coursera certificate for Python course",
+  "verification_confidence": "high | medium | low",
+  "verified_at": "datetime | null",
   "uploaded_at": "datetime"
 }
 ```
@@ -149,12 +154,53 @@ Response 200: [
         "file_url": "https://...",
         "file_type": "image/png",
         "verification_status": "pending | verified | rejected",
+        "verification_reason": "Legitimate Coursera certificate",
+        "verification_confidence": "high",
+        "verified_at": "2026-08-28T12:00:00Z",
         "uploaded_at": "datetime"
       }
     ]
   }
 ]
 ```
+
+---
+
+### GET /evidence/{evidence_id}/verification
+Returns the full verification details for a single piece of evidence.
+```json
+Response 200: {
+  "evidence_id": "uuid",
+  "verification_status": "verified",
+  "verification_reason": "Legitimate Coursera certificate for Python course",
+  "verification_confidence": "high",
+  "verified_at": "2026-08-28T12:00:00Z"
+}
+```
+
+Errors:
+- 404: `evidence_not_found` — evidence doesn't exist
+- 403: `forbidden` — evidence doesn't belong to the user
+
+---
+
+### POST /evidence/{evidence_id}/re-verify
+Re-runs AI verification on existing evidence. Useful when an image was wrongly rejected.
+Fetches the file from Supabase Storage and sends it to Gemini 3.5 Flash again.
+```json
+Response 200: {
+  "id": "uuid",
+  "verification_status": "verified",
+  "verification_reason": "On re-analysis, this is a legitimate AWS certificate",
+  "verification_confidence": "medium",
+  "verified_at": "2026-08-28T12:05:00Z"
+}
+```
+
+Errors:
+- 404: `evidence_not_found`
+- 403: `forbidden`
+- 502: `verification_failed` — Gemini API error during re-verification
 
 ---
 
@@ -614,99 +660,105 @@ All errors follow:
 | 500 | Internal server error |
 
 
----
+## Dashboard
 
-## Notifications
+### `GET /dashboard/summary`
 
-Notifications provide an in-app notification center — alerts for new opportunities, task milestones, badges, and reminders.
+Single-call aggregation endpoint for the home screen. Returns all data the dashboard needs in one request — profile, roadmap progress, opportunities, notifications, and onboarding state.
 
-### GET /notifications
+**Auth:** JWT Bearer token (required)
 
-List all notifications for the authenticated user.
+**Response (200):**
 
-**Query Parameters:**
-
-| Param | Type | Default | Description |
-|---|---|---|---|
-| `type` | string | null | Filter by type (`opportunity`, `task`, `badge`, `reminder`) |
-| `is_read` | bool | null | Filter by read status |
-| `limit` | int | 50 | Results per page (1–100) |
-| `offset` | int | 0 | Pagination offset |
-
-**Response 200:**
 ```json
 {
-  "notifications": [
-    {
-      "id": "uuid",
-      "title": "New opportunity: Software Engineer at Acme",
-      "body": "A new opportunity matching your profile has been found.",
-      "type": "opportunity",
-      "link": { "type": "opportunity", "id": "opp-123" },
-      "is_read": false,
-      "created_at": "2026-08-30T12:00:00Z"
-    }
-  ],
-  "unread_count": 3
+  "profile": {
+    "name": "Jordan",
+    "email": "jordan@test.com",
+    "role": "student",
+    "interests": ["Technology", "AI/ML", "Data Science"],
+    "career_path": "Software Engineer",
+    "has_completed_onboarding": true
+  },
+  "roadmap": {
+    "has_roadmap": true,
+    "career_path": "Software Engineer",
+    "total_tasks": 12,
+    "completed_tasks": 5,
+    "progress_percent": 42,
+    "current_step": "Build Your Portfolio",
+    "current_step_index": 2,
+    "total_steps": 4
+  },
+  "opportunities": {
+    "new_count": 30,
+    "recent": [
+      {
+        "id": "abc123",
+        "title": "Junior Developer",
+        "company": "TechCo",
+        "location": "Kingston, Jamaica",
+        "salary_min": 50000,
+        "salary_max": 80000,
+        "currency": "JMD",
+        "category": "job",
+        "posted_at": "2026-09-04T00:00:00Z"
+      }
+    ]
+  },
+  "notifications": {
+    "unread_count": 3,
+    "recent": [
+      {
+        "id": "notif-uuid",
+        "title": "New opportunity matches your profile",
+        "body": "A new scholarship was found...",
+        "type": "opportunity",
+        "is_read": false,
+        "created_at": "2026-09-05T10:00:00Z"
+      }
+    ]
+  },
+  "onboarding_checklist": {
+    "complete_profile": true,
+    "start_chat": false,
+    "generate_roadmap": true,
+    "browse_opportunities": false
+  }
 }
 ```
 
-### GET /notifications/unread/count
+**Field Descriptions:**
 
-Get count of unread notifications (for badge display).
+| Section | Field | Type | Description |
+|---------|-------|------|-------------|
+| `profile` | `name` | `string` | User's display name |
+| `profile` | `email` | `string` | User's email address |
+| `profile` | `role` | `string` | Education level or role |
+| `profile` | `interests` | `string[]` | Selected interest areas |
+| `profile` | `career_path` | `string` | Chosen career path |
+| `profile` | `has_completed_onboarding` | `bool` | True if career_path + interests are set |
+| `roadmap` | `has_roadmap` | `bool` | Whether user has generated a roadmap |
+| `roadmap` | `total_tasks` | `int` | Total tasks across all steps |
+| `roadmap` | `completed_tasks` | `int` | Tasks with status "complete" |
+| `roadmap` | `progress_percent` | `int` | completed/total * 100, 0 if no tasks |
+| `roadmap` | `current_step` | `string` | First step with incomplete tasks (or last step if all done) |
+| `roadmap` | `current_step_index` | `int` | 0-based index of current step |
+| `roadmap` | `total_steps` | `int` | Total number of steps |
+| `opportunities` | `new_count` | `int` | Total available opportunities |
+| `opportunities` | `recent` | `object[]` | Top 3 most recent opportunities |
+| `notifications` | `unread_count` | `int` | Number of unread notifications |
+| `notifications` | `recent` | `object[]` | Top 3 most recent notifications |
+| `onboarding_checklist` | `complete_profile` | `bool` | Profile has career_path + interests |
+| `onboarding_checklist` | `start_chat` | `bool` | User has sent at least one message |
+| `onboarding_checklist` | `generate_roadmap` | `bool` | User has an active roadmap |
+| `onboarding_checklist` | `browse_opportunities` | `bool` | Always false (viewing not tracked yet) |
 
-**Response 200:**
-```json
-{ "unread_count": 3 }
-```
+**Errors:**
+- `401` — Missing or invalid JWT token
+- `500` — Internal server error (individual sections degrade gracefully)
 
-### GET /notifications/{notification_id}
-
-Get a specific notification by ID.
-
-**Response 200:** Single `NotificationResponse` object.
-
-**Response 404:** `{"detail": "Notification not found"}`
-
-### POST /notifications
-
-Create a new notification (admin/utility use).
-
-**Request Body:**
-```json
-{
-  "title": "Roadmap milestone reached!",
-  "body": "You've completed 50% of your career roadmap.",
-  "type": "task",
-  "link": { "type": "roadmap", "id": "roadmap-123" }
-}
-```
-
-| Field | Type | Required | Default |
-|---|---|---|---|
-| `title` | string | ✅ | — |
-| `body` | string | ✅ | — |
-| `type` | string | ❌ | `"info"` |
-| `link` | string or object | ❌ | `null` |
-
-**Response 201:** Single `NotificationResponse` object.
-
-### PATCH /notifications/{notification_id}/read
-
-Mark a single notification as read.
-
-**Response 200:**
-```json
-{ "status": "ok", "message": "Notification marked as read" }
-```
-
-**Response 404:** `{"detail": "Notification not found"}`
-
-### POST /notifications/read-all
-
-Mark all notifications for the current user as read.
-
-**Response 200:**
-```json
-{ "status": "ok", "message": "Marked 5 notifications as read" }
-```
+**Design Notes:**
+- Each section is fetched independently — a failure in one section does not crash the endpoint
+- No new database tables — aggregates data from existing `users`, `roadmaps`, `steps`, `tasks`, `notifications`, and `conversations` tables
+- Opportunities are served from the curated list (in-memory cache)
