@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "frontend/**"
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -18,7 +19,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -28,7 +29,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Write service account key
+        if: env.FIREBASE_SA_JSON != ''
+        run: echo "$FIREBASE_SA_JSON" > /tmp/firebase-key.json
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
       - name: Deploy to Firebase
         run: npx firebase-tools deploy --only hosting
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-key.json
