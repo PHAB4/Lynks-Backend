@@ -1,0 +1,49 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Write service account key to file
+        run: echo "$FIREBASE_SA_JSON" > /tmp/firebase-key.json
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LYNKS_GEN_AI }}
+
+      - name: Verify key file exists
+        run: |
+          if [ -s /tmp/firebase-key.json ]; then
+            echo "Service account key found, deploying with service account..."
+          else
+            echo "No service account key found"
+            exit 1
+          fi
+
+      - name: Deploy to Firebase
+        run: npx firebase-tools deploy --only hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-key.json

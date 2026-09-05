@@ -23,17 +23,17 @@ export interface Roadmap {
 }
 
 export async function generateRoadmap(): Promise<Roadmap> {
-  return fetchAPI('/roadmap/generate', { method: 'POST' })
+  return fetchAPI<Roadmap>('/roadmap/generate', { method: 'POST' })
 }
 
 export async function getRoadmap(): Promise<Roadmap | null> {
   try {
-    return await fetchAPI('/roadmap')
+    return await fetchAPI<Roadmap>('/roadmap')
   } catch {
     return null
   }
 }
 
 export async function regenerateRoadmap(): Promise<Roadmap> {
-  return fetchAPI('/roadmap/regenerate', { method: 'POST' })
+  return fetchAPI<Roadmap>('/roadmap/regenerate', { method: 'POST' })
 }

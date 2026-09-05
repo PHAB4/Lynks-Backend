@@ -171,8 +171,9 @@ Frontend → Route (extract user_id from JWT) → Agent (do the work) → Route 
 2. **More opportunities** ✅ DONE
 3. **Resume builder** ✅ DONE
 4. **Conversation memory** ✅ DONE (last 3 conversation summaries loaded into mentor context)
-5. **Evidence AI verification** — AI analyzes uploaded images to verify task completion (not yet built)
-6. **Notifications** — Deadline reminders, new opportunity alerts (not yet built)
+5. **Evidence AI verification** ✅ DONE — AI analyzes uploaded images to verify task completion
+6. **Notifications** ✅ DONE — deadline reminders, new opportunity alerts, task milestones
+7. **Conversation management** ✅ DONE — pin/unpin, reorder, delete, conversation list
 
 ### Real web scraping (see docs/SCRAPER_PLAN.md)
 - **Phase 1:** RSS feeds from Caribbean news sites (Jamaica Gleaner, Loop Caribbean, Devpost, UWI) — reliable, structured data

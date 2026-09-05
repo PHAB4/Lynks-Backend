@@ -181,7 +181,7 @@ export default function LandingPage() {
         {/* Footer */}
         <footer className="w-full bg-[#E0E0E0] py-5 px-5 mt-12">
           <div className="flex items-center justify-between max-w-[1200px] mx-auto">
-            <img src="/lynks-full-logo.png" alt="LYNKS" className="h-6 w-auto object-contain" />
+            <img src="/lynks-full-logo.png" alt="LYNKS" className="h-36 w-auto object-contain" />
             <p className="text-[20px] leading-[30px]" style={{ fontFamily: "'Inter', sans-serif" }}>2026 LYNKS</p>
             <div className="flex items-center gap-3">
               <a href="https://www.instagram.com/lynks.tt/" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">

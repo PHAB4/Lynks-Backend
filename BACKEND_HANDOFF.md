@@ -32,7 +32,7 @@ Lynks is an **AI-powered career accelerator for Caribbean youth**. The backend i
 | `roadmap.py` | `/roadmap` | `POST /generate`, `GET /`, `POST /regenerate` |
 | `portfolio.py` | `/` | `POST /tasks/{task_id}/evidence`, `GET /portfolio` |
 | `opportunities.py` | `/opportunities` | `GET /?category=...` |
-| `chat.py` | `/chat` | `POST /message`, `GET /history`, `DELETE /history` |
+| `chat.py` | `/chat` | `POST /message`, `GET /history`, `DELETE /history`, `GET /conversations`, `GET /conversations/{id}`, `PATCH /conversations/{id}` (pin), `POST /conversations/reorder`, `DELETE /conversations/{id}` |
 | `notifications.py` | `/notifications` | `GET /`, `GET /unread/count`, `GET /{id}`, `POST /`, `PATCH /{id}/read`, `POST /read-all` |
 
 ### Infrastructure
@@ -106,10 +106,12 @@ With a valid JWT token, the test results were:
 | Item | Status |
 |------|--------|
 | Notification system | ✅ Built — endpoints, service, triggers, and tests complete |
-| Resume builder | Schema exists (`resumes` table) but no agent or routes |
+| Resume builder | ✅ Built — `POST /resume/generate`, `GET /resume` via portfolio_manager agent |
+| Evidence AI verification | ✅ Built — Gemini 3.5 Flash vision verification |
+| Conversation management | ✅ Built — pin/unpin, reorder, delete, conversation list |
 | Opportunity scraper scheduling | Needs cron job or background worker for periodic execution |
-| Supabase Storage bucket | Needs `evidence` bucket created as public in Supabase Dashboard |
-| Supabase trigger | Teammate already created the `auth.users → public.users` sync trigger |
+| Supabase Storage bucket | ✅ `evidence` bucket created as public |
+| Supabase trigger | ✅ `auth.users → public.users` sync trigger |
 
 ---
 

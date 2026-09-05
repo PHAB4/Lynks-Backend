@@ -20,6 +20,7 @@ class ProfileUpdate(BaseModel):
     employment_status: Optional[str] = None
     career_path: Optional[str] = None
     interests: Optional[list[str]] = None
+    career_path: Optional[str] = None
 
 
 class CareerPathUpdate(BaseModel):

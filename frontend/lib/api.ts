@@ -1,41 +1,119 @@
-import { supabase } from '@/lib/supabase'
+// API client for Lynks backend — matches their FastAPI endpoints
+import { supabase } from './supabase'
+import type { User, RoadmapResponse, EvidenceResponse, PortfolioEntry, Opportunity, ChatSendResponse, ChatConversation } from './types'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
+const BASE = BACKEND
 
-export async function fetchAPI(path: string, options: RequestInit = {}) {
+export class LynksApiError extends Error {
+  code: string
+  constructor(code: string, message: string) {
+    super(message)
+    this.code = code
+  }
+}
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession()
   const token = session?.access_token
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...((options.headers as Record<string, string>) || {}),
-  }
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
-  const res = await fetch(`${BACKEND_URL}${path}`, {
+  const res = await fetch(`${BASE}${path}`, {
     ...options,
-    headers,
+    headers: {
+      ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options?.headers,
+    },
   })
 
+  const body = await res.json().catch(() => ({}))
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    const detail = body?.detail
-    let msg: string
-    if (typeof detail === 'string') {
-      msg = detail
-    } else if (detail?.error?.message) {
-      msg = `${detail.error.code}: ${detail.error.message}`
-    } else if (detail?.message) {
-      msg = detail.message
-    } else {
-      msg = `Request failed (${res.status})`
-    }
-    if (res.status === 401) throw new Error('Not authenticated')
-    throw new Error(msg)
+    const detail = body.detail
+    const errObj = detail?.error
+    const msg = errObj?.message ?? detail?.message ?? detail ?? `Request failed (${res.status})`
+    const code = errObj?.code ?? 'unknown'
+    throw new LynksApiError(code, msg)
   }
+  return body as T
+}
 
-  return res.json()
+export async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
+  return request<T>(path, options)
+}
+
+export const profile = {
+  get: () => request<User>('/profile'),
+  update: (fields: Partial<Pick<User, 'name' | 'age' | 'country' | 'education_level' | 'employment_status' | 'interests'>>) =>
+    request<User>('/profile', { method: 'PATCH', body: JSON.stringify(fields) }),
+  setCareerPath: (careerPath: string) =>
+    request<{ career_path: string }>('/profile/career-path', { method: 'PATCH', body: JSON.stringify({ career_path: careerPath }) }),
+}
+
+export const roadmap = {
+  get: () => request<RoadmapResponse>('/roadmap'),
+  generate: () => request<RoadmapResponse>('/roadmap/generate', { method: 'POST' }),
+  regenerate: () => request<RoadmapResponse>('/roadmap/regenerate', { method: 'POST' }),
+}
+
+export const evidence = {
+  upload: async (taskId: string, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const res = await fetch(`${BASE}/tasks/${taskId}/evidence`, {
+      method: 'POST',
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: formData,
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) throw new LynksApiError('upload_failed', body.detail ?? 'Upload failed')
+    return body as EvidenceResponse
+  },
+}
+
+export const portfolio = {
+  get: () => request<PortfolioEntry[]>('/portfolio'),
+}
+
+export const opportunities = {
+  list: (filters?: { category?: string }) => {
+    const params = new URLSearchParams()
+    if (filters?.category) params.set('category', filters.category)
+    const qs = params.toString()
+    return request<Opportunity[]>(`/opportunities${qs ? `?${qs}` : ''}`)
+  },
+  refresh: () => request<Opportunity[]>('/opportunities/refresh', { method: 'POST' }),
+  saved: () => request<Opportunity[]>('/opportunities/saved'),
+  save: (id: string) => request<{ success: boolean }>(`/opportunities/${id}/save`, { method: 'POST' }),
+  unsave: (id: string) => request<{ success: boolean }>(`/opportunities/${id}/save`, { method: 'DELETE' }),
+  newCount: () => request<{ count: number }>('/opportunities/new-count'),
+}
+
+export const chat = {
+  send: (message: string, conversationId?: string) =>
+    request<ChatSendResponse>('/chat/message', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conversationId, message }),
+    }),
+  history: (conversationId?: string) => {
+    const qs = conversationId ? `?conversation_id=${conversationId}` : ''
+    return request<ChatConversation>(`/chat/history${qs}`)
+  },
+  clear: () => request<{ success: boolean }>('/chat/history', { method: 'DELETE' }),
+}
+
+export const resume = {
+  get: () => request<{ resume_id: string; content: string; created_at: string }>('/resume'),
+  generate: () => request<{ resume_id: string; content: string; created_at: string }>('/resume/generate', { method: 'POST' }),
+}
+
+export const notifications = {
+  list: () => request<{ id: string; title: string; message: string; read: boolean; created_at: string }[]>('/notifications'),
+  markRead: (id: string) => request<{ success: boolean }>(`/notifications/${id}/read`, { method: 'POST' }),
+  markAllRead: () => request<{ success: boolean }>('/notifications/read-all', { method: 'POST' }),
+}
+
+export const health = {
+  check: () => request<{ status: string }>('/health'),
 }

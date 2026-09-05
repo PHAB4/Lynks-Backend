@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react'
+import { Send, Loader2, MessageSquare, Plus, Trash2, MoreVertical, Pin, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown } from 'lucide-react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
@@ -10,6 +10,9 @@ import {
   listConversations,
   getConversationMessages,
   deleteChatHistory,
+  togglePinConversation,
+  deleteConversation,
+  reorderConversation,
   type ChatMessage,
   type ConversationItem,
 } from '@/lib/chat-api'
@@ -31,6 +34,7 @@ export default function ChatPage() {
 function ChatContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const roadmapStep = searchParams.get('roadmap_step')
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversations, setConversations] = useState<ConversationItem[]>([])
@@ -39,7 +43,10 @@ function ChatContent() {
   const [loadingConversations, setLoadingConversations] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState('')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const [userName, setUserName] = useState(() => {
     if (typeof window !== 'undefined') {
       const cached = localStorage.getItem('lynks_user')
@@ -55,6 +62,16 @@ function ChatContent() {
   }, [])
 
   useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     const loadUser = async () => {
@@ -73,6 +90,36 @@ function ChatContent() {
       loadMessages(urlConversationId)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (roadmapStep && !sending && messages.length === 0) {
+      const autoSend = async () => {
+        const userMessage: ChatMessage = { role: 'user', content: roadmapStep }
+        setMessages([userMessage])
+        setSending(true)
+        setError('')
+        try {
+          const result = await sendMessage(roadmapStep)
+          const aiMessage: ChatMessage = {
+            role: 'assistant',
+            content: result.response,
+            tool_calls: result.tool_calls ? result.tool_calls.map(tc => tc.name) : null,
+          }
+          setMessages([userMessage, aiMessage])
+          if (result.conversation_id) {
+            setActiveConversationId(result.conversation_id)
+            loadConversations()
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to send message')
+        } finally {
+          setSending(false)
+          window.history.replaceState({}, '', '/chat')
+        }
+      }
+      autoSend()
+    }
+  }, [roadmapStep])
 
   const loadConversations = async () => {
     setLoadingConversations(true)
@@ -118,6 +165,58 @@ function ChatContent() {
     }
   }
 
+  const handleTogglePin = async (conversationId: string) => {
+    try {
+      const result = await togglePinConversation(conversationId)
+      setConversations(prev =>
+        prev.map(c =>
+          c.conversation_id === conversationId ? { ...c, is_pinned: result.is_pinned } : c
+        ).sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+      )
+      setOpenMenuId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to pin conversation')
+    }
+  }
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      await deleteConversation(conversationId)
+      setConversations(prev => prev.filter(c => c.conversation_id !== conversationId))
+      if (activeConversationId === conversationId) {
+        setActiveConversationId(null)
+        setMessages([])
+      }
+      setOpenMenuId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete conversation')
+    }
+  }
+
+  const handleReorder = async (conversationId: string, action: 'top' | 'bottom' | 'up' | 'down') => {
+    try {
+      const result = await reorderConversation(conversationId, action)
+      if (result.conversations) {
+        // Merge sort_order back into conversation list
+        setConversations(prev => {
+          const updated = prev.map(c => {
+            const match = result.conversations.find(r => r.conversation_id === c.conversation_id)
+            return match ? { ...c, is_pinned: match.is_pinned } : c
+          })
+          return updated.sort((a, b) => {
+            if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
+            const aMatch = result.conversations.find(r => r.conversation_id === a.conversation_id)
+            const bMatch = result.conversations.find(r => r.conversation_id === b.conversation_id)
+            return (aMatch?.sort_order ?? 0) - (bMatch?.sort_order ?? 0)
+          })
+        })
+      }
+      setOpenMenuId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reorder conversation')
+    }
+  }
+
   const handleSend = async () => {
     if (!message.trim() || sending) return
 
@@ -139,7 +238,7 @@ function ChatContent() {
       const aiMessage: ChatMessage = {
         role: 'assistant',
         content: result.response,
-        tool_calls: result.tool_calls ? result.tool_calls.map((tc: { name: string }) => tc.name) : null,
+        tool_calls: result.tool_calls ? result.tool_calls.map(tc => tc.name) : null,
       }
       setMessages(prev => [...prev, aiMessage])
 
@@ -162,6 +261,7 @@ function ChatContent() {
   }
 
   return (
+    <>
       <AppLayout>
       <div className="flex h-screen bg-[#F7F3FE]">
         <div className="flex-1 flex flex-col min-w-0">
@@ -173,7 +273,7 @@ function ChatContent() {
                 <p className="text-[11px] text-[rgba(0,0,0,0.30)] font-semibold uppercase tracking-wider">Conversations</p>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={handleClearHistory}
+                    onClick={() => setShowClearConfirm(true)}
                     className="flex items-center gap-1 text-[10px] text-[#8B898E] hover:text-[#D14444] transition-colors"
                   >
                     <Trash2 size={10} />
@@ -190,9 +290,22 @@ function ChatContent() {
 
               {!loadingConversations && conversations.length === 0 && (
                 <div className="flex flex-col items-center justify-center max-w-[600px] mx-auto">
-                  <p className="text-2xl md:text-[32px] font-semibold leading-tight text-center text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                    Welcome {userName}<br />How can LYNKS help you today?
+                  <div className="w-14 h-14 rounded-full bg-[#EADFFF] flex items-center justify-center mb-5">
+                    <MessageSquare size={24} className="text-[#6B26EA]" />
+                  </div>
+                  <p className="text-2xl md:text-[32px] font-semibold leading-tight text-center text-[#0D0026] mb-3" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                    Welcome {userName}
                   </p>
+                  <p className="text-[14px] text-[#8B898E] text-center mb-8">
+                    Ask me anything about your career, opportunities, or roadmap.
+                  </p>
+                  <button
+                    onClick={handleNewChat}
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#6B26EA] text-white text-[13px] font-medium hover:bg-[#5A1FD0] transition-colors shadow-[0_4px_12px_rgba(107,38,234,0.25)]"
+                  >
+                    <Plus size={16} />
+                    Start a new chat
+                  </button>
                 </div>
               )}
 
@@ -206,17 +319,105 @@ function ChatContent() {
                     New conversation
                   </button>
                   {conversations.map((conv) => (
-                    <button
+                    <div
                       key={conv.conversation_id}
-                      onClick={() => handleSelectConversation(conv.conversation_id)}
-                      className="w-full text-left px-4 py-3 rounded-xl bg-white border border-[#EDE3FF] hover:border-[#D4C4F7] hover:shadow-[0_2px_8px_rgba(107,38,234,0.08)] transition-all"
+                      className="relative"
+                      ref={openMenuId === conv.conversation_id ? menuRef : undefined}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <MessageSquare size={12} className="text-[#6B26EA] shrink-0" />
-                        <p className="text-[13px] font-medium text-[#0D0026] truncate">{conv.title || 'New conversation'}</p>
-                      </div>
-                      <p className="text-[11px] text-[#8B898E] pl-5">{conv.message_count} messages</p>
-                    </button>
+                      <button
+                        onClick={() => handleSelectConversation(conv.conversation_id)}
+                        className="w-full text-left px-4 py-3 rounded-xl bg-white border border-[#EDE3FF] hover:border-[#D4C4F7] hover:shadow-[0_2px_8px_rgba(107,38,234,0.08)] transition-all"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          {conv.is_pinned ? (
+                            <Pin size={12} className="text-[#6B26EA] shrink-0 fill-current" />
+                          ) : (
+                            <MessageSquare size={12} className="text-[#6B26EA] shrink-0" />
+                          )}
+                          <p className="text-[13px] font-medium text-[#0D0026] truncate">{conv.title || 'New conversation'}</p>
+                        </div>
+                        <p className="text-[11px] text-[#8B898E] pl-5">{conv.message_count} messages</p>
+                      </button>
+
+                      {/* 3-dot menu button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenMenuId(openMenuId === conv.conversation_id ? null : conv.conversation_id)
+                        }}
+                        className="absolute top-2 right-2 p-1.5 rounded-lg hover:bg-[#F3EEFF] transition-colors text-[#8B898E] hover:text-[#6B26EA]"
+                      >
+                        <MoreVertical size={14} />
+                      </button>
+
+                      {/* Dropdown menu */}
+                      {openMenuId === conv.conversation_id && (
+                        <div className="absolute right-0 top-10 z-50 bg-white border border-[#EDE3FF] rounded-xl shadow-[0_8px_24px_rgba(107,38,234,0.15)] py-1 min-w-[180px]">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleTogglePin(conv.conversation_id)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <Pin size={12} className={conv.is_pinned ? 'fill-current text-[#6B26EA]' : 'text-[#8B898E]'} />
+                            {conv.is_pinned ? 'Unpin' : 'Pin'}
+                          </button>
+                          <div className="mx-2 my-1 h-px bg-[#EDE3FF]" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReorder(conv.conversation_id, 'top')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <ChevronsUp size={12} className="text-[#8B898E]" />
+                            Move to top
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReorder(conv.conversation_id, 'up')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <ArrowUp size={12} className="text-[#8B898E]" />
+                            Move up
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReorder(conv.conversation_id, 'down')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <ArrowDown size={12} className="text-[#8B898E]" />
+                            Move down
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleReorder(conv.conversation_id, 'bottom')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <ChevronsDown size={12} className="text-[#8B898E]" />
+                            Move to bottom
+                          </button>
+                          <div className="mx-2 my-1 h-px bg-[#EDE3FF]" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteConversation(conv.conversation_id)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#D14444] hover:bg-[#FEF2F2] transition-colors"
+                          >
+                            <Trash2 size={12} />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -302,7 +503,7 @@ function ChatContent() {
             </>
           )}
 
-          {/* Chat input */}
+          {/* Chat input — always visible */}
           <div className="px-4 md:px-6 pb-4 md:pb-6 shrink-0">
             <div className="flex items-center gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] mx-auto shadow-[0_0_5px_rgba(0,0,0,0.05)]">
               <input
@@ -327,5 +528,37 @@ function ChatContent() {
         </div>
       </div>
     </AppLayout>
+
+      {/* Clear All confirmation dialog */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.15)] p-6 max-w-[340px] w-full mx-4">
+            <h3 className="text-[15px] font-semibold text-[#0D0026] mb-2" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+              Clear all conversations?
+            </h3>
+            <p className="text-[13px] text-[#8B898E] mb-5">
+              This will permanently delete all your conversations. This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#EDE3FF] text-[13px] font-medium text-[#4A3572] hover:bg-[#F9F5FF] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await handleClearHistory()
+                  setShowClearConfirm(false)
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-[#D14444] text-white text-[13px] font-medium hover:bg-[#B83333] transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

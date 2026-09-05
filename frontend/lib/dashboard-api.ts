@@ -29,11 +29,11 @@ export interface DashboardOpportunity {
 }
 
 export async function getProfile(): Promise<DashboardProfile> {
-  return fetchAPI('/profile')
+  return fetchAPI<DashboardProfile>('/profile')
 }
 
 export async function updateCareerPath(careerPath: string) {
-  return fetchAPI('/profile/career-path', {
+  return fetchAPI<{ career_path: string }>('/profile/career-path', {
     method: 'PATCH',
     body: JSON.stringify({ career_path: careerPath }),
   })
@@ -44,13 +44,13 @@ export async function getOpportunities(params?: { category?: string; limit?: num
   if (params?.category) searchParams.set('category', params.category)
   if (params?.limit) searchParams.set('limit', String(params.limit))
   const qs = searchParams.toString()
-  return fetchAPI(`/opportunities${qs ? `?${qs}` : ''}`)
+  return fetchAPI<DashboardOpportunity[]>(`/opportunities${qs ? `?${qs}` : ''}`)
 }
 
 export async function getUnreadNotificationCount() {
-  return fetchAPI('/notifications/unread/count')
+  return fetchAPI<{ count: number }>('/notifications/unread/count')
 }
 
 export async function getPortfolio() {
-  return fetchAPI('/portfolio')
+  return fetchAPI<{ entries: any[] }>('/portfolio')
 }
