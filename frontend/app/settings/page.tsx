@@ -90,7 +90,15 @@ export default function SettingsPage() {
     { key: 'security', label: 'Security' },
   ]
 
-  if (!authChecked) return null
+  if (!authChecked) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-screen bg-[#F7F3FE]">
+          <div className="w-8 h-8 border-2 border-[#6B26EA] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </AppLayout>
+    )
+  }
 
   return (
     <AppLayout>

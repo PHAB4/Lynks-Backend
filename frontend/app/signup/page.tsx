@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 
 export default function SignupPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -28,6 +28,7 @@ export default function SignupPage() {
     setServerError('')
     const newErrors: Record<string, string> = {}
     if (!form.email) newErrors.email = 'Email is required'
+    if (!form.name) newErrors.name = 'Name is required'
     if (!passwordRules.every(r => r.test(form.password))) newErrors.password = 'Password does not meet requirements'
     if (form.password !== form.confirm) newErrors.confirm = 'Passwords do not match'
     setErrors(newErrors)
@@ -37,6 +38,7 @@ export default function SignupPage() {
     const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
+      options: { data: { full_name: form.name } },
     })
     setLoading(false)
 
@@ -47,7 +49,7 @@ export default function SignupPage() {
       return
     }
 
-    localStorage.setItem('lynks_user', JSON.stringify({ email: form.email }))
+    localStorage.setItem('lynks_user', JSON.stringify({ name: form.name, email: form.email }))
     router.push('/onboarding')
   }
 
@@ -60,6 +62,11 @@ export default function SignupPage() {
         </div>
         {serverError && <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center">{serverError}</div>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-medium text-[#8B898E] mb-1 block">Full Name</label>
+            <input type="text" value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className={cn('w-full py-3 px-4 rounded-xl border bg-white text-sm text-[#0D0026] focus:outline-none focus:border-[#6B26EA] transition-colors', errors.name ? 'border-red-400' : 'border-[#EDE3FF]')} placeholder="John Doe" />
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          </div>
           <div>
             <label className="text-xs font-medium text-[#8B898E] mb-1 block">Email</label>
             <input type="email" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} className={cn('w-full py-3 px-4 rounded-xl border bg-white text-sm text-[#0D0026] focus:outline-none focus:border-[#6B26EA] transition-colors', errors.email ? 'border-red-400' : 'border-[#EDE3FF]')} placeholder="john@example.com" />
