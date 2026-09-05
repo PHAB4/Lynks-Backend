@@ -2,7 +2,7 @@
 import { supabase } from './supabase'
 import type { User, RoadmapResponse, EvidenceResponse, PortfolioEntry, Opportunity, ChatSendResponse, ChatConversation } from './types'
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
 const BASE = BACKEND
 
 export class LynksApiError extends Error {

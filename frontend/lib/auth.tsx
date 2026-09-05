@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, ty
 import { useRouter } from 'next/navigation'
 import { supabase } from './supabase'
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
 const BASE = BACKEND
 
 export interface User {
