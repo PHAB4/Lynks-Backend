@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from openai import OpenAI
+from app.services.model_router import call_llm as _call_llm_router
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -168,26 +168,20 @@ Rules for the JSON:
 
 def _call_llm_sync(profile: ProfileData) -> str:
     """Synchronous LLM call — runs in a thread pool via asyncio.to_thread."""
-    client = OpenAI(
-        api_key=settings.LLM_API_KEY,
-        base_url=settings.LLM_API_BASE_URL,
-        timeout=30.0,
-        max_retries=1,
-    )
-
     user_message = build_user_message(profile) + "\n\n" + RESPONSE_FORMAT_INSTRUCTIONS
 
-    response = client.chat.completions.create(
-        model=settings.LLM_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
+
+    response_text, _, _ = _call_llm_router(
+        messages=messages,
         temperature=0.7,
         max_tokens=4096,
     )
 
-    return response.choices[0].message.content.strip()
+    return response_text.strip()
 
 
 def _parse_llm_response(raw_content: str) -> GeneratedRoadmap:
@@ -211,21 +205,19 @@ def _parse_llm_response(raw_content: str) -> GeneratedRoadmap:
 
 async def call_llm(profile: ProfileData) -> GeneratedRoadmap:
     """
-    Call the LLM asynchronously (runs the sync OpenAI call in a thread pool
+    Call the LLM asynchronously (runs the sync call in a thread pool
     so it doesn't block the FastAPI event loop).
 
     Raises RuntimeError on LLM errors.
     """
     import asyncio
-    from openai import APIStatusError
 
     try:
         raw_content = await asyncio.to_thread(_call_llm_sync, profile)
-    except APIStatusError as e:
-        if e.status_code == 429:
-            logger.warning("Rate limited on roadmap generation")
+    except RuntimeError as e:
+        if "rate" in str(e).lower() or "429" in str(e):
             raise RuntimeError("rate_limited: LLM rate limit exceeded. Please try again in a minute.") from e
-        raise RuntimeError(f"llm_api_error: {e}") from e
+        raise
     except Exception as e:
         if "rate" in str(e).lower() or "429" in str(e):
             raise RuntimeError("rate_limited: LLM rate limit exceeded. Please try again in a minute.") from e

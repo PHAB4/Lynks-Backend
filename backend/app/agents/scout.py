@@ -27,7 +27,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from openai import APIError as OpenAIError, OpenAI
+from app.services.model_router import call_llm
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -561,12 +561,6 @@ def match_opportunities_with_llm(
     prompt_pool = opportunities[:15]
 
     try:
-        client = OpenAI(
-            api_key=settings.LLM_API_KEY,
-            base_url=settings.LLM_API_BASE_URL,
-            timeout=15.0,
-        )
-
         user_message = (
             f"User profile:\n{json.dumps(profile, indent=2)}\n\n"
             f"Available opportunities:\n{json.dumps(prompt_pool, indent=2)}\n\n"
@@ -574,8 +568,7 @@ def match_opportunities_with_llm(
             "Return a JSON array of the full opportunity objects."
         )
 
-        response = client.chat.completions.create(
-            model=settings.LLM_MODEL,
+        raw_content, _, _ = call_llm(
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_message},
@@ -584,7 +577,7 @@ def match_opportunities_with_llm(
             max_tokens=4096,
         )
 
-        raw_content = response.choices[0].message.content.strip()
+        raw_content = raw_content.strip()
 
         if raw_content.startswith("```"):
             lines = raw_content.split("\n")
@@ -601,7 +594,7 @@ def match_opportunities_with_llm(
             return data["opportunities"]
         return opportunities[:8]
 
-    except (OpenAIError, json.JSONDecodeError) as e:
+    except (RuntimeError, json.JSONDecodeError) as e:
         logger.warning("LLM opportunity matching failed, returning curated list: %s", e)
         return opportunities[:8]
 

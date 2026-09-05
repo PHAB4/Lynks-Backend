@@ -25,7 +25,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from openai import APIError as OpenAIError, OpenAI
+from openai import APIError as OpenAIError
+from app.services.model_router import call_llm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -485,17 +486,11 @@ Conversation:
 Summary:"""
 
     try:
-        client = OpenAI(
-            api_key=settings.LLM_API_KEY,
-            base_url=settings.LLM_API_BASE_URL,
-        )
-        response = client.chat.completions.create(
-            model=settings.LLM_MODEL,
+        summary, _, _ = call_llm(
             messages=[{"role": "user", "content": SUMMARY_PROMPT}],
             temperature=0.3,
             max_tokens=200,
         )
-        summary = response.choices[0].message.content or ""
 
         if summary:
             conversation.summary = summary.strip()
@@ -573,31 +568,34 @@ async def send_message(
     # Load full user context (profile, memories, roadmap, cross-conversation summaries)
     user_context = await _load_user_context(db, user_id, conversation.id)
 
-    client = OpenAI(api_key=settings.LLM_API_KEY, base_url=settings.LLM_API_BASE_URL)
-
     system_prompt = SYSTEM_PROMPT_BASE + f"\n\n---\n\n# Current User Context\n\n{user_context}"
 
     messages = [{"role": "system", "content": system_prompt}] + history + [{"role": "user", "content": message}]
 
     # First LLM call — may request a tool call
-    response = client.chat.completions.create(  # type: ignore[call-overload]
-        model=settings.LLM_MODEL,
+    response_text, model_used, tool_calls_raw = call_llm(
         messages=_sanitize_messages(messages),
         tools=TOOLS,
-        tool_choice="auto",
+        require_tools=True,
         temperature=0.7,
         max_tokens=2048,
     )
 
-    choice = response.choices[0]
     tool_calls_made = None
 
-    if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+    if tool_calls_raw:
         # The LLM wants to call one or more tools
         tool_calls_made = []
-        messages.append(choice.message.model_dump())
+        messages.append({
+            "role": "assistant",
+            "content": response_text or "",
+            "tool_calls": [
+                {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
+                for tc in tool_calls_raw
+            ],
+        })
 
-        for tool_call in choice.message.tool_calls:
+        for tool_call in tool_calls_raw:
             tool_name = tool_call.function.name
             try:
                 tool_args = json.loads(tool_call.function.arguments or "{}")
@@ -623,15 +621,11 @@ async def send_message(
         }
 
         # Second LLM call — generate the natural-language response using tool results
-        final_response = client.chat.completions.create(  # type: ignore[call-overload]
-            model=settings.LLM_MODEL,
+        response_text, _, _ = call_llm(
             messages=_sanitize_messages(messages),
             temperature=0.7,
             max_tokens=2048,
         )
-        response_text = final_response.choices[0].message.content or ""
-    else:
-        response_text = choice.message.content or ""
 
     # Save the assistant's response
     await _save_message(
