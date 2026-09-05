@@ -58,7 +58,7 @@ class FakeUser:
         self.name = name
         self.email = email
         self.career_path = career_path
-        self.interests = interests or ["Technology"]
+        self.interests = interests if interests is not None else ["Technology"]
         self.education_level = education_level
 
 

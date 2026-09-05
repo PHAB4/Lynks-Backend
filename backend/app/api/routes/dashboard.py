@@ -44,6 +44,7 @@ def _calc_roadmap_progress(roadmap: Roadmap) -> dict:
     for step_idx, step in enumerate(roadmap.steps):
         step_tasks = step.tasks
         total_tasks += len(step_tasks)
+        completed_tasks += sum(1 for t in step_tasks if t.status == "complete")
         step_complete = all(t.status == "complete" for t in step_tasks) if step_tasks else False
 
         if current_step_title is None and not step_complete:

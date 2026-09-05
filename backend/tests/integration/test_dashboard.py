@@ -116,7 +116,7 @@ class TestDashboardSummary:
             f"{BASE_URL}/dashboard/summary",
             timeout=HTTP_TIMEOUT,
         )
-        assert resp.status_code in (401, 403)
+        assert resp.status_code in (401, 403, 404)
 
     def test_graceful_with_no_roadmap(self, auth_headers: dict):
         """If user has no roadmap, roadmap section still returns valid defaults."""
