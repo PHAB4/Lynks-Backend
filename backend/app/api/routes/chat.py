@@ -11,6 +11,7 @@ GET    /chat/conversations/{id} → get messages for a specific conversation
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from openai import APIError as OpenAIError
 from pydantic import BaseModel
 from sqlalchemy import func as sqlfunc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,11 +62,17 @@ async def post_chat_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": {"code": "chat_error", "message": str(e)}},
         )
+    except OpenAIError as e:
+        logger.error("LLM API error for user %s: %s (type=%s)", user_id, e, type(e).__name__, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"error": {"code": "llm_error", "message": f"LLM service error: {type(e).__name__}: {e}"}},
+        )
     except Exception as e:
         logger.error("Unexpected chat error for user %s: %s", user_id, e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"error": {"code": "chat_error", "message": "An internal error occurred. Please try again."}},
+            detail={"error": {"code": "chat_error", "message": f"An internal error occurred: {type(e).__name__}: {e}"}},
         )
 
     return result
