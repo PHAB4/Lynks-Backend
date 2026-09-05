@@ -90,10 +90,16 @@ curl -X POST /profile/avatar \
   -F "file=@profile.jpg"
 ```
 
+**Response 200:**
 ```json
-Response 200: { "avatar_url": "https://..." }
-Response 400: { "detail": "Invalid file type: ..." }
-Response 400: { "detail": "File too large: ..." }
+{ "avatar_url": "https://..." }
+```
+**Response 400:**
+```json
+{ "detail": "Invalid file type: image/bmp" }
+```
+```json
+{ "detail": "File too large: 2.1MB exceeds 800KB limit" }
 ```
 
 ---
@@ -101,11 +107,13 @@ Response 400: { "detail": "File too large: ..." }
 ### DELETE /profile/avatar
 Remove the user's profile picture.
 
+**Response 200:**
 ```json
-Request: (none)
-
-Response 200: { "message": "Profile picture removed" }
-Response 404: { "detail": "No profile picture to remove" }
+{ "message": "Profile picture removed" }
+```
+**Response 404:**
+```json
+{ "detail": "No profile picture to remove" }
 ```
 
 ---
