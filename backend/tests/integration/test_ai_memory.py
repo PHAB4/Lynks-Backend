@@ -33,12 +33,20 @@ LLM_TIMEOUT = 120.0
 
 @pytest.fixture(autouse=True)
 def _setup_auth(auth_token, base_url):
-    """Set module-level auth state from conftest session fixture."""
+    """Set module-level auth state from conftest session fixture.
+    
+    Skips the entire module when no auth is available (no Supabase
+    credentials or server unreachable).
+    """
     global BASE_URL
     BASE_URL = base_url
-    if auth_token:
-        _state["token"] = auth_token
-        _cleanup_test_data()
+    if not auth_token:
+        pytest.skip(
+            "No auth token available — set SUPABASE_URL, SUPABASE_ANON_KEY, "
+            "TEST_EMAIL, TEST_PASSWORD in .env and start the server"
+        )
+    _state["token"] = auth_token
+    _cleanup_test_data()
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  CONFIG — Reads from .env automatically
@@ -215,7 +223,7 @@ def _cleanup_test_data():
 # ── Auth ────────────────────────────────────────────────────────────────────
 
 def test_auth():
-    return _get_token()
+    assert _get_token(), "Failed to authenticate via Supabase"
 
 
 # ── Memory CRUD ─────────────────────────────────────────────────────────────
@@ -259,8 +267,7 @@ def test_memory_get():
 def test_memory_patch():
     """PATCH /memory/{id} — update a memory."""
     if not _state["memory_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no memory_id){Colors.RESET}")
-        return False
+        pytest.skip("No memory_id available — test_memory_post may have failed")
 
     resp = httpx.patch(
         f"{BASE_URL}/memory/{_state['memory_id']}",
@@ -297,8 +304,7 @@ def test_memory_post_invalid_category():
 def test_memory_delete():
     """DELETE /memory/{id} — delete a memory."""
     if not _state["memory_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no memory_id){Colors.RESET}")
-        return False
+        pytest.skip("No memory_id available — test_memory_post may have failed")
 
     resp = httpx.delete(
         f"{BASE_URL}/memory/{_state['memory_id']}",
