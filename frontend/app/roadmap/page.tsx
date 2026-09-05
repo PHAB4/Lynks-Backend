@@ -139,47 +139,43 @@ export default function RoadmapPage() {
                     .roadmap-scroll::-webkit-scrollbar-thumb { background: rgba(107,38,234,0.15); border-radius: 4px; }
                     .roadmap-scroll { scrollbar-width: thin; scrollbar-color: rgba(107,38,234,0.15) transparent; }
                   `}</style>
-                  <div className="relative flex flex-col items-center">
-                    {(() => {
-                      const ZIG_OFFSET = 130
-                      const allNodes: { id: string; offsetX: number; y: number; isCompleted: boolean }[] = []
-                      let yPos = 0
-                      const ROW_GAP = 56
-                      const STEP_GAP = 40
 
-                      const flatNodes: React.ReactNode[] = []
+                  <div className="flex flex-col items-center">
+                    {sortedSteps.map((step, stepIndex) => {
+                      const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
+                      const totalCount = step.tasks?.length || 0
+                      const allComplete = totalCount > 0 && completedCount === totalCount
+                      const isActive = activeStep === step.step_id
+                      const isPast = allComplete
+                      const sortedTasks = step.tasks ? [...step.tasks].sort((a, b) => a.order - b.order) : []
+                      const stepIsLeft = stepIndex % 2 === 0
+                      const stepOffsetX = stepIsLeft ? -100 : 100
 
-                      sortedSteps.forEach((step, stepIndex) => {
-                        const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
-                        const totalCount = step.tasks?.length || 0
-                        const allComplete = totalCount > 0 && completedCount === totalCount
-                        const isActive = activeStep === step.step_id
-                        const isPast = allComplete
-                        const sortedTasks = step.tasks ? [...step.tasks].sort((a, b) => a.order - b.order) : []
-                        const stepIsLeft = stepIndex % 2 === 0
-                        const stepOffsetX = stepIsLeft ? -ZIG_OFFSET : ZIG_OFFSET
-
-                        allNodes.push({ id: `step-${step.step_id}`, offsetX: stepOffsetX, y: yPos, isCompleted: isPast })
-
-                        // Step title
-                        flatNodes.push(
-                          <div key={`step-title-${step.step_id}`} style={{ transform: `translateX(${stepOffsetX}px)` }} className="flex justify-center mb-1">
+                      return (
+                        <div key={step.step_id} className="w-full" style={{ marginBottom: stepIndex < sortedSteps.length - 1 ? '48px' : '0' }}>
+                          {/* Step title + progress */}
+                          <div style={{ transform: `translateX(${stepOffsetX}px)` }} className="flex flex-col items-center mb-3">
                             <span className={cn(
-                              'text-[12px] font-semibold text-center leading-tight',
+                              'text-[13px] font-semibold text-center leading-tight mb-1',
                               isActive ? 'text-[#6B26EA]' : isPast ? 'text-[#22C55E]' : 'text-[#8B898E]'
                             )}>
                               {step.title}
                             </span>
+                            {totalCount > 0 && (
+                              <span className={cn(
+                                'text-[11px] font-medium',
+                                allComplete ? 'text-[#22C55E]' : 'text-[#B1AEAE]'
+                              )}>
+                                {completedCount}/{totalCount} tasks complete
+                              </span>
+                            )}
                           </div>
-                        )
 
-                        // Step node
-                        yPos += 44
-                        flatNodes.push(
-                          <div key={`step-node-${step.step_id}`} style={{ transform: `translateX(${stepOffsetX}px)` }} className="flex justify-center mb-1">
+                          {/* Step node */}
+                          <div style={{ transform: `translateX(${stepOffsetX}px)` }} className="flex justify-center mb-4">
                             <button
-                              onClick={() => setActiveStep(step.step_id)}
-                              className={cn('relative flex items-center justify-center transition-all duration-300 cursor-pointer group')}
+                              onClick={() => setActiveStep(isActive ? null : step.step_id)}
+                              className={cn('relative flex items-center justify-center transition-all duration-300 cursor-pointer')}
                               style={{
                                 width: '100px',
                                 height: '38px',
@@ -193,105 +189,88 @@ export default function RoadmapPage() {
                                 transform: isActive ? 'scale(1.1) translateY(-2px)' : 'none',
                               }}
                             >
-                              <span className="text-white text-[14px] font-bold drop-shadow-sm" style={{ fontFamily: "'Inter', sans-serif", textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-                                {stepIndex + 1}
-                              </span>
+                              {isPast ? (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              ) : (
+                                <span className="text-white text-[14px] font-bold drop-shadow-sm" style={{ fontFamily: "'Inter', sans-serif", textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                                  {stepIndex + 1}
+                                </span>
+                              )}
                             </button>
                           </div>
-                        )
 
-                        yPos += ROW_GAP
+                          {/* Task nodes */}
+                          <div className="flex flex-col" style={{ gap: '16px' }}>
+                            {sortedTasks.map((task, taskIndex) => {
+                              const taskDone = task.status === 'complete'
+                              const taskIsLeft = stepIsLeft ? (taskIndex % 2 !== 0) : (taskIndex % 2 === 0)
+                              const taskOffsetX = taskIsLeft ? -50 : 50
 
-                        // Task nodes
-                        sortedTasks.forEach((task, taskIndex) => {
-                          const taskDone = task.status === 'complete'
-                          const taskIsLeft = stepIsLeft ? (taskIndex % 2 !== 0) : (taskIndex % 2 === 0)
-                          const taskOffsetX = taskIsLeft ? -60 : 60
-
-                          allNodes.push({ id: `task-${task.task_id}`, offsetX: taskOffsetX, y: yPos, isCompleted: taskDone })
-
-                          flatNodes.push(
-                            <div key={`task-${task.task_id}`} className="relative" style={{ transform: `translateX(${taskOffsetX}px)`, marginBottom: taskIndex < sortedTasks.length - 1 ? '10px' : '0' }}>
-                              <div className={cn('flex items-center gap-3', taskIsLeft ? 'justify-end' : 'justify-start')}>
-                                {!taskIsLeft && (
-                                  <span className={cn('text-[13px] font-medium leading-snug text-left', taskDone ? 'text-[#22C55E]' : 'text-[#4A3572]')}>
-                                    {task.title}
-                                  </span>
-                                )}
-                                <div
-                                  className="shrink-0 flex items-center justify-center rounded-full"
-                                  style={{
-                                    width: '46px',
-                                    height: '26px',
-                                    borderRadius: '50%',
-                                    background: taskDone
-                                      ? 'linear-gradient(180deg, #34D673 0%, #22C55E 100%)'
-                                      : 'linear-gradient(180deg, #C8B0FF 0%, #9B7AD8 100%)',
-                                    boxShadow: taskDone
-                                      ? '0 3px 0 #148A3D, 0 4px 8px rgba(34,197,94,0.25), inset 0 1px 0 rgba(255,255,255,0.3)'
-                                      : '0 3px 0 #7A5AB0, 0 4px 8px rgba(155,122,216,0.25), inset 0 1px 0 rgba(255,255,255,0.4)',
-                                  }}
-                                >
-                                  {taskDone ? (
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                      <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                  ) : (
-                                    <span className="text-white text-[10px] font-bold" style={{ textShadow: '0 1px 1px rgba(0,0,0,0.15)' }}>✓</span>
-                                  )}
+                              return (
+                                <div key={task.task_id} style={{ transform: `translateX(${taskOffsetX}px)` }}>
+                                  <div className={cn('flex items-center gap-3', taskIsLeft ? 'justify-end' : 'justify-start')}>
+                                    {!taskIsLeft && (
+                                      <span className={cn('text-[13px] font-medium leading-snug text-left max-w-[200px]', taskDone ? 'text-[#22C55E]' : 'text-[#4A3572]')}>
+                                        {task.title}
+                                      </span>
+                                    )}
+                                    <div
+                                      className="shrink-0 flex items-center justify-center rounded-full"
+                                      style={{
+                                        width: '46px',
+                                        height: '26px',
+                                        borderRadius: '50%',
+                                        background: taskDone
+                                          ? 'linear-gradient(180deg, #34D673 0%, #22C55E 100%)'
+                                          : 'linear-gradient(180deg, #C8B0FF 0%, #9B7AD8 100%)',
+                                        boxShadow: taskDone
+                                          ? '0 3px 0 #148A3D, 0 4px 8px rgba(34,197,94,0.25), inset 0 1px 0 rgba(255,255,255,0.3)'
+                                          : '0 3px 0 #7A5AB0, 0 4px 8px rgba(155,122,216,0.25), inset 0 1px 0 rgba(255,255,255,0.4)',
+                                      }}
+                                    >
+                                      {taskDone ? (
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                          <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                      ) : (
+                                        <span className="text-white text-[10px] font-bold" style={{ textShadow: '0 1px 1px rgba(0,0,0,0.15)' }}>✓</span>
+                                      )}
+                                    </div>
+                                    {taskIsLeft && (
+                                      <span className={cn('text-[13px] font-medium leading-snug text-right max-w-[200px]', taskDone ? 'text-[#22C55E]' : 'text-[#4A3572]')}>
+                                        {task.title}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                                {taskIsLeft && (
-                                  <span className={cn('text-[13px] font-medium leading-snug text-right', taskDone ? 'text-[#22C55E]' : 'text-[#4A3572]')}>
-                                    {task.title}
-                                  </span>
-                                )}
-                              </div>
+                              )
+                            })}
+                          </div>
+
+                          {/* Begin Working on Step — shown when step is active */}
+                          {isActive && (
+                            <div className="flex justify-center mt-6" style={{ transform: `translateX(${stepOffsetX}px)` }}>
+                              <button
+                                onClick={() => {
+                                  const taskList = sortedTasks.map((t, i) => `${i + 1}. ${t.title}`).join('\n')
+                                  const prompt = `I want to begin working on Step ${stepIndex + 1}: "${step.title}"\n\nHere are the tasks I need to complete:\n${taskList}\n\nPlease help me get started. Break down the first task into actionable steps and guide me through it.`
+                                  const params = new URLSearchParams({ roadmap_step: prompt })
+                                  window.location.href = `/chat?${params.toString()}`
+                                }}
+                                className="flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[#6B26EA] text-white text-[13px] font-semibold hover:bg-[#5A1FD0] transition-all shadow-[0_4px_12px_rgba(107,38,234,0.3)] hover:shadow-[0_6px_16px_rgba(107,38,234,0.4)]"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                </svg>
+                                Begin Working on Step
+                              </button>
                             </div>
-                          )
-
-                          if (taskIndex < sortedTasks.length - 1) yPos += ROW_GAP
-                        })
-
-                        yPos += STEP_GAP
-                      })
-
-                      // Render diagonal SVG connectors overlaid on the path
-                      const totalHeight = yPos + 20
-                      const connectors: React.ReactNode[] = []
-
-                      for (let i = 0; i < allNodes.length - 1; i++) {
-                        const from = allNodes[i]
-                        const to = allNodes[i + 1]
-                        const bothComplete = from.isCompleted && to.isCompleted
-                        const connectorColor = bothComplete ? '#22C55E' : '#D6C6FF'
-                        connectors.push(
-                          <line
-                            key={`conn-${i}`}
-                            x1={300 + from.offsetX}
-                            y1={from.y}
-                            x2={300 + to.offsetX}
-                            y2={to.y}
-                            stroke={connectorColor}
-                            strokeWidth="2"
-                            strokeDasharray={bothComplete ? 'none' : '5 5'}
-                          />
-                        )
-                      }
-
-                      return (
-                        <>
-                          <svg
-                            className="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-none"
-                            width="600"
-                            height={totalHeight}
-                            viewBox={`0 0 600 ${totalHeight}`}
-                          >
-                            {connectors}
-                          </svg>
-                          {flatNodes}
-                        </>
+                          )}
+                        </div>
                       )
-                    })()}
+                    })}
                   </div>
                 </div>
               )}

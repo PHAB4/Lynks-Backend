@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Paperclip, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
 import {
@@ -14,6 +16,22 @@ import {
 } from '@/lib/chat-api'
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout>
+        <div className="flex h-screen bg-[#F7F3FE] items-center justify-center">
+          <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
+        </div>
+      </AppLayout>
+    }>
+      <ChatContent />
+    </Suspense>
+  )
+}
+
+function ChatContent() {
+  const searchParams = useSearchParams()
+  const roadmapStep = searchParams.get('roadmap_step')
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversations, setConversations] = useState<ConversationItem[]>([])
@@ -50,6 +68,36 @@ export default function ChatPage() {
     loadUser()
     loadConversations()
   }, [])
+
+  useEffect(() => {
+    if (roadmapStep && !sending && messages.length === 0) {
+      const autoSend = async () => {
+        const userMessage: ChatMessage = { role: 'user', content: roadmapStep }
+        setMessages([userMessage])
+        setSending(true)
+        setError('')
+        try {
+          const result = await sendMessage(roadmapStep)
+          const aiMessage: ChatMessage = {
+            role: 'assistant',
+            content: result.response,
+            tool_calls: result.tool_calls ? result.tool_calls.map(tc => tc.name) : null,
+          }
+          setMessages([userMessage, aiMessage])
+          if (result.conversation_id) {
+            setActiveConversationId(result.conversation_id)
+            loadConversations()
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to send message')
+        } finally {
+          setSending(false)
+          window.history.replaceState({}, '', '/chat')
+        }
+      }
+      autoSend()
+    }
+  }, [roadmapStep])
 
   const loadConversations = async () => {
     setLoadingConversations(true)
