@@ -99,7 +99,7 @@ export default function RoadmapPage() {
               {/* Header */}
               <div className="text-center mb-6">
                 <h1 className="text-[28px] md:text-[36px] font-semibold text-[#0D0026] leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                  Steps
+                  Roadmap
                 </h1>
                 <p className="text-[13px] text-[#8B898E] mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>
                   Tap a step to see what's inside
@@ -208,10 +208,10 @@ export default function RoadmapPage() {
                             className="flex justify-center mt-1"
                           >
                             <span className={cn(
-                              'text-[11px] font-medium text-center max-w-[100px] leading-tight',
+                              'text-[11px] font-medium text-center leading-tight',
                               isActive ? 'text-[#6B26EA]' : isPast ? 'text-[#22C55E]' : 'text-[#8B898E]'
                             )}>
-                              {step.title.length > 15 ? step.title.slice(0, 15) + '...' : step.title}
+                              {step.title}
                             </span>
                           </div>
                         </div>
@@ -231,7 +231,7 @@ export default function RoadmapPage() {
                 <div className="p-5 border-b border-[#EDE3FF]">
                   <div className="flex items-center justify-between">
                     <h2 className="text-[20px] font-semibold text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                      Steps
+                      Roadmap
                     </h2>
                     <span className="text-[12px] font-bold text-[#6B26EA] bg-[#EADFFF] px-3 py-1 rounded-full">
                       {completedTasks}/{totalTasks} DONE
@@ -253,7 +253,6 @@ export default function RoadmapPage() {
                     const totalCount = step.tasks?.length || 0
                     const allComplete = totalCount > 0 && completedCount === totalCount
                     const isActive = activeStep === step.step_id
-                    const isInProgress = !allComplete && step.tasks?.some(t => t.status === 'pending')
 
                     return (
                       <div key={step.step_id}>
@@ -272,17 +271,12 @@ export default function RoadmapPage() {
                           </span>
                           <div className="flex-1 min-w-0">
                             <p className={cn(
-                              'text-[13px] font-semibold truncate',
-                              allComplete ? 'text-[#22C55E]' : isActive ? 'text-[#0D0026]' : 'text-[#0D0026]'
+                              'text-[13px] font-semibold',
+                              allComplete ? 'text-[#22C55E]' : 'text-[#0D0026]'
                             )}>
                               {step.title}
                             </p>
                           </div>
-                          {isInProgress && !allComplete && (
-                            <span className="text-[10px] font-bold text-[#6B26EA] bg-[#EADFFF] px-2 py-0.5 rounded-full shrink-0">
-                              IN PROGRESS
-                            </span>
-                          )}
                           {allComplete && (
                             <CheckCircle2 size={14} className="text-[#22C55E] shrink-0" />
                           )}
