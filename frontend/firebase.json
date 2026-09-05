@@ -3,6 +3,7 @@
     "public": "out",
     "ignore": ["firebase.json", "**/node_modules/**", "**/.git/**"],
     "rewrites": [
+    "cleanUrls": true,
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [
