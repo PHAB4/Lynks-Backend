@@ -70,7 +70,9 @@ export default function DashboardPage() {
         }
 
         if (portfolio.status === 'fulfilled') {
-          setPortfolioTasks(Array.isArray(portfolio.value) ? portfolio.value.length : 0)
+          const pData = portfolio.value
+          const entries = Array.isArray(pData) ? pData : (pData?.entries ?? [])
+          setPortfolioTasks(entries.length)
         }
       } catch (err) {
         if (err instanceof Error && err.message === 'Not authenticated') {

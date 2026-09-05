@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Paperclip, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react'
+import { Send, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
 import {
@@ -14,6 +15,8 @@ import {
 } from '@/lib/chat-api'
 
 export default function ChatPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversations, setConversations] = useState<ConversationItem[]>([])
@@ -49,7 +52,13 @@ export default function ChatPage() {
     }
     loadUser()
     loadConversations()
-  }, [])
+
+    const urlConversationId = searchParams.get('conversation')
+    if (urlConversationId) {
+      setActiveConversationId(urlConversationId)
+      loadMessages(urlConversationId)
+    }
+  }, [searchParams])
 
   const loadConversations = async () => {
     setLoadingConversations(true)
@@ -74,12 +83,14 @@ export default function ChatPage() {
   const handleSelectConversation = (conversationId: string) => {
     setActiveConversationId(conversationId)
     loadMessages(conversationId)
+    router.replace(`/chat?conversation=${conversationId}`, { scroll: false })
   }
 
   const handleNewChat = () => {
     setActiveConversationId(null)
     setMessages([])
     setError('')
+    router.replace('/chat', { scroll: false })
   }
 
   const handleClearHistory = async () => {
