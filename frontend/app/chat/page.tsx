@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
@@ -15,6 +15,20 @@ import {
 } from '@/lib/chat-api'
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout>
+        <div className="flex h-screen bg-[#F7F3FE] items-center justify-center">
+          <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
+        </div>
+      </AppLayout>
+    }>
+      <ChatContent />
+    </Suspense>
+  )
+}
+
+function ChatContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [message, setMessage] = useState('')
