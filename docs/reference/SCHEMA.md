@@ -1,6 +1,6 @@
 # Lynks Database Schema
 
-> **Last updated:** August 28, 2026
+> **Last updated:** September 5, 2026
 > **Source:** Exported from Supabase SQL Editor (live database)
 
 ---
