@@ -1,6 +1,6 @@
 # Lynks Tech Stack
 
-> **Last updated:** August 28, 2026
+> **Last updated:** September 5, 2026
 
 ---
 
@@ -129,6 +129,12 @@ Ruff is configured in `backend/ruff.toml` with focused rules:
 - Step status is computed dynamically — completing the last pending task in a step marks that step as complete |
 
 ## Currency Detection System
+### Profile Management
+- `GET /profile` returns full user profile including `phone` field
+- `PATCH /profile` accepts partial updates (name, age, country, education_level, employment_status, phone, interests)
+- Phone field is optional — nullable text column on `users` table
+- Profile pictures not yet supported (placeholder UI only)
+
 
 The scraper uses a **priority-based lookup table** (`_CURRENCY_TABLE`) to detect currencies from salary text. Detection priority:
 

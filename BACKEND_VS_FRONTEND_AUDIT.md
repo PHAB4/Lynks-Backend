@@ -1,6 +1,6 @@
 # Backend vs Frontend Audit — Current State
 
-**Date:** September 5, 2026 (updated end of day)
+**Date:** September 5, 2026 (updated — phone field added to profile)
 **Frontend URL:** https://lynks-gen-ai.web.app
 **Backend URL:** https://lynks-backend-production.up.railway.app
 **Backend:** FastAPI + Supabase (Postgres + Auth + Storage)
@@ -127,8 +127,8 @@ All major frontend pages are now connected to the backend API. The chat feature 
 
 | Frontend Call | Backend Endpoint | Status |
 |---|---|---|
-| Fetch profile | `GET /profile` | ✅ Working |
-| Update profile | `PATCH /profile` | ✅ Working |
+| Fetch profile | `GET /profile` | ✅ Working (includes phone) |
+| Update profile | `PATCH /profile` | ✅ Working (phone field supported) |
 | Update career path | `PATCH /profile/career-path` | ✅ Working |
 
 ---
