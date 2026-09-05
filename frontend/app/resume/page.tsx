@@ -28,9 +28,9 @@ export default function ResumePage() {
     load()
   }, [])
 
-  return (
   if (!authChecked) return null
 
+  return (
     <AppLayout>
       <div className="flex h-screen bg-[#F0EFF2]">
         {/* Resume preview */}

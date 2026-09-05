@@ -86,9 +86,9 @@ export default function RoadmapPage() {
   const totalTasks = allTasks.length
   const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
-  return (
   if (!authChecked) return null
 
+  return (
     <AppLayout>
       <div className="min-h-screen bg-[#F7F3FE] overflow-y-auto">
         <div className="max-w-[800px] mx-auto px-4 md:px-8 py-8 md:py-12">
