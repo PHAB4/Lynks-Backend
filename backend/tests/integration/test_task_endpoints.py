@@ -98,6 +98,8 @@ class TestCompleteTask:
     def test_complete_task(self, headers):
         """Complete a pending task → 200 + correct shape."""
         resp = _get_roadmap(headers)
+        if resp.status_code == 404:
+            pytest.skip("No roadmap found — generate one first via the mentor chat")
         assert resp.status_code == 200
 
         step, task = _find_pending_task(resp.json())
@@ -119,6 +121,8 @@ class TestCompleteTask:
     def test_complete_task_then_check_roadmap(self, headers):
         """Complete a task, then GET /roadmap — step status updates dynamically."""
         resp = _get_roadmap(headers)
+        if resp.status_code == 404:
+            pytest.skip("No roadmap found — generate one first via the mentor chat")
         assert resp.status_code == 200
 
         step, task = _find_pending_task(resp.json())
