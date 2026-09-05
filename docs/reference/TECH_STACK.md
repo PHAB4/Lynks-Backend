@@ -13,8 +13,10 @@
 | ORM | SQLAlchemy (async) | 2.x |
 | Database driver | asyncpg | latest |
 | Auth | Supabase Auth (JWT verification) | — |
-| LLM | Groq (OpenAI-compatible API) | Llama 3 8B |
-| LLM SDK | OpenAI Python SDK | latest |
+| LLM (text) | Groq (OpenAI-compatible API) | openai/gpt-oss-120b |
+| LLM (vision) | Google AI Studio (Gemini 3.5 Flash) | free tier |
+| LLM SDK (text) | OpenAI Python SDK | latest |
+| LLM SDK (vision) | google-genai | latest |
 | File storage | Supabase Storage | — |
 | Validation | Pydantic v2 | — |
 
@@ -107,11 +109,17 @@ Ruff is configured in `backend/ruff.toml` with focused rules:
 
 | Component | Details |
 |-----------|---------|
-| Provider | Groq (OpenAI-compatible endpoint) |
-| Model | openai/gpt-oss-120b |
-| Base URL | https://api.groq.com/openai/v1 |
-| Use cases | Roadmap generation, chat responses, resume generation, opportunity extraction |
-| Response time | 5-15 seconds per call |
+| **Text Provider** | Groq (OpenAI-compatible endpoint) |
+| **Text Model** | openai/gpt-oss-120b |
+| **Text Base URL** | https://api.groq.com/openai/v1 |
+| **Text Use Cases** | Roadmap generation, chat responses, resume generation, opportunity extraction |
+| **Text Response Time** | 5-15 seconds per call |
+| **Vision Provider** | Google AI Studio (google-genai SDK) |
+| **Vision Model** | gemini-3.5-flash |
+| **Vision Free Tier** | 10 RPM, 250K TPM, 1,500 RPD, $0 cost |
+| **Vision Use Cases** | Evidence verification (certificates, screenshots, badges) |
+| **Vision SDK** | google-genai (Google's official Python SDK) |
+| **Note** | Impala/Highrise AI gateway is no longer accessible — all LLM calls go directly to Groq or Google AI Studio |
 
 ## Currency Detection System
 
@@ -155,5 +163,13 @@ CREATE INDEX ON conversations USING ivfflat (embedding vector_cosine_ops);
 2. **snake_case everywhere** — field names, table names, endpoints
 3. **Async throughout** — FastAPI + SQLAlchemy async + asyncpg
 4. **Supabase for everything** — Auth, Database, Storage (no self-hosted services)
-5. **LLM via OpenAI SDK** — compatible with any OpenAI-format API (Groq, OpenAI, Impala)
+5. **Dual LLM providers** — Groq (text, OpenAI SDK) for chat/roadmap/resume + Google Gemini (vision, google-genai SDK) for evidence verification. Free tier on both.
 6. **No LangChain/CrewAI** — agents are self-contained Python modules
+
+
+### Dashboard Aggregation
+- `GET /dashboard/summary` — single-call dashboard endpoint that aggregates profile, roadmap progress, opportunities, notifications, and onboarding state
+- Reduces frontend round-trips from 4-5 separate API calls to 1
+- Each section degrades gracefully — a failure in one section does not prevent others from returning
+- No schema changes — data sourced from existing tables (`users`, `roadmaps`, `steps`, `tasks`, `notifications`, `conversations`)
+
