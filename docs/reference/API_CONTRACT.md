@@ -78,16 +78,17 @@ Response 200: { "career_path": "Software Development" }
 
 ### POST /profile/avatar
 Upload a profile picture. Replaces any existing avatar (old file is deleted).
+```json
+Request: multipart/form-data
 
-**Request** — `multipart/form-data`:
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| file | binary | yes | JPEG, PNG, or GIF, max 800KB |
+{
+  "file": "<binary image data>"    // required — JPEG, PNG, or GIF, max 800KB
+}
 
-```
-curl -X POST /profile/avatar \
-  -H "Authorization: Bearer <token>" \
-  -F "file=@profile.jpg"
+Example (curl):
+  curl -X POST /profile/avatar \
+    -H "Authorization: Bearer <token>" \
+    -F "file=@profile.jpg"
 ```
 
 **Response 200:**
