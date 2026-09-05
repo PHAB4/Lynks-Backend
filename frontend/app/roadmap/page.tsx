@@ -5,6 +5,7 @@ import { Map, Loader2, RefreshCw, CheckCircle2, Circle, Sparkles, ChevronDown, C
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getRoadmap, generateRoadmap, regenerateRoadmap, type Roadmap, type RoadmapStep } from '@/lib/roadmap-api'
+import { fetchAPI } from '@/lib/api'
 
 export default function RoadmapPage() {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null)
@@ -37,6 +38,22 @@ export default function RoadmapPage() {
     setGenerating(true)
     setError('')
     try {
+      // Check profile completeness before calling the LLM-heavy generate endpoint
+      try {
+        const profile = await fetchAPI('/profile')
+        const missing: string[] = []
+        if (!profile.career_path) missing.push('career path')
+        if (!profile.education_level) missing.push('education level')
+        if (!profile.country) missing.push('country')
+        if (missing.length > 0) {
+          setError(`Your profile is missing: ${missing.join(', ')}. Please complete your onboarding or update your profile in Settings.`)
+          setGenerating(false)
+          return
+        }
+      } catch {
+        // If profile fetch fails (e.g. 401), let generateRoadmap handle it
+      }
+
       const data = await generateRoadmap()
       setRoadmap(data)
       if (data?.steps) {
@@ -44,8 +61,8 @@ export default function RoadmapPage() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to generate roadmap'
-      if (msg.includes('profile_incomplete')) {
-        setError('Please complete your profile (career path, education level, and country) before generating a roadmap.')
+      if (msg.includes('profile_incomplete') || msg.includes('Not authenticated')) {
+        setError('Your profile is missing required fields (career path, education level, and/or country). Please complete your onboarding or update your profile in Settings.')
       } else {
         setError(msg)
       }

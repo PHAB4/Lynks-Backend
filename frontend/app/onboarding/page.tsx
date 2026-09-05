@@ -17,35 +17,76 @@ export default function OnboardingPage() {
     interests: [] as string[],
   })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const steps = ['welcome', 'name', 'country', 'age', 'employment', 'education', 'careerPath', 'interests']
   const totalSteps = steps.length
 
   const handleFinish = async () => {
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('users').update({
+    setError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Not logged in. Please log in first.')
+        setSaving(false)
+        return
+      }
+
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
+
+      // Use backend PATCH /profile (service role — bypasses RLS)
+      const res = await fetch(`${BACKEND_URL}/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          name: profile.name,
+          country: profile.country,
+          age: profile.age ? parseInt(profile.age) : null,
+          employment_status: profile.employment,
+          education_level: profile.education,
+          interests: profile.interests,
+        }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.detail || `Save failed (${res.status})`)
+      }
+
+      // Also update career path via the dedicated endpoint
+      const careerRes = await fetch(`${BACKEND_URL}/profile/career-path`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ career_path: profile.careerPath }),
+      })
+
+      if (!careerRes.ok) {
+        const body = await careerRes.json().catch(() => ({}))
+        throw new Error(body?.detail || `Career path save failed (${careerRes.status})`)
+      }
+
+      localStorage.setItem('lynks_user', JSON.stringify({
         name: profile.name,
+        email: session.user.email || '',
         country: profile.country,
-        age: profile.age ? parseInt(profile.age) : null,
-        employment_status: profile.employment,
-        education_level: profile.education,
-        career_path: profile.careerPath,
+        age: profile.age,
+        employment: profile.employment,
+        education: profile.education,
         interests: profile.interests,
-      }).eq('id', user.id)
+      }))
+      router.push('/dashboard')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save profile. Please try again.')
+    } finally {
+      setSaving(false)
     }
-    localStorage.setItem('lynks_user', JSON.stringify({
-      name: profile.name,
-      email: user?.email || '',
-      country: profile.country,
-      age: profile.age,
-      employment: profile.employment,
-      education: profile.education,
-      interests: profile.interests,
-    }))
-    setSaving(false)
-    router.push('/dashboard')
   }
 
   const canNext = () => {
@@ -69,6 +110,13 @@ export default function OnboardingPage() {
           <span className="text-[#6B26EA] text-lg font-bold">&raquo;</span>
         </div>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="mx-6 mb-4 p-4 rounded-xl bg-red-50 border border-red-200">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
 
       {/* Main content — centered */}
       <div className="flex-1 flex flex-col items-center justify-center px-4">
