@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { ArrowLeft, Camera, X, Plus, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
-import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
+import { fetchAPI } from '@/lib/api'
 import SecurityTab from '@/components/SecurityTab'
 
 const CAREER_INTERESTS = [
@@ -34,44 +34,41 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data } = await supabase.from('users').select('*').eq('id', user.id).single()
+      try {
+        const data = await fetchAPI('/profile')
         if (data) {
           setProfile({
             name: data.name || '',
-            email: data.email || user.email || '',
-            phone: data.phone || '',
+            email: data.email || '',
+            phone: '',
             role: data.employment_status || '',
             careerPath: data.career_path || '',
           })
           setInterests(data.interests || [])
         }
+      } catch {
+        // Profile not yet created — user may need to complete onboarding
       }
     }
     load()
   }, [])
 
   const handleSave = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('users').update({
-        name: profile.name,
-        phone: profile.phone,
-        employment_status: profile.role,
-        career_path: profile.careerPath,
-        interests: interests,
-      }).eq('id', user.id)
+    try {
+      await fetchAPI('/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: profile.name,
+          employment_status: profile.role,
+          career_path: profile.careerPath,
+          interests: interests,
+        }),
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save profile')
     }
-    localStorage.setItem('lynks_user', JSON.stringify({
-      name: profile.name,
-      email: profile.email,
-      phone: profile.phone,
-      role: profile.role,
-      interests,
-    }))
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
   }
 
   const toggleInterest = (interest: string) => {
