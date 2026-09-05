@@ -69,7 +69,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [recentProjects, setRecentProjects] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string; email?: string } } | null) => {
       if (session?.user) {
         const { data } = await supabase.from('users').select('name').eq('id', session.user.id).single()
         const name = data?.name || session.user.email?.split('@')[0] || 'User'
@@ -637,11 +637,11 @@ function ChatPanel() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      {msg.tool_calls?.calls && msg.tool_calls.calls.length > 0 && (
+                      {msg.tool_calls && msg.tool_calls.length > 0 && (
                         <div className="flex items-center gap-1.5 mb-0.5 px-0.5">
                           <Loader2 size={10} className="text-[#6B26EA] animate-spin" />
                           <span className="text-[10px] text-[#6B26EA]">
-                            {TOOL_LABELS[msg.tool_calls.calls[0]] || 'Working on it...'}
+                            {TOOL_LABELS[msg.tool_calls[0]] || 'Working on it...'}
                           </span>
                         </div>
                       )}
