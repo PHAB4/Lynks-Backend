@@ -8,6 +8,7 @@ export interface DashboardProfile {
   country: string | null
   education_level: string | null
   career_path: string | null
+  employment_status: string | null
   interests: string[] | null
   created_at: string
 }
