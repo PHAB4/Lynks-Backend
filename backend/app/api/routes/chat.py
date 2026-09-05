@@ -20,6 +20,10 @@ from app.core.security import get_current_user_id
 from app.db.postgres import get_db
 from app.models.db_models import Conversation, Message
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
@@ -52,9 +56,16 @@ async def post_chat_message(
     try:
         result = await send_message(db, user_id, body.message, body.conversation_id)
     except (ValueError, RuntimeError) as e:
+        logger.error("Chat error for user %s: %s", user_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": {"code": "chat_error", "message": str(e)}},
+        )
+    except Exception as e:
+        logger.error("Unexpected chat error for user %s: %s", user_id, e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": {"code": "chat_error", "message": "An internal error occurred. Please try again."}},
         )
 
     return result
