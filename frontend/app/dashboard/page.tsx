@@ -4,51 +4,74 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Map, Briefcase, MessageSquare, FileText, Bell, ChevronRight, Sparkles, ArrowRight, TrendingUp, BookOpen } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
-import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
+import { getProfile, getOpportunities, getUnreadNotificationCount, getPortfolio } from '@/lib/dashboard-api'
+import { getRoadmap } from '@/lib/roadmap-api'
 
-interface UserProfile {
+interface DashboardProfile {
   name: string
   email: string
-  interests: string[]
-  employment_status: string
-  phone: string
+  career_path: string | null
+  interests: string[] | null
+  education_level: string | null
+  employment_status: string | null
 }
-
-const RECENT_OPPORTUNITIES = [
-  { id: 1, title: 'Senior Frontend Developer', company: 'TechCorp Inc.', location: 'San Francisco, CA', salary: '$120k - $160k', category: 'Software Engineering' },
-  { id: 2, title: 'Data Scientist', company: 'DataFlow Analytics', location: 'New York, NY (Remote)', salary: '$100k - $130k', category: 'Data Science' },
-  { id: 3, title: 'UX Designer', company: 'DesignStudio', location: 'Los Angeles, CA (Remote)', salary: '$85k - $110k', category: 'UX Design' },
-]
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<DashboardProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [roadmapProgress, setRoadmapProgress] = useState({ percent: 0, total: 0, completed: 0 })
+  const [recentOpportunities, setRecentOpportunities] = useState<Array<{ id: string; title: string; company: string; location: string; category: string; salary_min: number | null; salary_max: number | null; salary_currency: string | null }>>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [portfolioTasks, setPortfolioTasks] = useState(0)
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!session?.user) {
+    const loadDashboard = async () => {
+      try {
+        const [profileData, roadmap, opps, notifications, portfolio] = await Promise.allSettled([
+          getProfile(),
+          getRoadmap(),
+          getOpportunities({ limit: 3 }),
+          getUnreadNotificationCount(),
+          getPortfolio(),
+        ])
+
+        if (profileData.status === 'fulfilled') {
+          setProfile(profileData.value as DashboardProfile)
+        } else {
+          router.push('/login')
+          return
+        }
+
+        if (roadmap.status === 'fulfilled' && roadmap.value) {
+          const allTasks = roadmap.value.steps?.flatMap((s: { tasks: unknown[] }) => s.tasks || []) || []
+          const completedTasks = allTasks.filter((t: { status: string }) => t.status === 'complete').length
+          setRoadmapProgress({
+            percent: allTasks.length > 0 ? Math.round((completedTasks / allTasks.length) * 100) : 0,
+            total: allTasks.length,
+            completed: completedTasks,
+          })
+        }
+
+        if (opps.status === 'fulfilled') {
+          setRecentOpportunities(opps.value.opportunities?.slice(0, 3) || [])
+        }
+
+        if (notifications.status === 'fulfilled') {
+          setUnreadCount(notifications.value.unread_count || 0)
+        }
+
+        if (portfolio.status === 'fulfilled') {
+          setPortfolioTasks(Array.isArray(portfolio.value) ? portfolio.value.length : 0)
+        }
+      } catch {
         router.push('/login')
-        return
-      }
-      const user = session.user
-      const { data } = await supabase.from('users').select('*').eq('id', user.id).single()
-      if (data) {
-        setProfile({
-          name: data.name || user.email?.split('@')[0] || 'there',
-          email: data.email || user.email || '',
-          interests: data.interests || [],
-          employment_status: data.employment_status || '',
-          phone: data.phone || '',
-        })
-      } else {
-        setProfile({ name: user.email?.split('@')[0] || 'there', email: user.email || '', interests: [], employment_status: '', phone: '' })
       }
       setLoading(false)
-    })
+    }
 
-    return () => subscription.unsubscribe()
+    loadDashboard()
   }, [router])
 
   if (loading) {
@@ -141,9 +164,9 @@ export default function DashboardPage() {
                 </p>
                 <div className="space-y-3">
                   {[
-                    { label: 'Roadmap Progress', value: '0%', sub: 'Start your journey' },
-                    { label: 'Tasks Completed', value: '0', sub: 'Complete your first task' },
-                    { label: 'Opportunities Viewed', value: '0', sub: 'Browse opportunities' },
+                    { label: 'Roadmap Progress', value: `${roadmapProgress.percent}%`, sub: roadmapProgress.total > 0 ? `${roadmapProgress.completed}/${roadmapProgress.total} tasks` : 'Start your journey' },
+                    { label: 'Tasks Completed', value: String(roadmapProgress.completed), sub: roadmapProgress.total > 0 ? `of ${roadmapProgress.total} total` : 'Complete your first task' },
+                    { label: 'Opportunities Saved', value: String(portfolioTasks), sub: 'Browse opportunities' },
                   ].map((stat) => (
                     <div key={stat.label} className="flex items-center justify-between py-2 border-b border-[rgba(30,30,30,0.05)] last:border-0">
                       <div>
@@ -159,7 +182,11 @@ export default function DashboardPage() {
                 <p className="text-[13px] font-semibold text-[#0D0026] mb-3 flex items-center gap-2">
                   <Bell size={14} className="text-[#6B26EA]" />
                   Notifications
+                  {unreadCount > 0 && (
+                    <span className="ml-auto text-[10px] font-bold bg-[#6B26EA] text-white rounded-full w-5 h-5 flex items-center justify-center">{unreadCount}</span>
+                  )}
                 </p>
+                {unreadCount === 0 ? (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
                   <div className="w-10 h-10 rounded-full bg-[#F7F3FE] flex items-center justify-center mb-2">
                     <Bell size={16} className="text-[#D1D5DB]" />
@@ -167,6 +194,14 @@ export default function DashboardPage() {
                   <p className="text-[13px] text-[#8B898E]">No new notifications</p>
                   <p className="text-[11px] text-[#D1D5DB] mt-0.5">We&apos;ll let you know when something comes up</p>
                 </div>
+                ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <div className="w-10 h-10 rounded-full bg-[#F7F3FE] flex items-center justify-center mb-2">
+                    <Bell size={16} className="text-[#6B26EA]" />
+                  </div>
+                  <p className="text-[13px] text-[#0D0026] font-medium">{unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</p>
+                </div>
+                )}
               </div>
             </div>
             <div className="lg:col-span-2 space-y-4">
@@ -182,9 +217,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-2.5">
                   {[
-                    { label: 'Complete your onboarding profile', done: !!profile?.employment_status },
+                    { label: 'Complete your onboarding profile', done: !!profile?.education_level },
                     { label: 'Start a conversation with LYNKS AI', done: false },
-                    { label: 'Generate your career roadmap', done: false },
+                    { label: 'Generate your career roadmap', done: roadmapProgress.total > 0 },
                     { label: 'Browse available opportunities', done: false },
                   ].map((step, i) => (
                     <div key={i} className="flex items-center gap-3 py-2 px-3 rounded-xl bg-white/10">
@@ -212,8 +247,13 @@ export default function DashboardPage() {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {RECENT_OPPORTUNITIES.map((opp) => (
-                    <div key={opp.id} className="flex items-center gap-3 p-3 rounded-xl border border-[rgba(30,30,30,0.05)] hover:bg-[#F7F3FE] transition-colors cursor-pointer">
+                  {recentOpportunities.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-[13px] text-[#8B898E]">No opportunities found yet.</p>
+                      <button onClick={() => router.push('/opportunities')} className="text-[12px] text-[#6B26EA] font-semibold mt-1 hover:underline">Browse opportunities</button>
+                    </div>
+                  ) : recentOpportunities.map((opp) => (
+                    <div key={opp.id} onClick={() => router.push('/opportunities')} className="flex items-center gap-3 p-3 rounded-xl border border-[rgba(30,30,30,0.05)] hover:bg-[#F7F3FE] transition-colors cursor-pointer">
                       <div className="w-10 h-10 rounded-xl bg-[#EADFFF] flex items-center justify-center shrink-0">
                         <Briefcase size={16} className="text-[#6B26EA]" />
                       </div>
@@ -222,7 +262,12 @@ export default function DashboardPage() {
                         <p className="text-[11px] text-[#8B898E]">{opp.company} · {opp.location}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-[12px] font-semibold text-[#6B26EA]">{opp.salary}</p>
+                        {opp.salary_min && (
+                          <p className="text-[12px] font-semibold text-[#6B26EA]">
+                            {opp.salary_currency || '$'}{opp.salary_min.toLocaleString()}
+                            {opp.salary_max ? ` - ${opp.salary_max.toLocaleString()}` : ''}
+                          </p>
+                        )}
                         <p className="text-[10px] text-[#D1D5DB]">{opp.category}</p>
                       </div>
                     </div>

@@ -13,11 +13,12 @@ export default function OnboardingPage() {
     age: '',
     employment: '',
     education: '',
+    careerPath: '',
     interests: [] as string[],
   })
   const [saving, setSaving] = useState(false)
 
-  const steps = ['welcome', 'name', 'country', 'age', 'employment', 'education', 'interests']
+  const steps = ['welcome', 'name', 'country', 'age', 'employment', 'education', 'careerPath', 'interests']
   const totalSteps = steps.length
 
   const handleFinish = async () => {
@@ -30,6 +31,7 @@ export default function OnboardingPage() {
         age: profile.age ? parseInt(profile.age) : null,
         employment_status: profile.employment,
         education_level: profile.education,
+        career_path: profile.careerPath,
         interests: profile.interests,
       }).eq('id', user.id)
     }
@@ -53,7 +55,8 @@ export default function OnboardingPage() {
     if (step === 3) return profile.age.length > 0
     if (step === 4) return profile.employment.length > 0
     if (step === 5) return profile.education.length > 0
-    if (step === 6) return profile.interests.length > 0
+    if (step === 6) return profile.careerPath.trim().length > 0
+    if (step === 7) return profile.interests.length > 0
     return false
   }
 
@@ -195,8 +198,27 @@ export default function OnboardingPage() {
             </>
           )}
 
-          {/* Step 6: Interests */}
+          {/* Step 7: Interests */}
+          {/* Step 6: Career Path */}
           {step === 6 && (
+            <>
+              <div className="text-center mb-8">
+                <h1 className="text-[32px] font-bold text-[#0D0026] mb-3 leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>What career path are you interested in?</h1>
+                <p className="text-[16px] text-[#0D0026] leading-relaxed">Be as specific as possible — e.g. "Software Engineering", "UX Design", "Data Science". This powers your personalized roadmap.</p>
+              </div>
+              <div className="max-w-md mx-auto mb-8">
+                <input
+                  type="text"
+                  value={profile.careerPath}
+                  onChange={(e) => setProfile(p => ({ ...p, careerPath: e.target.value }))}
+                  placeholder="e.g. Software Engineering"
+                  className="w-full py-3.5 px-5 rounded-xl border border-[#EDE3FF] bg-white text-sm text-[#0D0026] focus:outline-none focus:border-[#6B26EA] transition-colors"
+                />
+              </div>
+            </>
+          )}
+
+          {step === 7 && (
             <>
               <div className="text-center mb-8">
                 <h1 className="text-[32px] font-bold text-[#0D0026] mb-3 leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>What career are you most interested in?</h1>

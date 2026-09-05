@@ -26,6 +26,7 @@ export default function SettingsPage() {
     email: '',
     phone: '',
     role: '',
+    careerPath: '',
   })
   const [interests, setInterests] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
@@ -42,6 +43,7 @@ export default function SettingsPage() {
             email: data.email || user.email || '',
             phone: data.phone || '',
             role: data.employment_status || '',
+            careerPath: data.career_path || '',
           })
           setInterests(data.interests || [])
         }
@@ -57,6 +59,7 @@ export default function SettingsPage() {
         name: profile.name,
         phone: profile.phone,
         employment_status: profile.role,
+        career_path: profile.careerPath,
         interests: interests,
       }).eq('id', user.id)
     }
@@ -254,7 +257,22 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-[rgba(30,30,30,0.80)] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        Career Path
+                      </label>
+                      <p className="text-[13px] text-[rgba(30,30,30,0.40)] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+                        Your target career direction — used to generate your personalized roadmap.
+                      </p>
+                      <input
+                        type="text"
+                        value={profile.careerPath}
+                        onChange={(e) => setProfile(p => ({ ...p, careerPath: e.target.value }))}
+                        className="w-full py-3.5 px-4 rounded-[10px] border border-[rgba(0,0,0,0.20)] bg-[rgba(215,212,212,0.10)] text-[15px] text-[#1E1E1E] focus:outline-none focus:border-[#6B26EA] transition-colors"
+                        style={{ fontFamily: "'Inter', sans-serif" }}
+                        placeholder="e.g. Software Engineering, UX Design, Data Science"
 
+                    </div>
                   <div className="mb-8">
                     <div className="mb-3">
                       <p className="text-sm font-semibold text-[rgba(30,30,30,0.80)] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
