@@ -5,14 +5,12 @@ import { Search, MapPin, DollarSign, ExternalLink, Bookmark, BookmarkCheck, Cloc
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getOpportunities, type DashboardOpportunity } from '@/lib/dashboard-api'
-import { useAuthGate } from '@/lib/use-auth'
 
 type FilterTab = 'personal' | 'all'
 type ViewMode = 'career' | 'general'
 type TimeFilter = 'today' | 'week' | 'month'
 
 export default function OpportunitiesPage() {
-  const authChecked = useAuthGate()
   const [search, setSearch] = useState('')
   const [filterTab, setFilterTab] = useState<FilterTab>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('career')
@@ -55,16 +53,6 @@ export default function OpportunitiesPage() {
       else next.add(id)
       return next
     })
-  }
-
-  if (!authChecked) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-screen bg-[#F7F3FE]">
-          <div className="w-8 h-8 border-2 border-[#6B26EA] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </AppLayout>
-    )
   }
 
   return (

@@ -7,7 +7,6 @@ import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
 import SecurityTab from '@/components/SecurityTab'
-import { useAuthGate } from '@/lib/use-auth'
 
 const CAREER_INTERESTS = [
   'Frontend Engineering',
@@ -22,7 +21,6 @@ const CAREER_INTERESTS = [
 
 export default function SettingsPage() {
   const router = useRouter()
-  const authChecked = useAuthGate()
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -89,16 +87,6 @@ export default function SettingsPage() {
     { key: 'notifications', label: 'Notifications' },
     { key: 'security', label: 'Security' },
   ]
-
-  if (!authChecked) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-screen bg-[#F7F3FE]">
-          <div className="w-8 h-8 border-2 border-[#6B26EA] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </AppLayout>
-    )
-  }
 
   return (
     <AppLayout>
