@@ -31,7 +31,7 @@ HTTP_TIMEOUT = 30.0
 LLM_TIMEOUT = 120.0
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="module")
 def _setup_auth(auth_token, base_url):
     """Set module-level auth state from conftest session fixture.
     
