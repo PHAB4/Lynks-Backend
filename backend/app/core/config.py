@@ -14,10 +14,14 @@ class Settings(BaseSettings):
     # Postgres (Supabase provides this — pooler URL for async access)
     DATABASE_URL: str = ""  # e.g. postgresql+asyncpg://user:pass@host:6543/postgres
 
-    # LLM — OpenAI-compatible compute gateway (Highrise / Impala AI)
-    LLM_API_BASE_URL: str = ""  # e.g. https://api.highrise.ai/v1
+    # LLM — Groq (text tasks: chat, roadmap, resume, memory)
+    LLM_API_BASE_URL: str = ""  # https://api.groq.com/openai/v1
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "openai/gpt-oss-120b"  # Groq model — override in .env if needed
+
+    # Vision — Google Gemini Flash (evidence verification, free tier)
+    GEMINI_API_KEY: str = ""  # Google AI Studio key — get from https://aistudio.google.com/apikey
+    VISION_MODEL: str = "gemini-3.5-flash"  # Free tier: 10 RPM, 1,500 RPD
 
     # Test config (optional)
     JWT_TOKEN: str = ""
