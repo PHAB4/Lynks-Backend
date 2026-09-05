@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { FileText } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
+import { useAuthGate } from '@/lib/use-auth'
 
 export default function ResumePage() {
+  const authChecked = useAuthGate()
   const [user, setUser] = useState({ name: '', email: '', education: '', interests: [] as string[] })
 
   useEffect(() => {
@@ -27,6 +29,8 @@ export default function ResumePage() {
   }, [])
 
   return (
+  if (!authChecked) return null
+
     <AppLayout>
       <div className="flex h-screen bg-[#F0EFF2]">
         {/* Resume preview */}

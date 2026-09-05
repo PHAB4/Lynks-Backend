@@ -1,53 +1,54 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, MapPin, DollarSign, ExternalLink, Bookmark, BookmarkCheck, Clock, ChevronDown, Eye } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, MapPin, DollarSign, ExternalLink, Bookmark, BookmarkCheck, Clock, ChevronDown, Eye, Loader2 } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
+import { getOpportunities, type DashboardOpportunity } from '@/lib/dashboard-api'
+import { useAuthGate } from '@/lib/use-auth'
 
 type FilterTab = 'personal' | 'all'
 type ViewMode = 'career' | 'general'
 type TimeFilter = 'today' | 'week' | 'month'
 
-const CAREER_JOBS = [
-  { id: 1, title: 'Senior Frontend Developer', company: 'TechCorp Inc.', location: 'San Francisco, CA (Hybrid)', salary: '$120k - $160k', source: 'LinkedIn', posted: '2h ago', recency: 1 },
-  { id: 2, title: 'Full Stack Engineer', company: 'CloudNine Systems', location: 'Seattle, WA (Remote)', salary: '$130k - $170k', source: 'Indeed', posted: '5h ago', recency: 2 },
-  { id: 3, title: 'Data Scientist', company: 'DataFlow Analytics', location: 'New York, NY (Remote)', salary: '$100k - $130k', source: 'Glassdoor', posted: '1d ago', recency: 3 },
-  { id: 4, title: 'UX Designer', company: 'DesignStudio', location: 'Los Angeles, CA (Remote)', salary: '$85k - $110k', source: 'Dribbble', posted: '1d ago', recency: 4 },
-  { id: 5, title: 'Machine Learning Engineer', company: 'AI Ventures', location: 'Boston, MA (Remote)', salary: '$140k - $180k', source: 'AngelList', posted: '2d ago', recency: 5 },
-  { id: 6, title: 'Backend Developer', company: 'ServerStack', location: 'Austin, TX (Hybrid)', salary: '$110k - $145k', source: 'LinkedIn', posted: '3d ago', recency: 6 },
-]
-
-const GENERAL_OPPORTUNITIES = [
-  { id: 101, title: 'Youth Leadership Program', company: 'Caribbean Development Bank', location: 'Remote / Trinidad', salary: 'Stipend', source: 'Web Scraped', posted: '1d ago', recency: 1, type: 'Youth Group' },
-  { id: 102, title: 'Summer Internship — Tech', company: 'Google Caribbean', location: 'Remote', salary: 'Paid', source: 'Web Scraped', posted: '3h ago', recency: 2, type: 'Internship' },
-  { id: 103, title: 'Senior Frontend Developer', company: 'TechCorp Inc.', location: 'San Francisco, CA (Hybrid)', salary: '$120k - $160k', source: 'LinkedIn', posted: '2h ago', recency: 3, type: 'Job' },
-  { id: 104, title: 'Community Innovation Grant', company: 'UNICEF Innovation', location: 'Global / Remote', salary: 'Up to $25k', source: 'Web Scraped', posted: '5h ago', recency: 4, type: 'Grant' },
-  { id: 105, title: 'UX Design Bootcamp', company: 'DesignCode', location: 'Online', salary: 'Free', source: 'Web Scraped', posted: '1d ago', recency: 5, type: 'Education' },
-  { id: 106, title: 'Data Science Intern', company: 'DataFlow Analytics', location: 'New York, NY (Remote)', salary: 'Paid', source: 'Indeed', posted: '1d ago', recency: 6, type: 'Internship' },
-]
-
 export default function OpportunitiesPage() {
+  const authChecked = useAuthGate()
   const [search, setSearch] = useState('')
   const [filterTab, setFilterTab] = useState<FilterTab>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('career')
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
-  const [savedIds, setSavedIds] = useState<Set<number>>(new Set())
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [showSaved, setShowSaved] = useState(false)
   const [showViewDropdown, setShowViewDropdown] = useState(false)
   const [showTimeDropdown, setShowTimeDropdown] = useState(false)
+  const [opportunities, setOpportunities] = useState<DashboardOpportunity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const baseData = viewMode === 'career' ? CAREER_JOBS : GENERAL_OPPORTUNITIES
-  const opportunities = showSaved ? baseData.filter(o => savedIds.has(o.id)) : baseData
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      try {
+        const result = await getOpportunities({ limit: 50 })
+        setOpportunities(result.opportunities || [])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load opportunities')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const filtered = opportunities.filter(opp => {
     const matchesSearch = !search ||
       opp.title.toLowerCase().includes(search.toLowerCase()) ||
       opp.company.toLowerCase().includes(search.toLowerCase())
-    return matchesSearch
+    const matchesSaved = !showSaved || savedIds.has(opp.id)
+    return matchesSearch && matchesSaved
   })
 
-  const toggleSave = (id: number) => {
+  const toggleSave = (id: string) => {
     setSavedIds(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -55,6 +56,8 @@ export default function OpportunitiesPage() {
       return next
     })
   }
+
+  if (!authChecked) return null
 
   return (
     <AppLayout>
@@ -184,7 +187,22 @@ export default function OpportunitiesPage() {
             </p>
           </div>
 
+          {/* Loading state */}
+          {loading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
+            </div>
+          )}
+
+          {/* Error state */}
+          {error && !loading && (
+            <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-4 mb-6">
+              <p className="text-[13px] text-[#D14444]">{error}</p>
+            </div>
+          )}
+
           {/* Opportunity cards */}
+          {!loading && (
           <div className="space-y-3">
             {filtered.map((opp) => {
               const isSaved = savedIds.has(opp.id)
@@ -193,22 +211,20 @@ export default function OpportunitiesPage() {
                   key={opp.id}
                   className="flex items-center gap-4 p-4 rounded-2xl border border-[#EDE3FF] bg-white hover:shadow-[0_4px_16px_rgba(107,38,234,0.06)] transition-all"
                 >
-                  {/* Company icon */}
                   <div className="w-10 h-10 rounded-xl bg-[#EADFFF] flex items-center justify-center shrink-0">
                     <span className="text-[#6B26EA] text-[13px] font-bold">
                       {opp.company.charAt(0)}
                     </span>
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <h3 className="text-[14px] font-semibold text-[#0D0026] truncate">
                         {opp.title}
                       </h3>
-                      {'type' in opp && (
+                      {opp.category && (
                         <span className="py-0.5 px-2 rounded-full bg-[#F7F3FE] text-[10px] text-[#6B26EA] font-semibold shrink-0">
-                          {(opp as & { type?: string }).type}
+                          {opp.category}
                         </span>
                       )}
                     </div>
@@ -217,17 +233,15 @@ export default function OpportunitiesPage() {
                       <span className="flex items-center gap-1 text-[11px] text-[#8B898E]">
                         <MapPin size={10} /> {opp.location}
                       </span>
-                      {opp.salary && (
+                      {opp.salary_min && (
                         <span className="flex items-center gap-1 text-[11px] text-[#6B26EA] font-semibold">
-                          <DollarSign size={10} /> {opp.salary}
+                          <DollarSign size={10} /> {opp.salary_currency || '$'}{opp.salary_min.toLocaleString()}{opp.salary_max ? ` - ${opp.salary_max.toLocaleString()}` : ''}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Right side: recency + save + source */}
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    <span className="text-[10px] text-[#D1D5DB]">{opp.recency}</span>
                     <button
                       onClick={() => toggleSave(opp.id)}
                       className="flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
@@ -240,9 +254,10 @@ export default function OpportunitiesPage() {
                     </button>
                   </div>
 
-                  {/* Go to source */}
                   <a
-                    href="#"
+                    href={opp.url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-1.5 py-2 px-3 rounded-xl bg-[#6B26EA] text-white text-[12px] font-semibold hover:bg-[#5A1FD0] transition-colors shrink-0"
                   >
                     Go to source
@@ -252,9 +267,10 @@ export default function OpportunitiesPage() {
               )
             })}
           </div>
+          )}
 
           {/* Empty state */}
-          {filtered.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-14 h-14 rounded-full bg-[#EADFFF] flex items-center justify-center mb-3">
                 <Search size={20} className="text-[#6B26EA]" />

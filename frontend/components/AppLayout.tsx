@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
+import { useAuthGate } from '@/lib/use-auth'
 import {
   sendMessage,
   listConversations,
@@ -52,6 +53,7 @@ function sortPanelsBySide(panels: PanelId[]): { left: PanelId[]; right: PanelId[
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const authChecked = useAuthGate()
   const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const [openPanels, setOpenPanels] = useState<PanelId[]>([])
   const [loadingPanels, setLoadingPanels] = useState<Set<PanelId>>(new Set())
@@ -164,12 +166,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     localStorage.removeItem('lynks_user')
     router.push('/')
   }
 
   const { left: leftPanels, right: rightPanels } = sortPanelsBySide(openPanels)
+
+  if (!authChecked) return (
+    <div className="flex h-screen bg-[#F7F3FE] items-center justify-center">
+      <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
+    </div>
+  )
 
   return (
     <div className="flex h-screen bg-[#F7F3FE] overflow-hidden">
