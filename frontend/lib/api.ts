@@ -123,6 +123,8 @@ export const chat = {
 export const resume = {
   get: () => request<ResumeResponse>('/resume'),
   generate: () => request<ResumeResponse>('/resume/generate', { method: 'POST' }),
+  save: (content: Record<string, unknown>) =>
+    request<ResumeResponse>('/resume', { method: 'PATCH', body: JSON.stringify({ content }) }),
 }
 
 export const notifications = {

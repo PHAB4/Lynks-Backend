@@ -1,91 +1,107 @@
 'use client'
 
 import type { ResumeData } from '@/lib/types'
-import { User, Mail, Target, GraduationCap, Wrench, Briefcase, FolderOpen, Award, Heart } from 'lucide-react'
 
 export default function ResumePreview({ data }: { data: ResumeData }) {
-  return (
-    <div className="bg-white border border-[#EDE3FF] rounded-xl overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#6B26EA] to-[#8B5CF6] text-white px-8 py-6">
-        <h1 className="text-2xl font-bold">{data.name}</h1>
-        <div className="flex items-center gap-3 mt-1 text-white/80 text-sm">
-          <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{data.email}</span>
-        </div>
-        {data.objective && (
-          <p className="mt-3 text-sm text-white/90 leading-relaxed">{data.objective}</p>
-        )}
-      </div>
+  const hasContact = data.phone || data.email || data.address
 
-      <div className="px-8 py-6 space-y-6">
-        {/* Skills */}
-        {data.skills?.length > 0 && (
-          <Section icon={<Wrench className="w-4 h-4" />} title="Skills">
-            <div className="flex flex-wrap gap-2">
-              {data.skills.map((skill, i) => (
-                <span key={i} className="px-3 py-1 bg-[#F5F0FF] text-[#6B26EA] text-sm font-medium rounded-full">{skill}</span>
-              ))}
+  return (
+    <div className="bg-white border border-[#E5E7EB] rounded-lg shadow-sm" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+      <div className="px-10 py-8">
+        {/* Header — Harvard/Yale style: name centered, contact below */}
+        <div className="text-center mb-1">
+          <h1 className="text-[22px] font-bold text-black tracking-wide uppercase" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+            {data.name || 'Your Name'}
+          </h1>
+          {hasContact && (
+            <div className="flex items-center justify-center gap-2 text-[11px] text-[#444] mt-1 flex-wrap">
+              {data.address && <span>{data.address}</span>}
+              {data.address && data.phone && <span>|</span>}
+              {data.phone && <span>{data.phone}</span>}
+              {data.phone && data.email && <span>|</span>}
+              {data.email && <span>{data.email}</span>}
             </div>
+          )}
+        </div>
+
+        {/* Horizontal rule */}
+        <div className="h-[2px] bg-black mt-3 mb-5" />
+
+        {/* Objective / Summary */}
+        {data.objective && (
+          <Section title="Objective">
+            <p className="text-[12px] text-[#333] leading-relaxed">{data.objective}</p>
           </Section>
         )}
 
         {/* Education */}
         {data.education?.length > 0 && (
-          <Section icon={<GraduationCap className="w-4 h-4" />} title="Education">
-            <div className="space-y-3">
-              {data.education.map((edu, i) => (
-                <div key={i}>
-                  <p className="font-semibold text-[#0D0026] text-sm">{edu.institution}</p>
-                  <p className="text-xs text-[#6B26EA] font-medium">{edu.level}</p>
-                  {edu.details && <p className="text-sm text-[#4A4A4A] mt-0.5">{edu.details}</p>}
+          <Section title="Education">
+            {data.education.map((edu, i) => (
+              <div key={i} className="mb-2 last:mb-0">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-[12px] font-bold text-black">{edu.institution}</p>
+                  {edu.details && <p className="text-[11px] text-[#555] italic">{edu.details}</p>}
                 </div>
-              ))}
-            </div>
+                <p className="text-[11px] text-[#444] italic">{edu.level}</p>
+              </div>
+            ))}
           </Section>
         )}
 
         {/* Experience */}
         {data.experience?.length > 0 && (
-          <Section icon={<Briefcase className="w-4 h-4" />} title="Experience">
-            <div className="space-y-3">
-              {data.experience.map((exp, i) => (
-                <div key={i}>
-                  <p className="font-semibold text-[#0D0026] text-sm">{exp.title}</p>
-                  <p className="text-xs text-[#6B26EA] font-medium">{exp.organization}</p>
-                  {exp.description && <p className="text-sm text-[#4A4A4A] mt-0.5">{exp.description}</p>}
+          <Section title="Experience">
+            {data.experience.map((exp, i) => (
+              <div key={i} className="mb-3 last:mb-0">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-[12px] font-bold text-black">{exp.title}</p>
                 </div>
-              ))}
-            </div>
+                <p className="text-[11px] text-[#444] italic mb-0.5">{exp.organization}</p>
+                {exp.description && (
+                  <p className="text-[11px] text-[#333] leading-relaxed">{exp.description}</p>
+                )}
+              </div>
+            ))}
           </Section>
         )}
 
         {/* Projects */}
         {data.projects?.length > 0 && (
-          <Section icon={<FolderOpen className="w-4 h-4" />} title="Projects">
-            <div className="space-y-3">
-              {data.projects.map((proj, i) => (
-                <div key={i}>
-                  <p className="font-semibold text-[#0D0026] text-sm">{proj.title}</p>
-                  {proj.description && <p className="text-sm text-[#4A4A4A] mt-0.5">{proj.description}</p>}
-                  {proj.skills_used?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {proj.skills_used.map((s, j) => (
-                        <span key={j} className="text-[10px] font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{s}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+          <Section title="Projects">
+            {data.projects.map((proj, i) => (
+              <div key={i} className="mb-2 last:mb-0">
+                <p className="text-[12px] font-bold text-black">{proj.title}</p>
+                {proj.description && (
+                  <p className="text-[11px] text-[#333] leading-relaxed mt-0.5">{proj.description}</p>
+                )}
+                {proj.skills_used?.length > 0 && (
+                  <p className="text-[10px] text-[#555] mt-1 italic">
+                    Technologies: {proj.skills_used.join(', ')}
+                  </p>
+                )}
+              </div>
+            ))}
+          </Section>
+        )}
+
+        {/* Skills */}
+        {data.skills?.length > 0 && (
+          <Section title="Skills">
+            <p className="text-[11px] text-[#333] leading-relaxed">
+              {data.skills.join(' · ')}
+            </p>
           </Section>
         )}
 
         {/* Certifications */}
         {data.certifications?.length > 0 && (
-          <Section icon={<Award className="w-4 h-4" />} title="Certifications">
-            <ul className="list-disc list-inside text-sm text-[#4A4A4A] space-y-1">
+          <Section title="Certifications">
+            <ul className="list-none space-y-0.5">
               {data.certifications.map((cert, i) => (
-                <li key={i}>{cert}</li>
+                <li key={i} className="text-[11px] text-[#333]">
+                  • {cert}
+                </li>
               ))}
             </ul>
           </Section>
@@ -93,12 +109,10 @@ export default function ResumePreview({ data }: { data: ResumeData }) {
 
         {/* Interests */}
         {data.interests?.length > 0 && (
-          <Section icon={<Heart className="w-4 h-4" />} title="Interests">
-            <div className="flex flex-wrap gap-2">
-              {data.interests.map((interest, i) => (
-                <span key={i} className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">{interest}</span>
-              ))}
-            </div>
+          <Section title="Interests">
+            <p className="text-[11px] text-[#333]">
+              {data.interests.join(' · ')}
+            </p>
           </Section>
         )}
       </div>
@@ -106,14 +120,13 @@ export default function ResumePreview({ data }: { data: ResumeData }) {
   )
 }
 
-function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-[#6B26EA]">{icon}</span>
-        <h2 className="text-sm font-bold text-[#0D0026] uppercase tracking-wide">{title}</h2>
-        <div className="flex-1 h-px bg-[#EDE3FF]" />
-      </div>
+    <div className="mb-4 last:mb-0">
+      <h2 className="text-[12px] font-bold text-black uppercase tracking-wider border-b border-black pb-0.5 mb-2"
+        style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+        {title}
+      </h2>
       {children}
     </div>
   )

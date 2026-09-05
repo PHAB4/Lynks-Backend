@@ -54,3 +54,59 @@ export async function getUnreadNotificationCount() {
 export async function getPortfolio() {
   return fetchAPI<{ entries: any[] }>('/portfolio')
 }
+
+export interface DashboardSummary {
+  profile: {
+    name: string | null
+    email: string
+    role: string
+    interests: string[]
+    career_path: string | null
+    has_completed_onboarding: boolean
+  } | null
+  roadmap: {
+    has_roadmap: boolean
+    career_path: string | null
+    total_tasks: number
+    completed_tasks: number
+    progress_percent: number
+    current_step: string | null
+    current_step_index: number
+    total_steps: number
+  }
+  opportunities: {
+    new_count: number
+    recent: Array<{
+      id: string
+      title: string
+      company: string
+      location: string
+      salary_min: number | null
+      salary_max: number | null
+      currency: string | null
+      category: string
+      posted_at: string | null
+    }>
+  }
+  notifications: {
+    unread_count: number
+    recent: Array<{
+      id: string
+      title: string
+      body: string
+      type: string
+      is_read: boolean
+      created_at: string | null
+    }>
+  }
+  onboarding_checklist: {
+    complete_profile: boolean
+    start_chat: boolean
+    generate_roadmap: boolean
+    browse_opportunities: boolean
+  }
+}
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  return fetchAPI<DashboardSummary>('/dashboard/summary')
+}
