@@ -251,3 +251,8 @@ opportunities (standalone)
 - Anyone can upload files
 - Anyone can read files
 - URL format: `https://qcyxyunngbkupttcwlbk.supabase.co/storage/v1/object/public/evidence/{filename}`
+
+
+### Changes
+
+- **2026-09-05:** Added `GET /dashboard/summary` aggregation endpoint. No schema changes — data is sourced from existing tables (`users`, `roadmaps`, `steps`, `tasks`, `notifications`, `conversations`).

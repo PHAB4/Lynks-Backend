@@ -165,3 +165,11 @@ CREATE INDEX ON conversations USING ivfflat (embedding vector_cosine_ops);
 4. **Supabase for everything** — Auth, Database, Storage (no self-hosted services)
 5. **Dual LLM providers** — Groq (text, OpenAI SDK) for chat/roadmap/resume + Google Gemini (vision, google-genai SDK) for evidence verification. Free tier on both.
 6. **No LangChain/CrewAI** — agents are self-contained Python modules
+
+
+### Dashboard Aggregation
+- `GET /dashboard/summary` — single-call dashboard endpoint that aggregates profile, roadmap progress, opportunities, notifications, and onboarding state
+- Reduces frontend round-trips from 4-5 separate API calls to 1
+- Each section degrades gracefully — a failure in one section does not prevent others from returning
+- No schema changes — data sourced from existing tables (`users`, `roadmaps`, `steps`, `tasks`, `notifications`, `conversations`)
+

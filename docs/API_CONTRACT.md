@@ -658,3 +658,107 @@ All errors follow:
 | 403 | Forbidden |
 | 404 | Resource not found |
 | 500 | Internal server error |
+
+
+## Dashboard
+
+### `GET /dashboard/summary`
+
+Single-call aggregation endpoint for the home screen. Returns all data the dashboard needs in one request — profile, roadmap progress, opportunities, notifications, and onboarding state.
+
+**Auth:** JWT Bearer token (required)
+
+**Response (200):**
+
+```json
+{
+  "profile": {
+    "name": "Jordan",
+    "email": "jordan@test.com",
+    "role": "student",
+    "interests": ["Technology", "AI/ML", "Data Science"],
+    "career_path": "Software Engineer",
+    "has_completed_onboarding": true
+  },
+  "roadmap": {
+    "has_roadmap": true,
+    "career_path": "Software Engineer",
+    "total_tasks": 12,
+    "completed_tasks": 5,
+    "progress_percent": 42,
+    "current_step": "Build Your Portfolio",
+    "current_step_index": 2,
+    "total_steps": 4
+  },
+  "opportunities": {
+    "new_count": 30,
+    "recent": [
+      {
+        "id": "abc123",
+        "title": "Junior Developer",
+        "company": "TechCo",
+        "location": "Kingston, Jamaica",
+        "salary_min": 50000,
+        "salary_max": 80000,
+        "currency": "JMD",
+        "category": "job",
+        "posted_at": "2026-09-04T00:00:00Z"
+      }
+    ]
+  },
+  "notifications": {
+    "unread_count": 3,
+    "recent": [
+      {
+        "id": "notif-uuid",
+        "title": "New opportunity matches your profile",
+        "body": "A new scholarship was found...",
+        "type": "opportunity",
+        "is_read": false,
+        "created_at": "2026-09-05T10:00:00Z"
+      }
+    ]
+  },
+  "onboarding_checklist": {
+    "complete_profile": true,
+    "start_chat": false,
+    "generate_roadmap": true,
+    "browse_opportunities": false
+  }
+}
+```
+
+**Field Descriptions:**
+
+| Section | Field | Type | Description |
+|---------|-------|------|-------------|
+| `profile` | `name` | `string` | User's display name |
+| `profile` | `email` | `string` | User's email address |
+| `profile` | `role` | `string` | Education level or role |
+| `profile` | `interests` | `string[]` | Selected interest areas |
+| `profile` | `career_path` | `string` | Chosen career path |
+| `profile` | `has_completed_onboarding` | `bool` | True if career_path + interests are set |
+| `roadmap` | `has_roadmap` | `bool` | Whether user has generated a roadmap |
+| `roadmap` | `total_tasks` | `int` | Total tasks across all steps |
+| `roadmap` | `completed_tasks` | `int` | Tasks with status "complete" |
+| `roadmap` | `progress_percent` | `int` | completed/total * 100, 0 if no tasks |
+| `roadmap` | `current_step` | `string` | First step with incomplete tasks (or last step if all done) |
+| `roadmap` | `current_step_index` | `int` | 0-based index of current step |
+| `roadmap` | `total_steps` | `int` | Total number of steps |
+| `opportunities` | `new_count` | `int` | Total available opportunities |
+| `opportunities` | `recent` | `object[]` | Top 3 most recent opportunities |
+| `notifications` | `unread_count` | `int` | Number of unread notifications |
+| `notifications` | `recent` | `object[]` | Top 3 most recent notifications |
+| `onboarding_checklist` | `complete_profile` | `bool` | Profile has career_path + interests |
+| `onboarding_checklist` | `start_chat` | `bool` | User has sent at least one message |
+| `onboarding_checklist` | `generate_roadmap` | `bool` | User has an active roadmap |
+| `onboarding_checklist` | `browse_opportunities` | `bool` | Always false (viewing not tracked yet) |
+
+**Errors:**
+- `401` — Missing or invalid JWT token
+- `500` — Internal server error (individual sections degrade gracefully)
+
+**Design Notes:**
+- Each section is fetched independently — a failure in one section does not crash the endpoint
+- No new database tables — aggregates data from existing `users`, `roadmaps`, `steps`, `tasks`, `notifications`, and `conversations` tables
+- Opportunities are served from the curated list (in-memory cache)

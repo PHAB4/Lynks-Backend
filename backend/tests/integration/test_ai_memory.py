@@ -33,12 +33,20 @@ LLM_TIMEOUT = 120.0
 
 @pytest.fixture(autouse=True)
 def _setup_auth(auth_token, base_url):
-    """Set module-level auth state from conftest session fixture."""
+    """Set module-level auth state from conftest session fixture.
+    
+    Skips the entire module when no auth is available (no Supabase
+    credentials or server unreachable).
+    """
     global BASE_URL
     BASE_URL = base_url
-    if auth_token:
-        _state["token"] = auth_token
-        _cleanup_test_data()
+    if not auth_token:
+        pytest.skip(
+            "No auth token available — set SUPABASE_URL, SUPABASE_ANON_KEY, "
+            "TEST_EMAIL, TEST_PASSWORD in .env and start the server"
+        )
+    _state["token"] = auth_token
+    _cleanup_test_data()
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  CONFIG — Reads from .env automatically
@@ -215,7 +223,7 @@ def _cleanup_test_data():
 # ── Auth ────────────────────────────────────────────────────────────────────
 
 def test_auth():
-    return _get_token()
+    assert _get_token(), "Failed to authenticate via Supabase"
 
 
 # ── Memory CRUD ─────────────────────────────────────────────────────────────
@@ -259,8 +267,7 @@ def test_memory_get():
 def test_memory_patch():
     """PATCH /memory/{id} — update a memory."""
     if not _state["memory_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no memory_id){Colors.RESET}")
-        return False
+        pytest.skip("No memory_id available — test_memory_post may have failed")
 
     resp = httpx.patch(
         f"{BASE_URL}/memory/{_state['memory_id']}",
@@ -297,8 +304,7 @@ def test_memory_post_invalid_category():
 def test_memory_delete():
     """DELETE /memory/{id} — delete a memory."""
     if not _state["memory_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no memory_id){Colors.RESET}")
-        return False
+        pytest.skip("No memory_id available — test_memory_post may have failed")
 
     resp = httpx.delete(
         f"{BASE_URL}/memory/{_state['memory_id']}",
@@ -375,8 +381,7 @@ def test_conversations_list_after_chat():
 def test_conversation_messages():
     """GET /chat/conversations/{id} — returns messages for a specific conversation."""
     if not _state["test_conversation_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no test_conversation_id){Colors.RESET}")
-        return False
+        pytest.skip("No test_conversation_id available — test_chat_creates_conversation may have failed")
 
     resp = httpx.get(
         f"{BASE_URL}/chat/conversations/{_state['test_conversation_id']}",
@@ -405,8 +410,7 @@ def test_conversation_messages_not_found():
 def test_chat_continues_conversation():
     """POST /chat/message with conversation_id — continues existing conversation."""
     if not _state["test_conversation_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no test_conversation_id){Colors.RESET}")
-        return False
+        pytest.skip("No test_conversation_id available — test_chat_creates_conversation may have failed")
 
     resp = httpx.post(
         f"{BASE_URL}/chat/message",
@@ -442,8 +446,7 @@ def test_chat_history():
 def test_chat_history_with_conversation_id():
     """GET /chat/history?conversation_id=... — still works."""
     if not _state["test_conversation_id"]:
-        print(f"    {Colors.YELLOW}(skipped — no test_conversation_id){Colors.RESET}")
-        return False
+        pytest.skip("No test_conversation_id available — test_chat_creates_conversation may have failed")
 
     resp = httpx.get(
         f"{BASE_URL}/chat/history?conversation_id={_state['test_conversation_id']}",
