@@ -140,6 +140,34 @@ Errors:
 
 ---
 
+### PATCH /roadmap/tasks/{task_id}
+General task update — change title, description, or status. Only includes fields you want to change (partial update).
+Validates ownership (task must belong to user's active roadmap).
+```
+Request: {
+  "title": "string (optional)",
+  "description": "string (optional)",
+  "status": "pending | in_progress | complete (optional)"
+}
+
+Response 200: {
+  "success": true,
+  "task_id": "uuid",
+  "title": "Updated task title",
+  "status": "in_progress",
+  "message": "Task 'Updated task title' updated successfully!"
+}
+
+Errors:
+  400 — invalid_status: Status must be one of: complete, in_progress, pending
+  404 — task_not_found: No task with that ID
+  403 — not_your_task: Task doesn't belong to user's active roadmap
+  403 — roadmap_inactive: Cannot update tasks on an inactive roadmap
+```
+> **Note:** If status is set to "complete", `completed_at` is set automatically. If reverted from complete to pending/in_progress, `completed_at` is cleared.
+
+---
+
 ### POST /tasks/{task_id}/evidence
 Uploads an evidence file for a task. Uses `multipart/form-data`.
 The file is validated, uploaded to Supabase Storage, and verified by Gemini 3.5 Flash (vision model via Google AI Studio).

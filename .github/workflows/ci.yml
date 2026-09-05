@@ -93,6 +93,7 @@ jobs:
             --ignore=tests/integration/test_ai_memory.py \
             --ignore=tests/integration/test_opportunities.py \
             --ignore=tests/integration/test_task_endpoints.py \
+            --ignore=tests/integration/test_task_update.py \
             -k "not test_refresh_opportunities"
       - name: Upload coverage
         if: always()

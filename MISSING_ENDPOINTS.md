@@ -41,8 +41,8 @@
 - `PATCH /roadmap/tasks/{task_id}/complete` — validates ownership + active roadmap, idempotent
 - Frontend can call this from a checkbox click on the Roadmap page
 
-### 3. **Task Status Update** — `PATCH /roadmap/tasks/{task_id}`
-No endpoint to update a task's status (`pending` → `in_progress` → `complete`). Only full roadmap regeneration exists.
+### 3. ~~**Task Status Update**~~ ✅ Done
+`PATCH /roadmap/tasks/{task_id}` — general task update endpoint. Supports partial updates to title, description, and status (pending → in_progress → complete). Validates ownership. Merged to main on 2026-09-05.
 
 ### 4. **Step Status** — No endpoint to manage step progress
 Step status is derived (complete only if ALL tasks in step are complete). But there's no endpoint to manage steps independently.
@@ -76,7 +76,8 @@ Currently:
 
 Needs:
   - GET /roadmap (fetch active roadmap with steps + tasks)
-  - PATCH /roadmap/tasks/{task_id}/complete (new endpoint — mark task done from UI)
+  - PATCH /roadmap/tasks/{task_id}/complete (mark task done from UI)
+  - PATCH /roadmap/tasks/{task_id} (edit task title, description, status)
   - Progress tracking UI (step cards, task checkboxes, completion %)
   - POST /roadmap/regenerate (regenerate roadmap button)
 ```
@@ -119,9 +120,10 @@ Needs:
 | Priority | Gap | Effort |
 |---|---|---|
 | ✅ Done | Dashboard aggregation endpoint | `GET /dashboard/summary` live — frontend needs wiring |
-| 🔴 High | Roadmap page is a placeholder, needs full UI + task completion endpoint | Large — new endpoint + full page build |
+| ✅ Done | Task completion via REST | `PATCH /roadmap/tasks/{task_id}/complete` live |
+| ✅ Done | Task status update | `PATCH /roadmap/tasks/{task_id}` live — supports title, description, status |
+| 🔴 High | Roadmap page is a placeholder, needs full UI + task completion endpoint | Large — full page build |
 | 🔴 High | Opportunities page uses hardcoded data, needs real API integration | Medium — endpoints exist, just need frontend wiring |
-| 🟡 Medium | Task completion only works via chat tool calling, not REST | Small — add `PATCH /roadmap/tasks/{id}/complete` endpoint |
 | 🟡 Medium | Onboarding writes to Supabase directly, bypassing backend | Medium — reroute to `PATCH /profile` |
 | 🟡 Medium | Settings page likely not connected to backend | Small — wire to existing profile endpoints |
 | 🟢 Low | No scheduled opportunity scraping (manual trigger only) | Small — add a cron/scheduled task |
