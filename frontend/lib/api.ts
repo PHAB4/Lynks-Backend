@@ -23,7 +23,16 @@ export async function fetchAPI(path: string, options: RequestInit = {}) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     const detail = body?.detail
-    const msg = typeof detail === 'string' ? detail : detail?.message || `Request failed (${res.status})`
+    let msg: string
+    if (typeof detail === 'string') {
+      msg = detail
+    } else if (detail?.error?.message) {
+      msg = `${detail.error.code}: ${detail.error.message}`
+    } else if (detail?.message) {
+      msg = detail.message
+    } else {
+      msg = `Request failed (${res.status})`
+    }
     if (res.status === 401) throw new Error('Not authenticated')
     throw new Error(msg)
   }
