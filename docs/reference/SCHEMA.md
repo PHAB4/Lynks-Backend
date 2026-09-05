@@ -167,6 +167,33 @@ opportunities (standalone)
 
 **Note:** Run `app/sql/opportunities_upgrade.sql` in Supabase SQL Editor to add new columns and indexes.
 
+### Opportunity Matching / Scoring Engine
+
+Each opportunity is scored against the user's profile (0–100) using `backend/app/services/scoring.py`. No LLM dependency — pure rule-based.
+
+| Factor | Max Points | Logic |
+|--------|-----------|-------|
+| Career path | 30 | Category alignment (20) + keyword matches in title/description (10) |
+| Education | 20 | User's education level meets opportunity's experience requirement |
+| Age | 20 | User falls within the opportunity's age range |
+| Interests | 15 | User interests appear in the opportunity's title/description |
+| Location | 15 | Country match (15), CARICOM-wide (12), Online (10), CARICOM country (8) |
+
+**Threshold:** ≥ 50 = a "match" (returned by `GET /opportunities/matches`).
+
+**Career path → category mapping:** Each career path (e.g. `software_engineering`) maps to a set of relevant opportunity categories (e.g. `competition`, `job`, `club`, `scholarship`). See `CAREER_CATEGORY_MAP` in `scoring.py`.
+
+**Career keywords:** Each career path has associated keywords (e.g. `software_engineering` → `coding`, `programming`, `hackathon`). Hits in title + description earn bonus points. See `CAREER_KEYWORDS` in `scoring.py`.
+
+**Education hierarchy:** `none` (0) → `high_school` (1) → `some_university` (2) → `bachelors` (3) → `masters` (4) → `phd` (5). User must meet or exceed the opportunity's requirement.
+
+**CARICOM awareness:** Users in CARICOM countries get partial credit (8 pts) for opportunities in other CARICOM countries. Opportunities tagged "CARICOM-wide" get 12 pts for all Caribbean users.
+
+**Endpoints:**
+- `GET /opportunities/matches` — returns only opportunities scoring ≥ 50, sorted by score descending
+- `GET /opportunities` — returns all opportunities with `relevance_score` attached, sorted by score
+- `GET /opportunities/saved` — returns saved opportunities with `relevance_score` attached
+
 ---
 
 ## user_memories

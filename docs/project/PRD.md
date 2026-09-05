@@ -56,6 +56,7 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 - Cached in-memory with 1-hour TTL for fast responses
 - Structured salary data for jobs (salary_min, salary_max, salary_currency) with **priority-based currency detection** (22+ currencies, source-context-aware)
 - Category-based filtering, time-based filtering, relevance sorting
+- **Rule-based matching engine** (`scoring.py`): scores each opportunity 0–100 against the user's profile (career path, education, age, interests, location). Returns matches ≥ 50 via `GET /opportunities/matches`.
 - Users can save/bookmark opportunities for later
 - New-opportunity notification polling via `GET /opportunities/new-count`
 - Social media scraping (Facebook, Instagram) — stretch goal
@@ -66,8 +67,8 @@ The career opportunities page has two tabs:
 
 | Tab | Description |
 |---|---|
-| **For You** (default) | Opportunities matched to the user's profile, sorted by relevance. Uses rule-based matching against career path, country, age, education level. No AI required. |
-| **Browse All** | Full catalog of all opportunities with filters. |
+| **For You** (default) | Opportunities scored 0–100 against the user's profile using rule-based matching (career path, country, age, education, interests). Only opportunities scoring ≥ 50 are shown, sorted by score descending. Endpoint: `GET /opportunities/matches`. |
+| **Browse All** | Full catalog of all opportunities with filters. Endpoint: `GET /opportunities` (includes `relevance_score` for each result). |
 
 **Filters available:**
 
@@ -161,7 +162,7 @@ The dashboard is the first screen users see after login. It provides an at-a-gla
 |---|---|---|---|
 | Career Architect | Generates personalized career roadmaps | User profile (career path, education, country, age) | Roadmap JSON (steps + tasks) |
 | Portfolio Manager | Verifies task evidence using Gemini 3.5 Flash (vision), manages portfolio | Uploaded files (certificates, images) + user career context | Verification result (verified/rejected/pending) with reason and confidence |
-| Job Scout | Sources Caribbean-relevant opportunities | Internet scraping + curated database | Matched opportunities list |
+| Job Scout | Sources Caribbean-relevant opportunities, scores them against user profiles (0–100) | Internet scraping + curated database | Scored & matched opportunities list |
 | Mentor-Orchestrator | Conversational assistant + agent router | User chat messages | Natural language response (possibly agent-assisted) |
 | Memory Extractor | Extracts key user facts from conversations | Conversation messages + existing memories | New user memories (up to 5 per extraction) |
 | Opportunity Scraper | Scrapes opportunities from multiple sources | RSS feeds, APIs, social media, LLM generation | Structured opportunity data |
