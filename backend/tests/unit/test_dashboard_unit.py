@@ -77,7 +77,7 @@ class TestRoadmapProgress:
                 FakeTask("T1", "complete", 0),
                 FakeTask("T2", "complete", 1),
                 FakeTask("T3", "complete", 2),
-                FakeTask("T4", "pending", 3),
+                FakeTask("T4", "complete", 3),
             ]),
             FakeStep("Step 2", 1, [
                 FakeTask("T5", "complete", 0),
