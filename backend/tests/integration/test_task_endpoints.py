@@ -15,7 +15,7 @@ import httpx
 import pytest
 
 # Skip entire module if no server / auth available
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BASE_URL", "https://lynks-backend-production.up.railway.app")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 TEST_EMAIL = os.getenv("TEST_EMAIL", "")
