@@ -36,3 +36,4 @@ htmlcov/
 # Firebase cache
 .firebase/
 frontend/.firebase/
+frontend/tsconfig.tsbuildinfo
