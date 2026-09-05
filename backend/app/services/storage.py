@@ -77,3 +77,61 @@ def delete_evidence_file(file_url: str) -> bool:
     except (StorageException, ValueError, IOError) as e:
         logger.error("Failed to delete evidence file: %s", e)
         return False
+
+
+# ── Profile Pictures ────────────────────────────────────────────────────────
+
+AVATAR_BUCKET = "profile-pictures"
+
+ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/gif"}
+MAX_AVATAR_SIZE = 800 * 1024  # 800 KB
+
+
+def upload_profile_picture(
+    user_id: str, file_bytes: bytes, filename: str, file_type: str
+) -> str:
+    """
+    Upload a profile picture to Supabase Storage and return the public URL.
+
+    File is stored at: profile-pictures/{user_id}/{uuid}.{ext}
+
+    Returns: public URL string
+    """
+    ext = Path(filename).suffix.lower()
+    unique_name = f"{user_id}/{uuid.uuid4()}{ext}"
+
+    try:
+        supabase_admin.storage.from_(AVATAR_BUCKET).upload(
+            path=unique_name,
+            file=file_bytes,
+            file_options={"content-type": file_type},
+        )
+    except (StorageException, ValueError, IOError) as e:
+        logger.error("Avatar upload failed: %s (type=%s)", e, type(e).__name__)
+        raise
+
+    public_url = supabase_admin.storage.from_(AVATAR_BUCKET).get_public_url(unique_name)
+
+    logger.info("Uploaded avatar for user %s -> %s", user_id, unique_name)
+    return public_url
+
+
+def delete_profile_picture(file_url: str) -> bool:
+    """
+    Delete a profile picture from Supabase Storage given its public URL.
+
+    Returns True if successful, False otherwise.
+    """
+    try:
+        parts = file_url.split(f"/{AVATAR_BUCKET}/")
+        if len(parts) < 2:
+            logger.warning("Could not extract file path from avatar URL: %s", file_url)
+            return False
+
+        file_path = parts[1]
+        supabase_admin.storage.from_(AVATAR_BUCKET).remove([file_path])
+        logger.info("Deleted avatar file: %s", file_path)
+        return True
+    except (StorageException, ValueError, IOError) as e:
+        logger.error("Failed to delete avatar file: %s", e)
+        return False

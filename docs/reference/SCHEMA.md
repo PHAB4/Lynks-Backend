@@ -34,6 +34,7 @@ opportunities (standalone)
 | education_level | text | YES | null | Set by user |
 | employment_status | text | YES | null | Set by user — "student", "employed", "unemployed", "freelancer", "looking for first job" |
 | phone | text | YES | null | User's phone number (e.g. "+1-876-555-1234") |
+| avatar_url | text | YES | null | URL to profile picture in Supabase Storage (profile-pictures bucket) |
 | career_path | text | YES | null | Set by user |
 | interests | ARRAY | YES | null | text[] — array of strings |
 | created_at | timestamptz | NO | now() | Set by signup trigger |
@@ -263,3 +264,4 @@ opportunities (standalone)
 - **2026-09-05:** Added `PATCH /roadmap/tasks/{task_id}` endpoint for general task updates (title, description, status). No schema changes — uses existing `tasks.status` and `tasks.completed_at` columns. Task status now supports three values: `pending`, `in_progress`, `complete`.
 - **2026-09-05:** Added `is_pinned` (boolean) and `sort_order` (integer) columns to `conversations` table for manual reordering. New endpoints: `PATCH /chat/conversations/{id}` (toggle pin), `POST /chat/conversations/reorder`, `DELETE /chat/conversations/{id}`.
 - **2026-09-05:** Added `phone` (text, nullable) column to `users` table. Updated `GET /profile` and `PATCH /profile` to include phone field.
+- **2026-09-05:** Added `avatar_url` (text, nullable) column to `users` table. Created `profile-pictures` Supabase storage bucket. Added `POST /profile/avatar` and `DELETE /profile/avatar` endpoints.

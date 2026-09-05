@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, Camera, X, Plus, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
@@ -27,20 +27,24 @@ export default function SettingsPage() {
     phone: '',
     role: '',
     careerPath: '',
+    avatarUrl: '',
   })
   const [interests, setInterests] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'security'>('profile')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fetchAPI<{ name?: string; email?: string; phone?: string; employment_status?: string; career_path?: string; interests?: string[] }>('/profile')
+        const data = await fetchAPI<{ name?: string; email?: string; phone?: string; avatar_url?: string; employment_status?: string; career_path?: string; interests?: string[] }>('/profile')
         if (data) {
           setProfile({
             name: data.name || '',
             email: data.email || '',
             phone: data.phone || '',
+            avatarUrl: data.avatar_url || '',
             role: data.employment_status || '',
             careerPath: data.career_path || '',
           })
@@ -85,6 +89,58 @@ export default function SettingsPage() {
         ? prev.filter(i => i !== interest)
         : [...prev, interest]
     )
+  }
+
+  const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/profile/avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''}`,
+        },
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Upload failed')
+      }
+
+      const data = await res.json()
+      setProfile(p => ({ ...p, avatarUrl: data.avatar_url }))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to upload photo')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleRemovePhoto = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/profile/avatar`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''}`,
+        },
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Failed to remove photo')
+      }
+
+      setProfile(p => ({ ...p, avatarUrl: '' }))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to remove photo')
+    }
   }
 
   const sidebarItems = [
@@ -182,21 +238,45 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="flex items-center gap-6 mb-8">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif"
+                      className="hidden"
+                      onChange={handleUploadPhoto}
+                    />
                     <div className="w-20 h-20 rounded-full bg-[rgba(154,152,152,0.20)] flex items-center justify-center overflow-hidden">
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                        <circle cx="20" cy="16" r="8" stroke="#9A9898" strokeWidth="2" />
-                        <path d="M4 36C4 29.3726 9.37258 24 16 24H24C30.6274 24 36 29.3726 36 36V38H4V36Z" stroke="#9A9898" strokeWidth="2" />
-                      </svg>
+                      {profile.avatarUrl ? (
+                        <img
+                          src={profile.avatarUrl}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                          <circle cx="20" cy="16" r="8" stroke="#9A9898" strokeWidth="2" />
+                          <path d="M4 36C4 29.3726 9.37258 24 16 24H24C30.6274 24 36 29.3726 36 36V38H4V36Z" stroke="#9A9898" strokeWidth="2" />
+                        </svg>
+                      )}
                     </div>
                     <div>
                       <div className="flex items-start gap-3 mb-2">
-                        <button className="py-2.5 px-4 rounded-[10px] bg-[#6B26EA] text-white text-sm font-semibold flex items-center gap-2 hover:bg-[#5A1FD0] transition-colors">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                          className="py-2.5 px-4 rounded-[10px] bg-[#6B26EA] text-white text-sm font-semibold flex items-center gap-2 hover:bg-[#5A1FD0] transition-colors disabled:opacity-50"
+                        >
                           <Camera size={16} />
-                          Upload new photo
+                          {uploading ? 'Uploading...' : 'Upload new photo'}
                         </button>
-                        <button className="py-2.5 px-4 rounded-[10px] border border-[rgba(30,30,30,0.12)] text-[rgba(30,30,30,0.80)] text-sm font-medium hover:bg-gray-50 transition-colors">
-                          Remove
-                        </button>
+                        {profile.avatarUrl && (
+                          <button
+                            onClick={handleRemovePhoto}
+                            className="py-2.5 px-4 rounded-[10px] border border-[rgba(30,30,30,0.12)] text-[rgba(30,30,30,0.80)] text-sm font-medium hover:bg-gray-50 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                       <p className="text-xs text-[rgba(30,30,30,0.40)]" style={{ fontFamily: "'Inter', sans-serif" }}>
                         JPG, GIF or PNG. Max size of 800K.

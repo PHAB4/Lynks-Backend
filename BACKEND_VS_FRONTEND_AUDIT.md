@@ -173,11 +173,11 @@ Uses `supabase.from('users').select('name')` for sidebar display. Caches in loca
 
 ---
 
-### 12. Profile Pictures ❌ Not Built
+### 12. Profile Pictures ✅ Built
 
-Frontend has decorative "Upload" / "Remove" buttons. Backend has no avatar endpoint.
+Backend has `POST /profile/avatar` and `DELETE /profile/avatar` endpoints. Storage bucket `profile-pictures` in Supabase. Frontend wired — upload opens file picker, displays avatar, remove clears it.
 
-**Action needed:** 🟡 Low priority for competition.
+**Status:** ✅ Complete. Run migration SQL before deploying.
 
 ---
 
@@ -199,6 +199,6 @@ Frontend has decorative "Upload" / "Remove" buttons. Backend has no avatar endpo
 | 🟢 Low | Onboarding → `PATCH /profile` instead of Supabase direct | Small |
 | 🟢 Low | Dashboard → `GET /dashboard/summary` instead of 5 calls | Small |
 | 🟢 Low | Notification UI (bell, list, mark-read) | Medium |
-| 🟡 Medium | Profile picture upload (endpoint + storage + UI) | Medium |
+| 🟡 Medium | Profile picture upload (endpoint + storage + UI) | ✅ Done |
 | 🟡 Medium | Opportunity personal matching scoring | Medium |
 | 🟡 Medium | Scheduled opportunity scraping (cron) | Medium |
