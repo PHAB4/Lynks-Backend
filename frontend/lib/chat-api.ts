@@ -13,6 +13,7 @@ export interface ConversationItem {
   summary: string | null
   message_count: number
   created_at: string
+  is_pinned: boolean
 }
 
 export async function sendMessage(message: string, conversationId?: string) {
@@ -37,4 +38,12 @@ export async function getChatHistory(conversationId?: string) {
 
 export async function deleteChatHistory() {
   return fetchAPI<{ success: boolean }>('/chat/history', { method: 'DELETE' })
+}
+
+export async function togglePinConversation(conversationId: string) {
+  return fetchAPI<{ conversation_id: string; is_pinned: boolean }>(`/chat/conversations/${conversationId}`, { method: 'PATCH' })
+}
+
+export async function deleteConversation(conversationId: string) {
+  return fetchAPI<{ success: boolean }>(`/chat/conversations/${conversationId}`, { method: 'DELETE' })
 }

@@ -92,17 +92,18 @@ async def list_conversations(
 ):
     """List all conversations for the sidebar — titles, summaries, timestamps, message counts."""
     result = await db.execute(
-        select(Conversation).where(Conversation.user_id == user_id).order_by(Conversation.created_at.desc()).limit(50)
+        select(Conversation)
+        .where(Conversation.user_id == user_id)
+        .order_by(Conversation.is_pinned.desc(), Conversation.created_at.desc())
+        .limit(50)
     )
     conversations = result.scalars().all()
 
     items = []
     for conv in conversations:
-        # Get message count
         count_result = await db.execute(select(sqlfunc.count(Message.id)).where(Message.conversation_id == conv.id))
         msg_count = count_result.scalar() or 0
 
-        # Generate title from first user message if no summary
         title = conv.summary
         if not title:
             first_msg_result = await db.execute(
@@ -122,10 +123,47 @@ async def list_conversations(
                 "summary": conv.summary,
                 "message_count": msg_count,
                 "created_at": conv.created_at,
+                "is_pinned": conv.is_pinned,
             }
         )
 
     return {"conversations": items}
+
+
+@router.patch("/conversations/{conversation_id}")
+async def toggle_pin_conversation(
+    conversation_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Toggle pin status of a conversation."""
+    conv = await db.get(Conversation, conversation_id)
+    if not conv or conv.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": "not_found", "message": "Conversation not found"}},
+        )
+    conv.is_pinned = not conv.is_pinned
+    await db.commit()
+    return {"conversation_id": conv.id, "is_pinned": conv.is_pinned}
+
+
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a single conversation and its messages."""
+    conv = await db.get(Conversation, conversation_id)
+    if not conv or conv.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": "not_found", "message": "Conversation not found"}},
+        )
+    await db.delete(conv)
+    await db.commit()
+    return {"success": True}
 
 
 @router.get("/conversations/{conversation_id}")

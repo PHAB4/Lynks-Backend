@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Paperclip, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react'
+import { Send, Paperclip, Loader2, MessageSquare, Plus, Trash2, MoreVertical, Pin } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import AppLayout from '@/components/AppLayout'
@@ -11,6 +11,8 @@ import {
   listConversations,
   getConversationMessages,
   deleteChatHistory,
+  togglePinConversation,
+  deleteConversation,
   type ChatMessage,
   type ConversationItem,
 } from '@/lib/chat-api'
@@ -40,7 +42,9 @@ function ChatContent() {
   const [loadingConversations, setLoadingConversations] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState('')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const [userName, setUserName] = useState(() => {
     if (typeof window !== 'undefined') {
       const cached = localStorage.getItem('lynks_user')
@@ -56,6 +60,16 @@ function ChatContent() {
   }, [])
 
   useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     const loadUser = async () => {
@@ -138,6 +152,34 @@ function ChatContent() {
       setActiveConversationId(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear history')
+    }
+  }
+
+  const handleTogglePin = async (conversationId: string) => {
+    try {
+      const result = await togglePinConversation(conversationId)
+      setConversations(prev =>
+        prev.map(c =>
+          c.conversation_id === conversationId ? { ...c, is_pinned: result.is_pinned } : c
+        ).sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+      )
+      setOpenMenuId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to pin conversation')
+    }
+  }
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      await deleteConversation(conversationId)
+      setConversations(prev => prev.filter(c => c.conversation_id !== conversationId))
+      if (activeConversationId === conversationId) {
+        setActiveConversationId(null)
+        setMessages([])
+      }
+      setOpenMenuId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete conversation')
     }
   }
 
@@ -229,17 +271,64 @@ function ChatContent() {
                     New conversation
                   </button>
                   {conversations.map((conv) => (
-                    <button
+                    <div
                       key={conv.conversation_id}
-                      onClick={() => handleSelectConversation(conv.conversation_id)}
-                      className="w-full text-left px-4 py-3 rounded-xl bg-white border border-[#EDE3FF] hover:border-[#D4C4F7] hover:shadow-[0_2px_8px_rgba(107,38,234,0.08)] transition-all"
+                      className="relative"
+                      ref={openMenuId === conv.conversation_id ? menuRef : undefined}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <MessageSquare size={12} className="text-[#6B26EA] shrink-0" />
-                        <p className="text-[13px] font-medium text-[#0D0026] truncate">{conv.title || 'New conversation'}</p>
-                      </div>
-                      <p className="text-[11px] text-[#8B898E] pl-5">{conv.message_count} messages</p>
-                    </button>
+                      <button
+                        onClick={() => handleSelectConversation(conv.conversation_id)}
+                        className="w-full text-left px-4 py-3 rounded-xl bg-white border border-[#EDE3FF] hover:border-[#D4C4F7] hover:shadow-[0_2px_8px_rgba(107,38,234,0.08)] transition-all"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          {conv.is_pinned ? (
+                            <Pin size={12} className="text-[#6B26EA] shrink-0 fill-current" />
+                          ) : (
+                            <MessageSquare size={12} className="text-[#6B26EA] shrink-0" />
+                          )}
+                          <p className="text-[13px] font-medium text-[#0D0026] truncate">{conv.title || 'New conversation'}</p>
+                        </div>
+                        <p className="text-[11px] text-[#8B898E] pl-5">{conv.message_count} messages</p>
+                      </button>
+
+                      {/* 3-dot menu button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenMenuId(openMenuId === conv.conversation_id ? null : conv.conversation_id)
+                        }}
+                        className="absolute top-2 right-2 p-1.5 rounded-lg hover:bg-[#F3EEFF] transition-colors text-[#8B898E] hover:text-[#6B26EA]"
+                      >
+                        <MoreVertical size={14} />
+                      </button>
+
+                      {/* Dropdown menu */}
+                      {openMenuId === conv.conversation_id && (
+                        <div className="absolute right-0 top-10 z-50 bg-white border border-[#EDE3FF] rounded-xl shadow-[0_8px_24px_rgba(107,38,234,0.15)] py-1 min-w-[160px]">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleTogglePin(conv.conversation_id)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                          >
+                            <Pin size={12} className={conv.is_pinned ? 'fill-current text-[#6B26EA]' : 'text-[#8B898E]'} />
+                            {conv.is_pinned ? 'Unpin' : 'Pin'}
+                          </button>
+                          <div className="mx-2 my-1 h-px bg-[#EDE3FF]" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteConversation(conv.conversation_id)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#D14444] hover:bg-[#FEF2F2] transition-colors"
+                          >
+                            <Trash2 size={12} />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
