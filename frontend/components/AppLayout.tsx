@@ -548,7 +548,7 @@ function ChatPanel() {
       const aiMessage: ChatMessage = {
         role: 'assistant',
         content: result.response,
-        tool_calls: result.tool_calls ? { calls: result.tool_calls } : null,
+        tool_calls: result.tool_calls || null,
       }
       setMessages(prev => [...prev, aiMessage])
 
