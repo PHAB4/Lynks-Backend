@@ -6,7 +6,7 @@ import { Map, Briefcase, MessageSquare, FileText, Bell, ChevronRight, Sparkles, 
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getProfile, getOpportunities, getUnreadNotificationCount, getPortfolio, DashboardProfile } from '@/lib/dashboard-api'
-import { getRoadmap } from '@/lib/roadmap-api'
+import { getRoadmap, Roadmap } from '@/lib/roadmap-api'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -36,8 +36,9 @@ export default function DashboardPage() {
         }
 
         if (roadmap.status === 'fulfilled' && roadmap.value) {
-          const allTasks = roadmap.value.steps?.flatMap((s: { tasks: unknown[] }) => s.tasks || []) || []
-          const completedTasks = allTasks.filter((t: { status: string }) => t.status === 'complete').length
+          const roadmapData = roadmap.value as Roadmap
+          const allTasks = roadmapData.steps?.flatMap((s) => s.tasks ?? []) ?? []
+          const completedTasks = allTasks.filter((t) => t.status === 'complete').length
           setRoadmapProgress({
             percent: allTasks.length > 0 ? Math.round((completedTasks / allTasks.length) * 100) : 0,
             total: allTasks.length,
