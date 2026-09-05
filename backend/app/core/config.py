@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # Vision — Google Gemini Flash (evidence verification, free tier)
     GEMINI_API_KEY: str = ""  # Google AI Studio key — get from https://aistudio.google.com/apikey
-    VISION_MODEL: str = "gemini-2.5-flash"  # Free tier: 10 RPM, 1,500 RPD
+    VISION_MODEL: str = "gemini-3.5-flash"  # Free tier: 10 RPM, 1,500 RPD
 
     # Test config (optional)
     JWT_TOKEN: str = ""
