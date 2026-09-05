@@ -115,6 +115,8 @@ opportunities (standalone)
 | id | uuid | NO | gen_random_uuid() | PK |
 | user_id | uuid | NO | gen_random_uuid() | FK → users.id |
 | summary | text | YES | null | LLM-generated summary of conversation (set after 15+ messages) |
+| is_pinned | boolean | NO | false | User-pinned conversation (appears at top of list) |
+| sort_order | integer | NO | 0 | Manual sort position within pin group (lower = higher in list) |
 | created_at | timestamptz | NO | now() | |
 
 ---
@@ -258,3 +260,4 @@ opportunities (standalone)
 - **2026-09-05:** Added `PATCH /roadmap/tasks/{task_id}/complete` endpoint. No schema changes — uses existing `tasks.status` and `tasks.completed_at` columns.
 - **2026-09-05:** Added `GET /dashboard/summary` aggregation endpoint. No schema changes — data is sourced from existing tables (`users`, `roadmaps`, `steps`, `tasks`, `notifications`, `conversations`).
 - **2026-09-05:** Added `PATCH /roadmap/tasks/{task_id}` endpoint for general task updates (title, description, status). No schema changes — uses existing `tasks.status` and `tasks.completed_at` columns. Task status now supports three values: `pending`, `in_progress`, `complete`.
+- **2026-09-05:** Added `is_pinned` (boolean) and `sort_order` (integer) columns to `conversations` table for manual reordering. New endpoints: `PATCH /chat/conversations/{id}` (toggle pin), `POST /chat/conversations/reorder`, `DELETE /chat/conversations/{id}`.

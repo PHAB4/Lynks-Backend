@@ -16,13 +16,15 @@ Lynks is an **AI-powered career accelerator for Caribbean youth**. It provides p
 | Backend server | ✅ Boots and runs | `uvicorn app.main:app --reload --port 8000` |
 | LLM connection (Groq) | ✅ Working | Uses `openai/gpt-ss-20b` model |
 | Auth (Supabase JWT) | ✅ Working | Supabase handles signup/signin |
-| Database (Supabase Postgres) | ⚠️ Blocked on dev's local network | Code is correct, needs unrestricted network |
+| Database (Supabase Postgres) | ✅ Working | Deployed on Railway |
 | Career Architect agent | ✅ Built | Generates personalized roadmaps |
-| Portfolio Manager agent | ✅ Built | Verifies evidence with LLM Vision |
+| Portfolio Manager agent | ✅ Built | Verifies evidence with LLM Vision + resume generation |
 | Job Scout agent | ✅ Built | Caribbean-specific opportunities + scraper |
 | Mentor-Orchestrator agent | ✅ Built | Unified chatbot with tool-calling |
-| Test script | ✅ Built | 16 endpoint tests |
-| Frontend | ⏳ YOU | Starting now |
+| Notifications | ✅ Built | Opportunity alerts, task milestones, reminders |
+| Evidence AI verification | ✅ Built | Gemini 3.5 Flash vision verification |
+| Conversation management | ✅ Built | Pin/unpin, reorder, delete, conversation list |
+| Frontend | ✅ Built | Full Next.js app with all pages connected to backend |
 
 ---
 
@@ -249,11 +251,9 @@ LLM_MODEL=openai/gpt-ss-20b
 
 ## Open Items / Known Issues
 
-1. **Database connection** works in code but is blocked on the backend dev's current network (public WiFi). Will work on unrestricted network.
-2. **Opportunity scraper** has a curated list + LLM-based generation. Needs scheduled execution (cron job) for production.
-3. **Notification system** — when new opportunities match a user's profile, notify them. Not built yet (Phase 2).
-4. **Resume builder** — not yet built. Schema exists (`resumes` table) but no agent or routes.
-5. **S3/Supabase Storage** — evidence uploads use Supabase Storage. The `evidence` bucket needs to be created as public in the Supabase dashboard.
+1. **Opportunity scraper** has a curated list + LLM-based generation. Needs scheduled execution (cron job) for production.
+2. **Onboarding flow** writes to Supabase directly — should call backend `PATCH /profile` instead.
+3. **Dashboard** makes 5 separate API calls — could be consolidated to 1 call to `GET /dashboard/summary`.
 
 ---
 
