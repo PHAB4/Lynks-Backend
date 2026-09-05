@@ -109,6 +109,20 @@ class TaskCompleteResponse(BaseModel):
     status: str = Field(..., description="complete")
 
 
+class TaskUpdateRequest(BaseModel):
+    title: Optional[str] = Field(None, description="New title for the task")
+    description: Optional[str] = Field(None, description="New description for the task")
+    status: Optional[str] = Field(None, description="pending | in_progress | complete")
+
+
+class TaskUpdateResponse(BaseModel):
+    success: bool
+    task_id: str = Field(..., description="UUID")
+    title: str
+    status: str
+    message: str
+
+
 # ── Resume ─────────────────────────────────────────────────────────────────
 
 

@@ -1,6 +1,6 @@
 # Lynks API Contract
 
-> **Last updated:** August 31, 2026
+> **Last updated:** September 5, 2026
 > **Base URL:** `http://localhost:8000` (local) / `https://lynks-backend-production.up.railway.app` (production)
 > **Auth:** Bearer token in `Authorization` header (Supabase JWT)
 > **Content-Type:** `application/json` (except evidence upload: `multipart/form-data`)
@@ -137,6 +137,34 @@ Errors:
   403 — roadmap_inactive: Cannot complete tasks on an inactive roadmap
 ```
 > **Note:** Step status is computed dynamically from child tasks — completing a task may change the parent step's status in subsequent GET /roadmap responses.
+
+---
+
+### PATCH /roadmap/tasks/{task_id}
+General task update — change title, description, or status. Only includes fields you want to change (partial update).
+Validates ownership (task must belong to user's active roadmap).
+```
+Request: {
+  "title": "string (optional)",
+  "description": "string (optional)",
+  "status": "pending | in_progress | complete (optional)"
+}
+
+Response 200: {
+  "success": true,
+  "task_id": "uuid",
+  "title": "Updated task title",
+  "status": "in_progress",
+  "message": "Task 'Updated task title' updated successfully!"
+}
+
+Errors:
+  400 — invalid_status: Status must be one of: complete, in_progress, pending
+  404 — task_not_found: No task with that ID
+  403 — not_your_task: Task doesn't belong to user's active roadmap
+  403 — roadmap_inactive: Cannot update tasks on an inactive roadmap
+```
+> **Note:** If status is set to "complete", `completed_at` is set automatically. If reverted from complete to pending/in_progress, `completed_at` is cleared.
 
 ---
 
