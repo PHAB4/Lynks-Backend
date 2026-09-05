@@ -1,6 +1,6 @@
 # Lynks Database Schema
 
-> **Last updated:** September 6, 2026
+> **Last updated:** September 10, 2026
 > **Source:** Exported from Supabase SQL Editor (live database)
 
 ---
@@ -294,3 +294,6 @@ opportunities (standalone)
 - **2026-09-05:** Added `phone` (text, nullable) column to `users` table. Updated `GET /profile` and `PATCH /profile` to include phone field.
 - **2026-09-05:** Added `avatar_url` (text, nullable) column to `users` table. Created `profile-pictures` Supabase storage bucket. Added `POST /profile/avatar` and `DELETE /profile/avatar` endpoints.
 - **2026-09-06:** Added background opportunity scheduler (`services/scheduler.py`) — asyncio task runs every 6 hours on FastAPI startup. Scrapes all sources, generates `opportunity_scrape` notifications. New endpoint: `GET /opportunities/scheduler/status`. Fixed `POST /opportunities/refresh` decorator bug (was stacked on wrong function).
+
+- **2026-09-10:** Added model router (`services/model_router.py`) — centralized LLM routing with `call_llm()` function used by all agents (mentor, architect, scout, memory_extractor, opportunity_scraper). Reads model configs from `models.json`. Supports task-based model selection and automatic fallback chains. No schema changes — pure service layer.
+- **2026-09-10:** Updated curated opportunity URLs to point to specific pages (15 URLs updated). Opportunity scraper switched from direct OpenAI calls to `call_llm()` model router.

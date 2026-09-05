@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Audit — Live Site Review
 
-**Date:** September 6, 2026
+**Date:** September 10, 2026
 **Frontend URL:** https://lynks-gen-ai.web.app
 **Backend URL:** https://lynks-backend-production.up.railway.app
 **Methodology:** Browser crawl of every page + cross-reference against `API_CONTRACT.md`, `SCHEMA.md`, `PRD.md`, and existing `BACKEND_VS_FRONTEND_AUDIT.md`
@@ -9,7 +9,7 @@
 
 ## TL;DR
 
-All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are connected to the backend API and working. The **Notifications list** page returns **404** — no frontend route. The **Portfolio/Evidence** page has been **POSTPONED until after the competition** — no frontend work needed for now. The **Resume editing UI** has been built by the frontend teammate and is live on the site. Several smaller gaps exist around fields, data flow, and wiring that this document details.
+All major pages (Dashboard, Roadmap, Chat, Opportunities, Resume, Settings) are connected to the backend API and working. The **Notifications list** page returns **404** — no frontend route (deferred post-competition). The **Portfolio/Evidence** page has been **POSTPONED until after the competition** — no frontend work needed for now. The **Resume editing UI** has been built by the frontend teammate and is live on the site. **Model routing** is complete — all LLM calls go through `call_llm()` for optimal model selection and fallback. **Salary/pay** is now displayed on opportunity cards. **Opportunities** is in the sidebar. Several smaller gaps remain around onboarding wiring and notification UI.
 
 ---
 
@@ -405,7 +405,7 @@ The left sidebar icon rail contains these items (always visible):
 **Missing from sidebar:**
 - 🔴 Notifications (bell icon) — no entry point
 - ⏸️ Portfolio/Evidence — POSTPONED (after competition)
-- 🟡 Opportunities — no sidebar icon (accessed via dashboard "Browse opportunities" button or top bar)
+- ✅ Opportunities — IS in the sidebar (confirmed)
 
 **Top bar icons (per page):**
 - Dashboard: steps, roadmap, chat, resume icons (top right)
@@ -428,11 +428,11 @@ The left sidebar icon rail contains these items (always visible):
 
 | # | Issue | Details | Effort |
 |---|---|---|---|
-| 4 | **Opportunities: salary not displayed** | Backend returns `pay` field but frontend cards don't show it | Small |
-| 5 | **Opportunities: no sidebar icon** | Only accessible via dashboard CTA — no direct sidebar nav | Small |
-| 6 | **Onboarding bypasses backend** | Writes directly to Supabase instead of `PATCH /profile` | Small |
+| 4 | ~~**Opportunities: salary not displayed**~~ | ✅ **RESOLVED** — Green salary badge now shows on opportunity cards | Done |
+| 5 | ~~**Opportunities: no sidebar icon**~~ | ✅ **RESOLVED** — Opportunities is in the sidebar | Done |
+| 6 | **Onboarding bypasses backend** | Writes directly to Supabase instead of `PATCH /profile` | Small — deferred post-competition |
 | 7 | **"Current Role" label confusing** | Shows employment_status values ("student") as if it's a job title | Small |
-| 8 | **Notification settings tab** | Just says "coming soon" — no actual notification preferences UI | Small |
+| 8 | **Notification settings tab** | Just says "coming soon" — no actual notification preferences UI | Small — deferred post-competition |
 
 ### 🟢 Nice to Have (Optimizations)
 
@@ -503,22 +503,45 @@ The left sidebar icon rail contains these items (always visible):
 
 ## Recommendations (Priority Order)
 
-1. **🔴 Build Notifications UI** — The backend is 100% ready. Add a bell icon to the sidebar/top bar, create a notification list dropdown or page, wire to the 6 existing endpoints. This is the highest-value missing feature.
+1. ~~**🔴 Build Notifications UI**~~ — ⏸️ **POSTPONED** until after the competition. Backend is 100% ready.
 
-2. ~~**🔴 Build Portfolio/Evidence page**~~ — ⏸️ **POSTPONED** until after the competition. Backend endpoints remain ready for when this is revisited.
+2. ~~**🔴 Build Portfolio/Evidence page**~~ — ⏸️ **POSTPONED** until after the competition. Backend endpoints remain ready.
 
-3. ~~**🔴 Add Resume Editing**~~ — ✅ **RESOLVED** — Frontend teammate has built and deployed the resume editing UI. Verify `PATCH /resume` works end-to-end.
+3. ~~**🔴 Add Resume Editing**~~ — ✅ **RESOLVED** — Frontend teammate has built and deployed the resume editing UI.
 
-4. **🟡 Show salary on opportunity cards** — The `pay` field is in the API response but not displayed. One-line fix on the frontend.
+4. ~~**🟡 Show salary on opportunity cards**~~ — ✅ **RESOLVED** — Green salary badge now shows on cards.
 
-5. **🟡 Add Opportunities to sidebar** — Currently only accessible via dashboard CTA. Add a briefcase/briefcase icon to the sidebar nav.
+5. ~~**🟡 Add Opportunities to sidebar**~~ — ✅ **RESOLVED** — Opportunities is in the sidebar.
 
 6. **🟡 Fix "Current Role" labeling** — Rename to "Employment Status" or change the dropdown to actual role titles instead of status values.
 
-7. **🟢 Wire onboarding to `PATCH /profile`** — For consistency and future-proofing.
+7. **🟢 Wire onboarding to `PATCH /profile`** — For consistency and future-proofing. Deferred post-competition.
 
-8. ~~**🟢 Use `GET /dashboard/summary`**~~ — ✅ **RESOLVED** — Dashboard already uses the summary endpoint.
+8. ~~**🟢 Use `GET /dashboard/summary`~~** — ✅ **RESOLVED** — Dashboard already uses the summary endpoint.
 
 ---
 
-*This audit was generated by crawling the live site at https://lynks-gen-ai.web.app on September 6, 2026 and cross-referencing against the backend at https://lynks-backend-production.up.railway.app.*
+## Model Routing (Implemented Sep 10, 2026)
+
+**Status:** ✅ Complete and merged to main
+
+All LLM calls in the backend now go through a centralized model router (`backend/app/services/model_router.py`) via the `call_llm()` function. This replaces direct `OpenAI()` calls in every agent.
+
+**What changed:**
+- `mentor.py` — uses `call_llm(messages, task_type="chat")` for mentor conversations
+- `architect.py` — uses `call_llm(messages, task_type="roadmap_generation")` for roadmap generation
+- `scout.py` — uses `call_llm(messages, task_type="analysis")` for opportunity matching
+- `memory_extractor.py` — uses `call_llm(messages, task_type="memory_extraction")` for fact extraction
+- `opportunity_scraper.py` — uses `call_llm(messages, task_type="opportunity_extraction")` for LLM-generated opportunities
+
+**Benefits:**
+- Task-based model selection (70B for complex tasks, 8B for simple extraction)
+- Automatic fallback chains if primary model is unavailable
+- Centralized logging of model usage
+- Easy to swap models without touching agent code
+
+**Files:** `backend/app/services/model_router.py`, `backend/app/models/models.json`, `backend/tests/unit/test_model_router.py` (26 tests)
+
+---
+
+*This audit was generated by crawling the live site at https://lynks-gen-ai.web.app on September 6, 2026, updated September 10, 2026, and cross-referencing against the backend at https://lynks-backend-production.up.railway.app.*

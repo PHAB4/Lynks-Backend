@@ -1,6 +1,6 @@
 # Lynks API Contract
 
-> **Last updated:** September 6, 2026 (added scheduler status, refresh, opportunity matching endpoints)
+> **Last updated:** September 10, 2026 (added model router, salary display, curated URL updates)
 > **Base URL:** `http://localhost:8000` (local) / `https://lynks-backend-production.up.railway.app` (production)
 > **Auth:** Bearer token in `Authorization` header (Supabase JWT)
 > **Content-Type:** `application/json` (except evidence upload: `multipart/form-data`)
@@ -895,6 +895,33 @@ Errors:
 ---
 
 ## Error Format
+## Model Router
+
+All LLM calls in the backend go through a centralized model router (`backend/app/services/model_router.py`) via the `call_llm()` function. This is a service-layer feature, not an API endpoint — it's transparent to the frontend.
+
+**How it works:**
+1. Each agent calls `call_llm(messages, task_type="chat")` instead of directly calling `OpenAI()`
+2. The router reads `models.json` to select the optimal model for the task type
+3. If the primary model is unavailable, it automatically falls back to secondary/tertiary models
+4. All selections are logged for monitoring
+
+**Task types and model selection:**
+
+| Task Type | Primary Model | Context Window | Cost Tier |
+|---|---|---|---|
+| `chat` | Llama 3 70B (Groq) | 8K tokens | Mid |
+| `roadmap_generation` | Llama 3 70B (Groq) | 8K tokens | Mid |
+| `analysis` | Llama 3 70B (Groq) | 8K tokens | Mid |
+| `memory_extraction` | Llama 3 8B (Groq) | 8K tokens | Low |
+| `opportunity_extraction` | Llama 3 8B (Groq) | 8K tokens | Low |
+| `embeddings` | Sentence Transformers | 512 tokens | Free |
+
+**Agents using the router:** mentor.py, architect.py, scout.py, memory_extractor.py, opportunity_scraper.py
+
+**Config files:** `backend/app/services/model_router.py` (router logic), `backend/app/models/models.json` (model configs)
+
+---
+
 
 All errors follow:
 ```json
