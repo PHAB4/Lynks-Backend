@@ -55,7 +55,7 @@ function sortPanelsBySide(panels: PanelId[]): { left: PanelId[]; right: PanelId[
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const authChecked = useAuthGate()
+  const authState = useAuthGate()
   const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const [openPanels, setOpenPanels] = useState<PanelId[]>([])
   const [loadingPanels, setLoadingPanels] = useState<Set<PanelId>>(new Set())
@@ -75,15 +75,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string; email?: string } } | null) => {
       if (session?.user) {
-        try {
-          const { data } = await supabase.from('users').select('name').eq('id', session.user.id).single()
-          const name = data?.name || session.user.email?.split('@')[0] || 'User'
-          setUserName(name)
-          localStorage.setItem('lynks_user', JSON.stringify({ name }))
-        } catch {
-          const fallback = session.user.email?.split('@')[0] || 'User'
-          setUserName(fallback)
-          localStorage.setItem('lynks_user', JSON.stringify({ name: fallback }))
+        const cached = localStorage.getItem('lynks_user')
+        if (!cached) {
+          try {
+            const { data } = await supabase.from('users').select('name').eq('id', session.user.id).single()
+            const name = data?.name || session.user.email?.split('@')[0] || 'User'
+            setUserName(name)
+            localStorage.setItem('lynks_user', JSON.stringify({ name }))
+          } catch {
+            const fallback = session.user.email?.split('@')[0] || 'User'
+            setUserName(fallback)
+            localStorage.setItem('lynks_user', JSON.stringify({ name: fallback }))
+          }
         }
       } else if (event === 'SIGNED_OUT') {
         setUserName('User')
@@ -191,7 +194,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const { left: leftPanels, right: rightPanels } = sortPanelsBySide(openPanels)
 
-  if (!authChecked) return (
+  if (authState === 'loading') return (
     <div className="flex h-screen bg-[#F7F3FE] items-center justify-center">
       <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
     </div>
