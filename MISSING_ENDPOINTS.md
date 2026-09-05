@@ -37,8 +37,9 @@
 ### 1. ~~**Dashboard Summary Endpoint**~~ ✅ Done
 `GET /dashboard/summary` — single-call aggregation endpoint that returns profile, roadmap progress, opportunities, notifications, and onboarding checklist. Merged to main on 2026-09-05.
 
-### 2. **Task Completion via REST** — `PATCH /roadmap/tasks/{task_id}/complete`
-Tasks can only be completed via the **Mentor's tool calling** (`complete_task` in chat). There is no standalone REST endpoint to mark a task complete from the Roadmap page directly (e.g., clicking a checkbox).
+### 2. ~~**Task Completion via REST**~~ ✅ Done
+- `PATCH /roadmap/tasks/{task_id}/complete` — validates ownership + active roadmap, idempotent
+- Frontend can call this from a checkbox click on the Roadmap page
 
 ### 3. **Task Status Update** — `PATCH /roadmap/tasks/{task_id}`
 No endpoint to update a task's status (`pending` → `in_progress` → `complete`). Only full roadmap regeneration exists.
