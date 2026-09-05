@@ -41,6 +41,7 @@ Response 200: {
   "education_level": "string | null",
   "employment_status": "string | null",
   "phone": "string | null",
+  "avatar_url": "string | null",
   "career_path": "string | null",
   "interests": ["string"] | null,
   "created_at": "datetime"
@@ -71,6 +72,28 @@ Updates only the career path.
 ```json
 Request: { "career_path": "Software Development" }
 Response 200: { "career_path": "Software Development" }
+```
+
+---
+
+### POST /profile/avatar
+Upload a profile picture (multipart form data).
+- **Content-Type:** `multipart/form-data`
+- **Field:** `file` — JPEG, PNG, or GIF, max 800KB
+- Replaces any existing avatar (old file is deleted)
+```json
+Response 200: { "avatar_url": "https://..." }
+Response 400: { "detail": "Invalid file type: ..." }
+Response 400: { "detail": "File too large: ..." }
+```
+
+---
+
+### DELETE /profile/avatar
+Remove the user's profile picture.
+```json
+Response 200: { "message": "Profile picture removed" }
+Response 404: { "detail": "No profile picture to remove" }
 ```
 
 ---
