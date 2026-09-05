@@ -12,7 +12,7 @@ import httpx
 import pytest
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 HTTP_TIMEOUT = 30.0
 

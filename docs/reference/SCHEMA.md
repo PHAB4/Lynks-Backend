@@ -1,6 +1,6 @@
 # Lynks Database Schema
 
-> **Last updated:** August 28, 2026
+> **Last updated:** September 5, 2026
 > **Source:** Exported from Supabase SQL Editor (live database)
 
 ---
@@ -72,7 +72,7 @@ opportunities (standalone)
 | step_id | uuid | NO | gen_random_uuid() | FK → steps.id |
 | title | text | NO | null | Task name |
 | description | text | NO | null | What to do and why |
-| status | text | NO | null | "pending" or "complete" |
+| status | text | NO | null | "pending", "in_progress", or "complete" |
 | order | integer | YES | 0 | 1-based position in step |
 | completed_at | timestamptz | YES | null | When marked complete |
 | created_at | timestamptz | NO | now() | |
@@ -251,3 +251,10 @@ opportunities (standalone)
 - Anyone can upload files
 - Anyone can read files
 - URL format: `https://qcyxyunngbkupttcwlbk.supabase.co/storage/v1/object/public/evidence/{filename}`
+
+
+### Changes
+
+- **2026-09-05:** Added `PATCH /roadmap/tasks/{task_id}/complete` endpoint. No schema changes — uses existing `tasks.status` and `tasks.completed_at` columns.
+- **2026-09-05:** Added `GET /dashboard/summary` aggregation endpoint. No schema changes — data is sourced from existing tables (`users`, `roadmaps`, `steps`, `tasks`, `notifications`, `conversations`).
+- **2026-09-05:** Added `PATCH /roadmap/tasks/{task_id}` endpoint for general task updates (title, description, status). No schema changes — uses existing `tasks.status` and `tasks.completed_at` columns. Task status now supports three values: `pending`, `in_progress`, `complete`.
