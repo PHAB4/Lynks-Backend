@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Map, Loader2, RefreshCw, CheckCircle2, Circle, Sparkles, ChevronDown, ChevronRight, Lock } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Map, Loader2, Sparkles } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
-import { getRoadmap, generateRoadmap, regenerateRoadmap, type Roadmap, type RoadmapStep } from '@/lib/roadmap-api'
+import { getRoadmap, generateRoadmap, type Roadmap } from '@/lib/roadmap-api'
 import { fetchAPI } from '@/lib/api'
 
 export default function RoadmapPage() {
@@ -69,23 +69,6 @@ export default function RoadmapPage() {
       setGenerating(false)
     }
   }
-
-  const handleRegenerate = async () => {
-    setGenerating(true)
-    setError('')
-    try {
-      const data = await regenerateRoadmap()
-      setRoadmap(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to regenerate roadmap')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const allTasks = roadmap?.steps?.flatMap((s) => s.tasks || []) || []
-  const completedTasks = allTasks.filter((t) => t.status === 'complete').length
-  const totalTasks = allTasks.length
 
   const sortedSteps = roadmap?.steps ? [...roadmap.steps].sort((a, b) => a.order - b.order) : []
 
@@ -153,7 +136,6 @@ export default function RoadmapPage() {
 
               {!loading && roadmap && !generating && (
                 <div className="relative w-full max-w-[500px]">
-                  {/* Winding path visualization */}
                   <div className="relative">
                     {sortedSteps.map((step, index) => {
                       const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
@@ -190,13 +172,23 @@ export default function RoadmapPage() {
                             <button
                               onClick={() => setActiveStep(step.step_id)}
                               className={cn(
-                                'relative flex items-center justify-center rounded-full transition-all duration-300 cursor-pointer group',
-                                isActive && 'scale-110 ring-4 ring-[#EADFFF]',
-                                isPast ? 'bg-[#22C55E]' : 'bg-[#6B26EA]',
+                                'relative flex items-center justify-center transition-all duration-300 cursor-pointer group',
+                                isActive && 'scale-110',
                               )}
-                              style={{ width: '80px', height: '40px', borderRadius: '20px' }}
+                              style={{
+                                width: '100px',
+                                height: '38px',
+                                borderRadius: '50%',
+                                background: isPast
+                                  ? 'linear-gradient(180deg, #34D673 0%, #1BA84E 100%)'
+                                  : 'linear-gradient(180deg, #9B5CFF 0%, #6B26EA 50%, #4A10B8 100%)',
+                                boxShadow: isPast
+                                  ? '0 4px 0 #148A3D, 0 6px 12px rgba(34,197,94,0.35), inset 0 1px 1px rgba(255,255,255,0.25)'
+                                  : '0 4px 0 #3A0E8C, 0 6px 12px rgba(107,38,234,0.4), inset 0 1px 1px rgba(255,255,255,0.3)',
+                                transform: isActive ? 'scale(1.1) translateY(-2px)' : 'none',
+                              }}
                             >
-                              <span className="text-white text-[13px] font-bold" style={{ fontFamily: "'Inter', sans-serif" }}>
+                              <span className="text-white text-[14px] font-bold drop-shadow-sm" style={{ fontFamily: "'Inter', sans-serif", textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                                 {index + 1}
                               </span>
                             </button>
@@ -221,121 +213,6 @@ export default function RoadmapPage() {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Right panel — step details */}
-          <div className="w-[340px] bg-white border-l border-[#EDE3FF] flex flex-col overflow-hidden shrink-0">
-            {!loading && roadmap && !generating && (
-              <>
-                {/* Panel header */}
-                <div className="p-5 border-b border-[#EDE3FF]">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-[20px] font-semibold text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                      Roadmap
-                    </h2>
-                    <span className="text-[12px] font-bold text-[#6B26EA] bg-[#EADFFF] px-3 py-1 rounded-full">
-                      {completedTasks}/{totalTasks} DONE
-                    </span>
-                  </div>
-                  {/* Progress bar */}
-                  <div className="w-full h-1.5 rounded-full bg-[#EDE3FF] mt-3 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[#6B26EA] transition-all duration-500"
-                      style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Step list */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                  {sortedSteps.map((step, index) => {
-                    const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
-                    const totalCount = step.tasks?.length || 0
-                    const allComplete = totalCount > 0 && completedCount === totalCount
-                    const isActive = activeStep === step.step_id
-
-                    return (
-                      <div key={step.step_id}>
-                        <button
-                          onClick={() => setActiveStep(isActive ? null : step.step_id)}
-                          className={cn(
-                            'w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all',
-                            isActive ? 'bg-[#F7F3FE]' : 'hover:bg-[#FAFAFA]'
-                          )}
-                        >
-                          <span className={cn(
-                            'text-[13px] font-semibold w-5 shrink-0',
-                            allComplete ? 'text-[#22C55E]' : isActive ? 'text-[#6B26EA]' : 'text-[#8B898E]'
-                          )}>
-                            {index + 1}.
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              'text-[13px] font-semibold',
-                              allComplete ? 'text-[#22C55E]' : 'text-[#0D0026]'
-                            )}>
-                              {step.title}
-                            </p>
-                          </div>
-                          {allComplete && (
-                            <CheckCircle2 size={14} className="text-[#22C55E] shrink-0" />
-                          )}
-                        </button>
-
-                        {/* Expanded task list */}
-                        {isActive && (
-                          <div className="ml-5 mt-1 mb-2 space-y-1.5 pl-3 border-l-2 border-[#EDE3FF]">
-                            {step.tasks
-                              ?.sort((a, b) => a.order - b.order)
-                              .map((task) => (
-                                <div
-                                  key={task.task_id}
-                                  className={cn(
-                                    'flex items-start gap-2.5 p-2.5 rounded-lg',
-                                    task.status === 'complete' ? 'bg-[#F0FDF4]' : 'bg-[#FAFAFA]'
-                                  )}
-                                >
-                                  {task.status === 'complete' ? (
-                                    <CheckCircle2 size={14} className="text-[#22C55E] shrink-0 mt-0.5" />
-                                  ) : (
-                                    <Circle size={14} className="text-[#D1D5DB] shrink-0 mt-0.5" />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <p className={cn(
-                                      'text-[12px] font-medium leading-snug',
-                                      task.status === 'complete' ? 'text-[#8B898E] line-through' : 'text-[#0D0026]'
-                                    )}>
-                                      {task.title}
-                                    </p>
-                                    <p className="text-[11px] text-[#8B898E] mt-0.5 leading-snug">
-                                      {task.description}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))
-                            }
-                            {(!step.tasks || step.tasks.length === 0) && (
-                              <p className="text-[12px] text-[#8B898E] py-2">No tasks in this step yet.</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* Footer actions */}
-                <div className="p-4 border-t border-[#EDE3FF]">
-                  <button
-                    onClick={handleRegenerate}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#EDE3FF] text-[13px] text-[#6B26EA] font-semibold hover:bg-[#F7F3FE] transition-colors"
-                  >
-                    <RefreshCw size={14} />
-                    Regenerate Roadmap
-                  </button>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>

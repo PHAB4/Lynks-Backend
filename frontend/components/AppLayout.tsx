@@ -7,6 +7,7 @@ import {
   Home, Briefcase, MessageSquare, Map, FileText,
   ChevronLeft, ChevronRight, LogOut, Settings, User,
   ListChecks, Loader2, Maximize2, Plus, Trash2,
+  CheckCircle2, Circle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
@@ -19,6 +20,7 @@ import {
   type ChatMessage,
   type ConversationItem,
 } from '@/lib/chat-api'
+import { getRoadmap, type Roadmap } from '@/lib/roadmap-api'
 
 export type PanelId = 'chat' | 'steps' | 'resume' | 'roadmap'
 
@@ -90,6 +92,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (pathname === '/roadmap' && !openPanels.includes('steps')) {
+      setOpenPanels(prev => {
+        if (prev.includes('steps')) return prev
+        return [...prev, 'steps']
+      })
+    }
+  }, [pathname])
 
   const initials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
 
@@ -750,13 +761,157 @@ function ChatPanel() {
 }
 
 function StepsPanel() {
-  return (
-    <div className="p-4">
-      <div className="flex flex-col items-center justify-center py-10 text-center">
-        <div className="w-12 h-12 rounded-full bg-[#F7F3FE] flex items-center justify-center mb-3">
-          <ListChecks size={18} className="text-[#D1D5DB]" />
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [activeStep, setActiveStep] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    getRoadmap()
+      .then((data) => { if (!cancelled) setRoadmap(data) })
+      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load steps') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (roadmap?.steps && roadmap.steps.length > 0 && !activeStep) {
+      const sorted = [...roadmap.steps].sort((a, b) => a.order - b.order)
+      const inProgress = sorted.find(s => s.status === 'pending' && s.tasks?.some(t => t.status === 'pending'))
+      setActiveStep(inProgress?.step_id || sorted[0].step_id)
+    }
+  }, [roadmap, activeStep])
+
+  const sortedSteps = roadmap?.steps ? [...roadmap.steps].sort((a, b) => a.order - b.order) : []
+  const allTasks = sortedSteps.flatMap(s => s.tasks || [])
+  const completedTasks = allTasks.filter(t => t.status === 'complete').length
+  const totalTasks = allTasks.length
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full py-16">
+        <Loader2 size={20} className="text-[#6B26EA] animate-spin mb-2" />
+        <p className="text-[12px] text-[#8B898E]">Loading steps...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <p className="text-[12px] text-[#D14444] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">{error}</p>
+      </div>
+    )
+  }
+
+  if (!roadmap || sortedSteps.length === 0) {
+    return (
+      <div className="p-4">
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <div className="w-12 h-12 rounded-full bg-[#F7F3FE] flex items-center justify-center mb-3">
+            <ListChecks size={18} className="text-[#D1D5DB]" />
+          </div>
+          <p className="text-[13px] text-[#8B898E]">No steps yet. Generate a roadmap first.</p>
         </div>
-        <p className="text-[13px] text-[#8B898E]">Steps will appear here once your roadmap is generated.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Progress header */}
+      <div className="px-4 py-3 border-b border-[#EDE3FF] shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[14px] font-semibold text-[#0D0026]">Steps</h3>
+          <span className="text-[11px] font-bold text-[#6B26EA] bg-[#EADFFF] px-2.5 py-0.5 rounded-full">
+            {completedTasks}/{totalTasks} DONE
+          </span>
+        </div>
+        <div className="w-full h-1.5 rounded-full bg-[#EDE3FF] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[#6B26EA] transition-all duration-500"
+            style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Step list */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-1">
+        {sortedSteps.map((step, index) => {
+          const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
+          const totalCount = step.tasks?.length || 0
+          const allComplete = totalCount > 0 && completedCount === totalCount
+          const isActive = activeStep === step.step_id
+
+          return (
+            <div key={step.step_id}>
+              <button
+                onClick={() => setActiveStep(isActive ? null : step.step_id)}
+                className={cn(
+                  'w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all',
+                  isActive ? 'bg-[#F7F3FE]' : 'hover:bg-[#FAFAFA]'
+                )}
+              >
+                <span className={cn(
+                  'text-[12px] font-semibold w-5 shrink-0',
+                  allComplete ? 'text-[#22C55E]' : isActive ? 'text-[#6B26EA]' : 'text-[#8B898E]'
+                )}>
+                  {index + 1}.
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className={cn(
+                    'text-[12px] font-semibold',
+                    allComplete ? 'text-[#22C55E]' : 'text-[#0D0026]'
+                  )}>
+                    {step.title}
+                  </p>
+                </div>
+                {allComplete && (
+                  <CheckCircle2 size={13} className="text-[#22C55E] shrink-0" />
+                )}
+              </button>
+
+              {isActive && (
+                <div className="ml-4 mt-1 mb-2 space-y-1 pl-3 border-l-2 border-[#EDE3FF]">
+                  {step.tasks
+                    ?.sort((a, b) => a.order - b.order)
+                    .map((task) => (
+                      <div
+                        key={task.task_id}
+                        className={cn(
+                          'flex items-start gap-2 p-2 rounded-lg',
+                          task.status === 'complete' ? 'bg-[#F0FDF4]' : 'bg-[#FAFAFA]'
+                        )}
+                      >
+                        {task.status === 'complete' ? (
+                          <CheckCircle2 size={12} className="text-[#22C55E] shrink-0 mt-0.5" />
+                        ) : (
+                          <Circle size={12} className="text-[#D1D5DB] shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            'text-[11px] font-medium leading-snug',
+                            task.status === 'complete' ? 'text-[#8B898E] line-through' : 'text-[#0D0026]'
+                          )}>
+                            {task.title}
+                          </p>
+                          <p className="text-[10px] text-[#8B898E] mt-0.5 leading-snug">
+                            {task.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  }
+                  {(!step.tasks || step.tasks.length === 0) && (
+                    <p className="text-[11px] text-[#8B898E] py-1.5">No tasks yet.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
