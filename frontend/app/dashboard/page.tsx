@@ -7,6 +7,7 @@ import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getProfile, getOpportunities, getUnreadNotificationCount, getPortfolio, DashboardProfile } from '@/lib/dashboard-api'
 import { getRoadmap, Roadmap } from '@/lib/roadmap-api'
+import { supabase } from '@/lib/supabase'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -31,8 +32,23 @@ export default function DashboardPage() {
         if (profileData.status === 'fulfilled') {
           setProfile(profileData.value as DashboardProfile)
         } else {
-          router.push('/login')
-          return
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session) {
+            router.push('/login')
+            return
+          }
+          setProfile({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            age: null,
+            country: null,
+            education_level: null,
+            career_path: null,
+            employment_status: null,
+            interests: null,
+            created_at: new Date().toISOString(),
+          })
         }
 
         if (roadmap.status === 'fulfilled' && roadmap.value) {
