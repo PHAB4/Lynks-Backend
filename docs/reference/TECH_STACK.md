@@ -121,6 +121,11 @@ Ruff is configured in `backend/ruff.toml` with focused rules:
 | **Vision SDK** | google-genai (Google's official Python SDK) |
 | **Note** | Impala/Highrise AI gateway is no longer accessible — all LLM calls go directly to Groq or Google AI Studio |
 
+### Task Completion
+- Tasks can be marked complete via `PATCH /roadmap/tasks/{task_id}/complete` (REST) or through the Mentor chatbot
+- Endpoint validates ownership (task must belong to user's active roadmap)
+- Step status is computed dynamically — completing the last pending task in a step marks that step as complete |
+
 ## Currency Detection System
 
 The scraper uses a **priority-based lookup table** (`_CURRENCY_TABLE`) to detect currencies from salary text. Detection priority:
