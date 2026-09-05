@@ -6,6 +6,7 @@ import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getRoadmap, generateRoadmap, type Roadmap } from '@/lib/roadmap-api'
 import { fetchAPI } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 
 export default function RoadmapPage() {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null)
@@ -14,23 +15,29 @@ export default function RoadmapPage() {
   const [error, setError] = useState('')
   const [activeStep, setActiveStep] = useState<string | null>(null)
   const [startedSteps, setStartedSteps] = useState<Set<string>>(new Set())
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    loadRoadmap()
-  }, [])
-
-  useEffect(() => {
-    const stored = localStorage.getItem('lynks_started_steps')
-    if (stored) {
-      try { setStartedSteps(new Set(JSON.parse(stored))) } catch {}
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUserId(user.id)
+        const stored = localStorage.getItem(`lynks_started_steps_${user.id}`)
+        if (stored) {
+          try { setStartedSteps(new Set(JSON.parse(stored))) } catch {}
+        }
+      }
+      loadRoadmap()
     }
+    init()
   }, [])
 
   const markStepStarted = (stepId: string) => {
+    if (!userId) return
     setStartedSteps(prev => {
       const next = new Set(prev)
       next.add(stepId)
-      localStorage.setItem('lynks_started_steps', JSON.stringify([...next]))
+      localStorage.setItem(`lynks_started_steps_${userId}`, JSON.stringify([...next]))
       return next
     })
   }
