@@ -67,11 +67,14 @@ export default function LoginPage() {
             </div>
             {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
           </div>
+            <div className="text-right mt-1">
+              <Link href="/forgot-password" className="text-xs text-[#6B26EA] hover:underline">Forgot password?</Link>
+            </div>
           <button type="submit" disabled={loading} className="py-3 rounded-xl bg-[#6B26EA] text-white text-sm font-semibold hover:bg-[#5A1FD0] transition-colors mt-2 disabled:opacity-50">
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
-        <p className="text-center text-sm text-[#8B898E] mt-6">Don&apos;t have an account? <Link href="/signup" className="text-[#6B26EA] font-semibold hover:underline">Get Started</Link></p>
+        <p className="text-center text-sm text-[#8B898E] mt-4">Don&apos;t have an account? <Link href="/signup" className="text-[#6B26EA] font-semibold hover:underline">Get Started</Link></p>
       </div>
     </div>
   )
