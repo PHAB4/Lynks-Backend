@@ -35,7 +35,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fetchAPI('/profile')
+        const data = await fetchAPI<{ name?: string; email?: string; employment_status?: string; career_path?: string; interests?: string[] }>('/profile')
         if (data) {
           setProfile({
             name: data.name || '',
@@ -56,7 +56,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     try {
       // Save main profile fields
-      await fetchAPI('/profile', {
+      await fetchAPI<Record<string, unknown>>('/profile', {
         method: 'PATCH',
         body: JSON.stringify({
           name: profile.name,
@@ -65,7 +65,7 @@ export default function SettingsPage() {
         }),
       })
       // Save career path via dedicated endpoint (backend may not support it in main PATCH yet)
-      await fetchAPI('/profile/career-path', {
+      await fetchAPI<{ career_path: string }>('/profile/career-path', {
         method: 'PATCH',
         body: JSON.stringify({
           career_path: profile.careerPath,

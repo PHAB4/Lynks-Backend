@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Link, usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { notifications } from '@/lib/api'
 import { Home, Briefcase, MessageCircle, Map, FileText, Settings, Menu, X, Bell, BellDot } from 'lucide-react'

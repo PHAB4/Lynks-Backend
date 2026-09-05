@@ -62,11 +62,11 @@ export default function DashboardPage() {
         }
 
         if (opps.status === 'fulfilled') {
-          setRecentOpportunities(opps.value.opportunities?.slice(0, 3) || [])
+          setRecentOpportunities(opps.value?.slice(0, 3) || [])
         }
 
         if (notifications.status === 'fulfilled') {
-          setUnreadCount(notifications.value.unread_count || 0)
+          setUnreadCount(notifications.value.count || 0)
         }
 
         if (portfolio.status === 'fulfilled') {

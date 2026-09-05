@@ -37,6 +37,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return body as T
 }
 
+export async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
+  return request<T>(path, options)
+}
+
 export const profile = {
   get: () => request<User>('/profile'),
   update: (fields: Partial<Pick<User, 'name' | 'age' | 'country' | 'education_level' | 'employment_status' | 'interests'>>) =>

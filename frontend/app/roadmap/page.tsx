@@ -44,7 +44,7 @@ export default function RoadmapPage() {
     setError('')
     try {
       try {
-        const profile = await fetchAPI('/profile')
+        const profile = await fetchAPI<{ career_path?: string; education_level?: string; country?: string }>('/profile')
         const missing: string[] = []
         if (!profile.career_path) missing.push('career path')
         if (!profile.education_level) missing.push('education level')
