@@ -325,10 +325,11 @@ def run_tests():
             missing = [f for f in required if f not in data]
             if missing:
                 return False, f"response missing: {missing}"
+            reason = data.get('verification_reason') or 'N/A'
             return True, (
                 f"status={data['verification_status']}, "
-                f"confidence={data['verification_confidence']}, "
-                f"reason={data['verification_reason'][:50]}..."
+                f"confidence={data.get('verification_confidence', 'N/A')}, "
+                f"reason={reason[:50]}..."
             )
         return False, f"status={resp.status_code}: {resp.text[:200]}"
 
