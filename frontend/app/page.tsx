@@ -119,11 +119,9 @@ export default function LandingPage() {
         <nav className="nav-shadow flex items-center justify-between w-full max-w-[1200px] mx-auto px-5 py-4">
           <img src="/lynks-full-logo.png" alt="LYNKS" className="h-28 w-auto object-contain" />
           <div className="flex items-center gap-4">
-            <button>
-            <Link href= "/login" className="bg-[#E0E0E0] text-[#6B26EA] text-sm px-6 py-2 rounded-full hover:bg-[#D1D1D1] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
+            <Link href="/login" className="bg-[#E0E0E0] text-[#6B26EA] text-sm px-6 py-2 rounded-full hover:bg-[#D1D1D1] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
               Log in
-            </Link>  
-            </button>
+            </Link>
             <Link href="/signup" className="bg-[#6B26EA] text-white text-sm px-6 py-2 rounded-full hover:bg-[#5A1FD0] transition-colors" style={{ fontFamily: "'Google Sans Flex', sans-serif" }}>
               Sign up
             </Link>
