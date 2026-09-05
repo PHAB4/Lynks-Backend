@@ -135,23 +135,41 @@ export default function RoadmapPage() {
               )}
 
               {!loading && roadmap && !generating && (
-                <div className="relative w-full max-w-[540px]">
+                <div className="relative w-full max-w-[540px] mt-8">
                   <div className="relative">
-                    {sortedSteps.map((step, stepIndex) => {
-                      const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
-                      const totalCount = step.tasks?.length || 0
-                      const allComplete = totalCount > 0 && completedCount === totalCount
-                      const isActive = activeStep === step.step_id
-                      const isPast = allComplete
-                      const sortedTasks = step.tasks ? [...step.tasks].sort((a, b) => a.order - b.order) : []
-                      const isLeft = stepIndex % 2 === 0
-                      const marginLeft = isLeft ? '0%' : '25%'
-                      const marginRight = isLeft ? '25%' : '0%'
+                    {(() => {
+                      let globalIndex = 0
+                      return sortedSteps.map((step, stepIndex) => {
+                        const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
+                        const totalCount = step.tasks?.length || 0
+                        const allComplete = totalCount > 0 && completedCount === totalCount
+                        const isActive = activeStep === step.step_id
+                        const isPast = allComplete
+                        const sortedTasks = step.tasks ? [...step.tasks].sort((a, b) => a.order - b.order) : []
 
-                      return (
-                        <div key={step.step_id} className="relative">
-                          {/* Step node (big 3D ellipse) */}
-                          <div style={{ marginLeft, marginRight }} className="flex justify-center">
+                        const nodes: React.ReactNode[] = []
+
+                        // Step title ABOVE the node
+                        const stepGlobalIdx = globalIndex
+                        const stepIsLeft = stepGlobalIdx % 2 === 0
+                        const stepMarginLeft = stepIsLeft ? '0%' : '25%'
+                        const stepMarginRight = stepIsLeft ? '25%' : '0%'
+                        globalIndex++
+
+                        nodes.push(
+                          <div key={`step-title-${step.step_id}`} style={{ marginLeft: stepMarginLeft, marginRight: stepMarginRight }} className="flex justify-center mb-1.5">
+                            <span className={cn(
+                              'text-[12px] font-semibold text-center leading-tight',
+                              isActive ? 'text-[#6B26EA]' : isPast ? 'text-[#22C55E]' : 'text-[#8B898E]'
+                            )}>
+                              {step.title}
+                            </span>
+                          </div>
+                        )
+
+                        // Step node (big 3D ellipse)
+                        nodes.push(
+                          <div key={`step-node-${step.step_id}`} style={{ marginLeft: stepMarginLeft, marginRight: stepMarginRight }} className="flex justify-center mb-1">
                             <button
                               onClick={() => setActiveStep(step.step_id)}
                               className={cn(
@@ -176,96 +194,78 @@ export default function RoadmapPage() {
                               </span>
                             </button>
                           </div>
+                        )
 
-                          {/* Step title below */}
-                          <div style={{ marginLeft, marginRight }} className="flex justify-center mt-1 mb-2">
-                            <span className={cn(
-                              'text-[12px] font-semibold text-center leading-tight',
-                              isActive ? 'text-[#6B26EA]' : isPast ? 'text-[#22C55E]' : 'text-[#8B898E]'
-                            )}>
-                              {step.title}
-                            </span>
-                          </div>
+                        // Task nodes (smaller circles)
+                        sortedTasks.forEach((task, taskIndex) => {
+                          const taskDone = task.status === 'complete'
+                          const taskGlobalIdx = globalIndex
+                          const taskIsLeft = taskGlobalIdx % 2 === 0
+                          const taskMarginLeft = taskIsLeft ? '5%' : '20%'
+                          const taskMarginRight = taskIsLeft ? '20%' : '5%'
+                          globalIndex++
 
-                          {/* Task nodes (smaller circles with names) */}
-                          {sortedTasks.map((task, taskIndex) => {
-                            const taskDone = task.status === 'complete'
-                            // Alternate tasks opposite to step direction
-                            const taskIsLeft = !(stepIndex % 2 === 0)
-                            // If many tasks, alternate within the tasks too
-                            const taskAlign = taskIndex % 2 === 0
-                              ? (taskIsLeft ? 'ml-[8%] mr-auto' : 'mr-[8%] ml-auto')
-                              : (taskIsLeft ? 'ml-[18%] mr-auto' : 'mr-[18%] ml-auto')
+                          nodes.push(
+                            <div key={`task-${task.task_id}`} className="relative" style={{ marginBottom: taskIndex < sortedTasks.length - 1 ? '10px' : '0' }}>
+                              {/* Connector line from above */}
+                              <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '-10px', height: '10px' }}>
+                                <svg width="2" height="10" className="overflow-visible">
+                                  <line x1="1" y1="0" x2="1" y2="10" stroke={taskDone ? '#22C55E' : '#EDE3FF'} strokeWidth="1.5" strokeDasharray={taskDone ? 'none' : '3 3'} />
+                                </svg>
+                              </div>
 
-                            return (
-                              <div key={task.task_id} className="relative" style={{ marginBottom: taskIndex < sortedTasks.length - 1 ? '10px' : '0' }}>
-                                {/* Connector line from step/task above */}
-                                <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '-10px', height: '10px' }}>
-                                  <svg width="2" height="10" className="overflow-visible">
-                                    <line
-                                      x1="1" y1="0" x2="1" y2="10"
-                                      stroke={taskDone ? '#22C55E' : '#EDE3FF'}
-                                      strokeWidth="1.5"
-                                      strokeDasharray={taskDone ? 'none' : '3 3'}
-                                    />
-                                  </svg>
-                                </div>
-
-                                <div className={cn('flex items-center gap-3', taskAlign)}>
-                                  {/* Small task circle */}
-                                  <div
-                                    className="shrink-0 flex items-center justify-center rounded-full"
-                                    style={{
-                                      width: '46px',
-                                      height: '26px',
-                                      borderRadius: '50%',
-                                      background: taskDone
-                                        ? 'linear-gradient(180deg, #34D673 0%, #22C55E 100%)'
-                                        : 'linear-gradient(180deg, #C8B0FF 0%, #9B7AD8 100%)',
-                                      boxShadow: taskDone
-                                        ? '0 3px 0 #148A3D, 0 4px 8px rgba(34,197,94,0.25), inset 0 1px 0 rgba(255,255,255,0.3)'
-                                        : '0 3px 0 #7A5AB0, 0 4px 8px rgba(155,122,216,0.25), inset 0 1px 0 rgba(255,255,255,0.4)',
-                                    }}
-                                  >
-                                    {taskDone ? (
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </svg>
-                                    ) : (
-                                      <span className="text-white text-[10px] font-bold" style={{ textShadow: '0 1px 1px rgba(0,0,0,0.15)' }}>
-                                        ✓
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {/* Task name — full, never cut off */}
-                                  <span className={cn(
-                                    'text-[13px] font-medium leading-snug text-left',
-                                    taskDone ? 'text-[#22C55E]' : 'text-[#4A3572]'
-                                  )}>
+                              <div style={{ marginLeft: taskMarginLeft, marginRight: taskMarginRight }} className={cn('flex items-center gap-3', taskIsLeft ? 'justify-start' : 'justify-end')}>
+                                {!taskIsLeft && (
+                                  <span className={cn('text-[13px] font-medium leading-snug text-right', taskDone ? 'text-[#22C55E]' : 'text-[#4A3572]')}>
                                     {task.title}
                                   </span>
+                                )}
+                                <div
+                                  className="shrink-0 flex items-center justify-center rounded-full"
+                                  style={{
+                                    width: '46px',
+                                    height: '26px',
+                                    borderRadius: '50%',
+                                    background: taskDone
+                                      ? 'linear-gradient(180deg, #34D673 0%, #22C55E 100%)'
+                                      : 'linear-gradient(180deg, #C8B0FF 0%, #9B7AD8 100%)',
+                                    boxShadow: taskDone
+                                      ? '0 3px 0 #148A3D, 0 4px 8px rgba(34,197,94,0.25), inset 0 1px 0 rgba(255,255,255,0.3)'
+                                      : '0 3px 0 #7A5AB0, 0 4px 8px rgba(155,122,216,0.25), inset 0 1px 0 rgba(255,255,255,0.4)',
+                                  }}
+                                >
+                                  {taskDone ? (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  ) : (
+                                    <span className="text-white text-[10px] font-bold" style={{ textShadow: '0 1px 1px rgba(0,0,0,0.15)' }}>✓</span>
+                                  )}
                                 </div>
+                                {taskIsLeft && (
+                                  <span className={cn('text-[13px] font-medium leading-snug text-left', taskDone ? 'text-[#22C55E]' : 'text-[#4A3572]')}>
+                                    {task.title}
+                                  </span>
+                                )}
                               </div>
-                            )
-                          })}
+                            </div>
+                          )
+                        })
 
-                          {/* Connector line to next step */}
-                          {stepIndex < sortedSteps.length - 1 && (
-                            <div className="flex justify-center" style={{ marginTop: '10px', marginBottom: '10px' }}>
+                        // Connector line to next step
+                        if (stepIndex < sortedSteps.length - 1) {
+                          nodes.push(
+                            <div key={`connector-${step.step_id}`} className="flex justify-center" style={{ marginTop: '10px', marginBottom: '10px' }}>
                               <svg width="2" height="40" className="overflow-visible">
-                                <line
-                                  x1="1" y1="0" x2="1" y2="40"
-                                  stroke={isPast ? '#22C55E' : '#EDE3FF'}
-                                  strokeWidth="2"
-                                  strokeDasharray={isPast ? 'none' : '4 4'}
-                                />
+                                <line x1="1" y1="0" x2="1" y2="40" stroke={isPast ? '#22C55E' : '#EDE3FF'} strokeWidth="2" strokeDasharray={isPast ? 'none' : '4 4'} />
                               </svg>
                             </div>
-                          )}
-                        </div>
-                      )
-                    })}
+                          )
+                        }
+
+                        return nodes
+                      })
+                    })()}
                   </div>
                 </div>
               )}
