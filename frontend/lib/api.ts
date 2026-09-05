@@ -1,86 +1,135 @@
-import { supabase } from './supabase'
-import type { User, RoadmapResponse, EvidenceResponse, PortfolioEntry, Opportunity, ChatSendResponse, ChatConversation } from './types'
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? ''
-const BASE = BACKEND || '/api'
-export class LynksApiError extends Error {
-  code: string
-  constructor(code: string, message: string) {
-    super(message)
-    this.code = code
-  }
+import { supabase } from '@/lib/supabase'
+
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
+const BASE = BACKEND
+
+interface ApiOptions {
+  method?: string
+  body?: unknown
+  headers?: Record<string, string>
 }
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: {
-      ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  })
-  const body = await res.json().catch(() => ({}))
+
+function headers(auth?: string): HeadersInit {
+  const h: HeadersInit = { 'Content-Type': 'application/json' }
+  if (auth) h['Authorization'] = `Bearer ${auth}`
+  return h
+}
+
+async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, opts)
   if (!res.ok) {
-    const detail = body.detail
-    const errObj = detail?.error
-    const msg = errObj?.message ?? detail?.message ?? detail ?? `Request failed (${res.status})`
-    const code = errObj?.code ?? 'unknown'
-    throw new LynksApiError(code, msg)
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? body.error ?? `Request failed (${res.status})`)
   }
-  return body as T
+  return res.json()
 }
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) {
+    throw new Error('Not authenticated')
+  }
+  return {
+    Authorization: `Bearer ${session.access_token}`,
+    'Content-Type': 'application/json',
+  }
+}
+
+async function refreshTokenIfNeeded(): Promise<string | null> {
+  const { data, error } = await supabase.auth.refreshSession()
+  if (error || !data.session?.access_token) return null
+  return data.session.access_token
+}
+
+export async function fetchAPI<T = unknown>(
+  path: string,
+  options: ApiOptions = {},
+): Promise<T> {
+  const authHeaders = await getAuthHeaders()
+  const url = `${BASE}${path}`
+
+  const doFetch = async (token?: string) => {
+    const reqHeaders: Record<string, string> = {
+      ...authHeaders,
+      ...options.headers,
+    }
+    if (token) reqHeaders.Authorization = `Bearer ${token}`
+    return fetch(url, {
+      method: options.method || 'GET',
+      headers: reqHeaders,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    })
+  }
+
+  let res = await doFetch()
+
+  if (res.status === 401) {
+    const newToken = await refreshTokenIfNeeded()
+    if (newToken) {
+      res = await doFetch(newToken)
+    }
+  }
+
+  if (!res.ok) {
+    let errorDetail = ''
+    try {
+      const errBody = await res.json()
+      errorDetail =
+        errBody?.detail?.error?.message ||
+        errBody?.detail?.message ||
+        (typeof errBody?.detail === 'string' ? errBody.detail : '') ||
+        res.statusText
+    } catch {
+      errorDetail = res.statusText
+    }
+    throw new Error(errorDetail || `Request failed (${res.status})`)
+  }
+
+  return res.json()
+}
+
 export const profile = {
-  get: () => request<User>('/profile'),
-  update: (fields: Partial<Pick<User, 'name' | 'age' | 'country' | 'education_level' | 'employment_status' | 'interests'>>) =>
-    request<User>('/profile', { method: 'PATCH', body: JSON.stringify(fields) }),
-  setCareerPath: (careerPath: string) =>
-    request<{ career_path: string }>('/profile/career-path', { method: 'PATCH', body: JSON.stringify({ career_path: careerPath }) }),
+  get: (auth: string) => request<any>('/profile', { headers: headers(auth) }),
+  update: (auth: string, data: Record<string, any>) =>
+    request<any>('/profile', { method: 'PATCH', headers: headers(auth), body: JSON.stringify(data) }),
+  setCareerPath: (auth: string, career_path: string) =>
+    request<any>('/profile/career-path', { method: 'PATCH', headers: headers(auth), body: JSON.stringify({ career_path }) }),
 }
 export const roadmap = {
-  get: () => request<RoadmapResponse>('/roadmap'),
-  generate: () => request<RoadmapResponse>('/roadmap/generate', { method: 'POST' }),
-  regenerate: () => request<RoadmapResponse>('/roadmap/regenerate', { method: 'POST' }),
+  get: (auth: string) => request<any>('/roadmap', { headers: headers(auth) }),
+  generate: (auth: string) => request<any>('/roadmap/generate', { method: 'POST', headers: headers(auth) }),
+  regenerate: (auth: string) => request<any>('/roadmap/regenerate', { method: 'POST', headers: headers(auth) }),
 }
-export const evidence = {
-  upload: async (taskId: string, file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
-    const res = await fetch(`${BASE}/tasks/${taskId}/evidence`, {
-      method: 'POST',
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: formData,
-    })
-    const body = await res.json().catch(() => ({}))
-    if (!res.ok) throw new LynksApiError('upload_failed', body.detail ?? 'Upload failed')
-    return body as EvidenceResponse
+export const tasks = {
+  uploadEvidence: (auth: string, taskId: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<any>(`/tasks/${taskId}/evidence`, { method: 'POST', headers: { Authorization: `Bearer ${auth}` }, body: form })
   },
-}
-export const portfolio = {
-  get: () => request<PortfolioEntry[]>('/portfolio'),
 }
 export const opportunities = {
-  list: (filters?: { category?: string }) => {
-    const params = new URLSearchParams()
-    if (filters?.category) params.set('category', filters.category)
-    const qs = params.toString()
-    return request<Opportunity[]>(`/opportunities${qs ? `?${qs}` : ''}`)
-  },
+  list: (auth: string) => request<any>('/opportunities', { headers: headers(auth) }),
+  saved: (auth: string) => request<any>('/opportunities/saved', { headers: headers(auth) }),
+  refresh: (auth: string) => request<any>('/opportunities/refresh', { method: 'POST', headers: headers(auth) }),
+  newCount: (auth: string) => request<any>('/opportunities/new-count', { headers: headers(auth) }),
+  save: (auth: string, id: string) => request<any>(`/opportunities/${id}/save`, { method: 'POST', headers: headers(auth) }),
+  unsave: (auth: string, id: string) => request<any>(`/opportunities/${id}/save`, { method: 'DELETE', headers: headers(auth) }),
+}
+export const resume = {
+  get: (auth: string) => request<any>('/resume', { headers: headers(auth) }),
+  generate: (auth: string) => request<any>('/resume/generate', { method: 'POST', headers: headers(auth) }),
 }
 export const chat = {
-  send: (message: string, conversationId?: string) =>
-    request<ChatSendResponse>('/chat/message', {
-      method: 'POST',
-      body: JSON.stringify({ conversation_id: conversationId, message }),
-    }),
-  history: (conversationId?: string) => {
-    const qs = conversationId ? `?conversation_id=${conversationId}` : ''
-    return request<ChatConversation>(`/chat/history${qs}`)
-  },
-  clear: () => request<{ success: boolean }>('/chat/history', { method: 'DELETE' }),
+  send: (auth: string, conversation_id: string | null, message: string) =>
+    request<any>('/chat/message', { method: 'POST', headers: headers(auth), body: JSON.stringify({ conversation_id, message }) }),
+  history: (auth: string) => request<any>('/chat/history', { headers: headers(auth) }),
+  deleteHistory: (auth: string) => request<any>('/chat/history', { method: 'DELETE', headers: headers(auth) }),
+  conversations: (auth: string) => request<any>('/chat/conversations', { headers: headers(auth) }),
+  getConversation: (auth: string, id: string) => request<any>(`/chat/conversations/${id}`, { headers: headers(auth) }),
 }
-export const health = {
-  check: () => request<{ status: string }>('/health'),
+export const memory = {
+  list: (auth: string) => request<any>('/memory', { headers: headers(auth) }),
+  add: (auth: string, content: string) => request<any>('/memory', { method: 'POST', headers: headers(auth), body: JSON.stringify({ content }) }),
+  update: (auth: string, id: string, content: string) => request<any>(`/memory/${id}`, { method: 'PATCH', headers: headers(auth), body: JSON.stringify({ content }) }),
+  delete: (auth: string, id: string) => request<any>(`/memory/${id}`, { method: 'DELETE', headers: headers(auth) }),
 }
