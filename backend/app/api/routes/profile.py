@@ -18,6 +18,7 @@ class ProfileUpdate(BaseModel):
     country: Optional[str] = None
     education_level: Optional[str] = None
     employment_status: Optional[str] = None
+    career_path: Optional[str] = None
     interests: Optional[list[str]] = None
 
 
