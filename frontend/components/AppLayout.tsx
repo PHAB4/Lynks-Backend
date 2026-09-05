@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
+import { profile } from '@/lib/api'
 import { useAuthGate } from '@/lib/use-auth'
 import {
   listConversations,
@@ -97,8 +98,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string; email?: string } } | null) => {
       if (session?.user) {
         try {
-          const { data } = await supabase.from('users').select('name').eq('id', session.user.id).single()
-          const name = data?.name || session.user.email?.split('@')[0] || 'User'
+          const userData = await profile.get()
+          const name = userData.name || session.user.email?.split('@')[0] || 'User'
           setUserName(name)
           localStorage.setItem('lynks_user', JSON.stringify({ name }))
         } catch {
