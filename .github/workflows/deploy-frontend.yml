@@ -33,7 +33,7 @@ jobs:
         if: env.FIREBASE_SA_JSON != ''
         run: echo "$FIREBASE_SA_JSON" > /tmp/firebase-key.json
         env:
-          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_LYNKS_GEN_AI }}
 
       - name: Deploy to Firebase
         run: npx firebase-tools deploy --only hosting
