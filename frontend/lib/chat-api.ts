@@ -1,9 +1,9 @@
 import { fetchAPI } from '@/lib/api'
 
 export interface ChatMessage {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system'
   content: string
-  tool_calls?: { calls: string[] } | null
+  tool_calls?: string[] | null
   created_at?: string
 }
 
@@ -15,35 +15,26 @@ export interface ConversationItem {
   created_at: string
 }
 
-export interface SendMessageResponse {
-  conversation_id: string
-  response: string
-  tool_calls?: string[]
-  summary_updated?: boolean
-}
-
-export async function sendMessage(message: string, conversationId?: string): Promise<SendMessageResponse> {
+export async function sendMessage(message: string, conversationId?: string) {
   return fetchAPI('/chat/message', {
     method: 'POST',
-    body: { message, conversation_id: conversationId || null },
+    body: JSON.stringify({ message, conversation_id: conversationId }),
   })
 }
 
-export async function listConversations(): Promise<{ conversations: ConversationItem[] }> {
+export async function listConversations() {
   return fetchAPI('/chat/conversations')
 }
 
-export async function getConversationMessages(
-  conversationId: string,
-): Promise<{ conversation_id: string; summary: string | null; messages: ChatMessage[] }> {
+export async function getConversationMessages(conversationId: string) {
   return fetchAPI(`/chat/conversations/${conversationId}`)
 }
 
-export async function getChatHistory(conversationId?: string): Promise<{ conversation_id: string; messages: ChatMessage[] }> {
+export async function getChatHistory(conversationId?: string) {
   const params = conversationId ? `?conversation_id=${conversationId}` : ''
   return fetchAPI(`/chat/history${params}`)
 }
 
-export async function deleteChatHistory(): Promise<{ success: boolean }> {
+export async function deleteChatHistory() {
   return fetchAPI('/chat/history', { method: 'DELETE' })
 }
