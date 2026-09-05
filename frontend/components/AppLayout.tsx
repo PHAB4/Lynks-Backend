@@ -73,10 +73,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string; email?: string } } | null) => {
       if (session?.user) {
-        const { data } = await supabase.from('users').select('name').eq('id', session.user.id).single()
-        const name = data?.name || session.user.email?.split('@')[0] || 'User'
-        setUserName(name)
-        localStorage.setItem('lynks_user', JSON.stringify({ name }))
+        try {
+          const { data } = await supabase.from('users').select('name').eq('id', session.user.id).single()
+          const name = data?.name || session.user.email?.split('@')[0] || 'User'
+          setUserName(name)
+          localStorage.setItem('lynks_user', JSON.stringify({ name }))
+        } catch {
+          const fallback = session.user.email?.split('@')[0] || 'User'
+          setUserName(fallback)
+          localStorage.setItem('lynks_user', JSON.stringify({ name: fallback }))
+        }
       } else if (event === 'SIGNED_OUT') {
         setUserName('User')
         localStorage.removeItem('lynks_user')

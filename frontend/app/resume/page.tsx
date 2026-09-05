@@ -4,10 +4,8 @@ import { useState, useEffect } from 'react'
 import { FileText } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
-import { useAuthGate } from '@/lib/use-auth'
 
 export default function ResumePage() {
-  const authChecked = useAuthGate()
   const [user, setUser] = useState({ name: '', email: '', education: '', interests: [] as string[] })
 
   useEffect(() => {
@@ -27,16 +25,6 @@ export default function ResumePage() {
     }
     load()
   }, [])
-
-  if (!authChecked) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-screen bg-[#F7F3FE]">
-          <div className="w-8 h-8 border-2 border-[#6B26EA] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </AppLayout>
-    )
-  }
 
   return (
     <AppLayout>

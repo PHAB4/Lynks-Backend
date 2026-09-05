@@ -5,10 +5,8 @@ import { Map, Loader2, RefreshCw, CheckCircle2, Circle, Sparkles, ChevronDown, C
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getRoadmap, generateRoadmap, regenerateRoadmap, type Roadmap, type RoadmapStep } from '@/lib/roadmap-api'
-import { useAuthGate } from '@/lib/use-auth'
 
 export default function RoadmapPage() {
-  const authChecked = useAuthGate()
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -85,16 +83,6 @@ export default function RoadmapPage() {
   const completedTasks = allTasks.filter((t) => t.status === 'complete').length
   const totalTasks = allTasks.length
   const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-
-  if (!authChecked) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-screen bg-[#F7F3FE]">
-          <div className="w-8 h-8 border-2 border-[#6B26EA] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </AppLayout>
-    )
-  }
 
   return (
     <AppLayout>
