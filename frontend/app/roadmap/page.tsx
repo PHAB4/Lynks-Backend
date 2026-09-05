@@ -135,40 +135,23 @@ export default function RoadmapPage() {
               )}
 
               {!loading && roadmap && !generating && (
-                <div className="relative w-full max-w-[500px]">
+                <div className="relative w-full max-w-[540px]">
                   <div className="relative">
-                    {sortedSteps.map((step, index) => {
+                    {sortedSteps.map((step, stepIndex) => {
                       const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
                       const totalCount = step.tasks?.length || 0
                       const allComplete = totalCount > 0 && completedCount === totalCount
                       const isActive = activeStep === step.step_id
                       const isPast = allComplete
-
-                      // Alternate left/right positioning for winding effect
-                      const isLeft = index % 2 === 0
+                      const sortedTasks = step.tasks ? [...step.tasks].sort((a, b) => a.order - b.order) : []
+                      const isLeft = stepIndex % 2 === 0
                       const marginLeft = isLeft ? '0%' : '25%'
                       const marginRight = isLeft ? '25%' : '0%'
 
                       return (
-                        <div key={step.step_id} className="relative" style={{ marginBottom: index < sortedSteps.length - 1 ? '16px' : '0' }}>
-                          {/* Connection line to next step */}
-                          {index < sortedSteps.length - 1 && (
-                            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '40px', height: '32px' }}>
-                              <svg width="2" height="32" className="overflow-visible">
-                                <line
-                                  x1="1" y1="0" x2="1" y2="32"
-                                  stroke={isPast ? '#22C55E' : '#EDE3FF'}
-                                  strokeWidth="2"
-                                  strokeDasharray={isPast ? 'none' : '4 4'}
-                                />
-                              </svg>
-                            </div>
-                          )}
-
-                          <div
-                            style={{ marginLeft, marginRight }}
-                            className="flex justify-center"
-                          >
+                        <div key={step.step_id} className="relative">
+                          {/* Step node (big 3D ellipse) */}
+                          <div style={{ marginLeft, marginRight }} className="flex justify-center">
                             <button
                               onClick={() => setActiveStep(step.step_id)}
                               className={cn(
@@ -189,23 +172,97 @@ export default function RoadmapPage() {
                               }}
                             >
                               <span className="text-white text-[14px] font-bold drop-shadow-sm" style={{ fontFamily: "'Inter', sans-serif", textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-                                {index + 1}
+                                {stepIndex + 1}
                               </span>
                             </button>
                           </div>
 
-                          {/* Step label below */}
-                          <div
-                            style={{ marginLeft, marginRight }}
-                            className="flex justify-center mt-1"
-                          >
+                          {/* Step title below */}
+                          <div style={{ marginLeft, marginRight }} className="flex justify-center mt-1 mb-2">
                             <span className={cn(
-                              'text-[11px] font-medium text-center leading-tight',
+                              'text-[12px] font-semibold text-center leading-tight',
                               isActive ? 'text-[#6B26EA]' : isPast ? 'text-[#22C55E]' : 'text-[#8B898E]'
                             )}>
                               {step.title}
                             </span>
                           </div>
+
+                          {/* Task nodes (smaller circles with names) */}
+                          {sortedTasks.map((task, taskIndex) => {
+                            const taskDone = task.status === 'complete'
+                            // Alternate tasks opposite to step direction
+                            const taskIsLeft = !(stepIndex % 2 === 0)
+                            // If many tasks, alternate within the tasks too
+                            const taskAlign = taskIndex % 2 === 0
+                              ? (taskIsLeft ? 'ml-[8%] mr-auto' : 'mr-[8%] ml-auto')
+                              : (taskIsLeft ? 'ml-[18%] mr-auto' : 'mr-[18%] ml-auto')
+
+                            return (
+                              <div key={task.task_id} className="relative" style={{ marginBottom: taskIndex < sortedTasks.length - 1 ? '10px' : '0' }}>
+                                {/* Connector line from step/task above */}
+                                <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '-10px', height: '10px' }}>
+                                  <svg width="2" height="10" className="overflow-visible">
+                                    <line
+                                      x1="1" y1="0" x2="1" y2="10"
+                                      stroke={taskDone ? '#22C55E' : '#EDE3FF'}
+                                      strokeWidth="1.5"
+                                      strokeDasharray={taskDone ? 'none' : '3 3'}
+                                    />
+                                  </svg>
+                                </div>
+
+                                <div className={cn('flex items-center gap-3', taskAlign)}>
+                                  {/* Small task circle */}
+                                  <div
+                                    className="shrink-0 flex items-center justify-center rounded-full"
+                                    style={{
+                                      width: '46px',
+                                      height: '26px',
+                                      borderRadius: '50%',
+                                      background: taskDone
+                                        ? 'linear-gradient(180deg, #34D673 0%, #22C55E 100%)'
+                                        : 'linear-gradient(180deg, #C8B0FF 0%, #9B7AD8 100%)',
+                                      boxShadow: taskDone
+                                        ? '0 3px 0 #148A3D, 0 4px 8px rgba(34,197,94,0.25), inset 0 1px 0 rgba(255,255,255,0.3)'
+                                        : '0 3px 0 #7A5AB0, 0 4px 8px rgba(155,122,216,0.25), inset 0 1px 0 rgba(255,255,255,0.4)',
+                                    }}
+                                  >
+                                    {taskDone ? (
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                    ) : (
+                                      <span className="text-white text-[10px] font-bold" style={{ textShadow: '0 1px 1px rgba(0,0,0,0.15)' }}>
+                                        ✓
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Task name — full, never cut off */}
+                                  <span className={cn(
+                                    'text-[13px] font-medium leading-snug text-left',
+                                    taskDone ? 'text-[#22C55E]' : 'text-[#4A3572]'
+                                  )}>
+                                    {task.title}
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          })}
+
+                          {/* Connector line to next step */}
+                          {stepIndex < sortedSteps.length - 1 && (
+                            <div className="flex justify-center" style={{ marginTop: '10px', marginBottom: '10px' }}>
+                              <svg width="2" height="40" className="overflow-visible">
+                                <line
+                                  x1="1" y1="0" x2="1" y2="40"
+                                  stroke={isPast ? '#22C55E' : '#EDE3FF'}
+                                  strokeWidth="2"
+                                  strokeDasharray={isPast ? 'none' : '4 4'}
+                                />
+                              </svg>
+                            </div>
+                          )}
                         </div>
                       )
                     })}
