@@ -22,13 +22,13 @@
 
 | Page | Backend Connected? | Current State |
 |---|---|---|
-| **`/dashboard`** | ⚠️ **Backend ready** | `GET /dashboard/summary` endpoint live. Frontend team needs to replace hardcoded data with API call. |
-| **`/roadmap`** | ❌ **NOT connected** | Placeholder page — just shows "Your roadmap will appear here." Backend endpoints exist but no frontend integration. |
-| **`/opportunities`** | ❌ **NOT connected** | Hardcoded `CAREER_JOBS` and `GENERAL_OPPORTUNITIES` arrays. Backend endpoints exist but no frontend integration. |
-| **`/resume`** | ❌ Likely not connected | Needs verification. |
-| **`/settings`** | ❌ Likely not connected | Needs verification. |
-| **`/chat`** | ✅ **Connected** | Just integrated — calls backend API for messages, conversations, send/receive. |
-| **`/onboarding`** | ⚠️ Partial | Writes to Supabase directly via client SDK, not through backend. |
+| **`/dashboard`** | ✅ **Connected** | Calls backend via 5 separate API calls (`getProfile`, `getRoadmap`, `getOpportunities`, `getUnreadNotificationCount`, `getPortfolio`). Does NOT use the `GET /dashboard/summary` aggregation endpoint yet — could be consolidated into 1 call. |
+| **`/roadmap`** | ✅ **Connected** | Uses `roadmap-api.ts` — fetches roadmap, generates, regenerates. Task completion wired. |
+| **`/opportunities`** | ❌ **NOT connected** | Still uses hardcoded `CAREER_JOBS` and `GENERAL_OPPORTUNITIES` arrays. Backend endpoints exist but no frontend integration. |
+| **`/resume`** | ❌ **NOT connected** | Reads profile from Supabase directly (`supabase.from('users')`), not through backend API. No resume generation. |
+| **`/settings`** | ❌ **NOT connected** | Reads and writes profile via Supabase client SDK (`supabase.from('users').update(...)`) — bypasses backend `PATCH /profile` entirely. |
+| **`/chat`** | ✅ **Connected** | Calls backend API for messages, conversations, send/receive. |
+| **`/onboarding`** | ⚠️ **Partial** | Writes to Supabase directly via client SDK, not through backend. Backend `PATCH /profile` not called. |
 
 ---
 
@@ -57,29 +57,29 @@ The onboarding flow writes directly to Supabase client-side (`supabase.from('use
 
 ## Missing Frontend Integrations (endpoints exist, but UI uses hardcoded data)
 
-### 1. `/dashboard` — Backend endpoint ready, needs frontend wiring ✅
+### 1. `/dashboard` — ✅ Frontend Connected (could consolidate to /summary)
 ```
 Backend:
   - GET /dashboard/summary ✅ (live on main)
   - Returns: profile, roadmap progress, opportunities (count + top 3), notifications (count + top 3), onboarding checklist
 
-Frontend needs:
-  - Replace HARDCODED RECENT_OPPORTUNITIES with API data
-  - Replace HARDCODED DASHBOARD_STATS with computed roadmap data
-  - Single fetch('/api/dashboard/summary') call replaces 4-5 separate calls
+Frontend (current):
+  - ✅ Calls getProfile(), getRoadmap(), getOpportunities(), getUnreadNotificationCount(), getPortfolio()
+  - ✅ No more hardcoded data — all dynamic content from backend API
+  - ⚠️ Makes 5 separate API calls instead of 1 call to GET /dashboard/summary
+  - Optional improvement: consolidate to single /dashboard/summary call
 ```
 
-### 2. `/roadmap` — Needs full integration
+### 2. `/roadmap` — ✅ Frontend Connected
 ```
-Currently:
-  - Placeholder text: "Your personalized career roadmap will appear here"
+Backend:
+  - GET /roadmap, POST /roadmap/generate, POST /roadmap/regenerate
+  - PATCH /roadmap/tasks/{task_id}/complete, PATCH /roadmap/tasks/{task_id}
 
-Needs:
-  - GET /roadmap (fetch active roadmap with steps + tasks)
-  - PATCH /roadmap/tasks/{task_id}/complete (mark task done from UI)
-  - PATCH /roadmap/tasks/{task_id} (edit task title, description, status)
-  - Progress tracking UI (step cards, task checkboxes, completion %)
-  - POST /roadmap/regenerate (regenerate roadmap button)
+Frontend (current):
+  - ✅ Uses roadmap-api.ts — fetches roadmap, generates, regenerates
+  - ✅ Task completion wired via PATCH /roadmap/tasks/{task_id}/complete
+  - ✅ Step cards, task checkboxes, progress tracking all functional
 ```
 
 ### 3. `/opportunities` — Needs real data
@@ -97,20 +97,30 @@ Needs:
   - POST /opportunities/refresh (manual refresh button)
 ```
 
-### 4. `/resume` — Needs verification
+### 4. `/resume` — ❌ NOT connected
 ```
+Currently:
+  - Reads profile from Supabase directly (supabase.from('users'))
+  - Does NOT call backend API for resume data or generation
+
 Needs:
-  - GET /resume (fetch existing resume)
-  - POST /resume/generate (generate new resume from profile)
+  - GET /resume (fetch existing resume from backend)
+  - POST /resume/generate (generate resume from profile via backend)
   - Display/download generated resume
 ```
 
-### 5. `/settings` — Needs verification
+### 5. `/settings` — ❌ NOT connected (bypasses backend)
 ```
+Currently:
+  - Reads profile via supabase.from('users').select('*')
+  - Writes profile via supabase.from('users').update({...})
+  - Completely bypasses backend PATCH /profile endpoint
+
 Needs:
-  - GET /profile (display current settings)
-  - PATCH /profile (update settings)
-  - PATCH /profile/career-path (change career direction)
+  - Replace Supabase client calls with backend API:
+    - GET /profile (display current settings)
+    - PATCH /profile (update settings)
+    - PATCH /profile/career-path (change career direction)
 ```
 
 ---
@@ -119,12 +129,14 @@ Needs:
 
 | Priority | Gap | Effort |
 |---|---|---|
-| ✅ Done | Dashboard aggregation endpoint | `GET /dashboard/summary` live — frontend needs wiring |
+| ✅ Done | Dashboard aggregation endpoint | `GET /dashboard/summary` live — frontend uses 5 separate calls, could consolidate |
 | ✅ Done | Task completion via REST | `PATCH /roadmap/tasks/{task_id}/complete` live |
 | ✅ Done | Task status update | `PATCH /roadmap/tasks/{task_id}` live — supports title, description, status |
-| 🔴 High | Roadmap page is a placeholder, needs full UI + task completion endpoint | Large — full page build |
-| 🔴 High | Opportunities page uses hardcoded data, needs real API integration | Medium — endpoints exist, just need frontend wiring |
-| 🟡 Medium | Onboarding writes to Supabase directly, bypassing backend | Medium — reroute to `PATCH /profile` |
-| 🟡 Medium | Settings page likely not connected to backend | Small — wire to existing profile endpoints |
-| 🟢 Low | No scheduled opportunity scraping (manual trigger only) | Small — add a cron/scheduled task |
-| 🟢 Low | Resume page needs verification | Small — check and wire existing endpoints |
+| ✅ Done | Dashboard frontend connected | Uses `dashboard-api.ts` — calls backend for profile, roadmap, opportunities, notifications, portfolio |
+| ✅ Done | Roadmap frontend connected | Uses `roadmap-api.ts` — generates, regenerates, completes tasks |
+| 🔴 High | Opportunities page uses hardcoded data | Needs `GET /opportunities` + save/unsave/refresh wired |
+| 🟡 Medium | Settings bypasses backend | Uses `supabase.from('users')` directly — needs `PATCH /profile` |
+| 🟡 Medium | Resume not connected | Uses Supabase directly — needs backend API + generation |
+| 🟡 Medium | Onboarding bypasses backend | Writes to Supabase directly — needs `PATCH /profile` |
+| 🟢 Low | No scheduled opportunity scraping | Manual trigger only — add cron for auto-refresh |
+| 🟢 Low | Dashboard could use /summary endpoint | Currently 5 API calls — could be 1 call to `GET /dashboard/summary` |

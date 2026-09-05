@@ -72,7 +72,7 @@ opportunities (standalone)
 | step_id | uuid | NO | gen_random_uuid() | FK → steps.id |
 | title | text | NO | null | Task name |
 | description | text | NO | null | What to do and why |
-| status | text | NO | null | "pending" or "complete" |
+| status | text | NO | null | "pending", "in_progress", or "complete" |
 | order | integer | YES | 0 | 1-based position in step |
 | completed_at | timestamptz | YES | null | When marked complete |
 | created_at | timestamptz | NO | now() | |
