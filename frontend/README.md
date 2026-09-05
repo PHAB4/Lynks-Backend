@@ -69,3 +69,4 @@ frontend/
 - Call the API via `fetch()` using `NEXT_PUBLIC_API_URL`
 - Use shadcn/ui components and Tailwind CSS
 - Use `lucide-react` for icons
+
