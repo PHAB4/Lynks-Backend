@@ -477,8 +477,13 @@ async def test_upload_continues_when_verification_fails(mock_save, mock_upload, 
 
     mock_verify.side_effect = RuntimeError("Gemini is down")
 
-    # Build a fake UploadFile
-    file = UploadFile(filename="cert.jpg", file=BytesIO(b"fake-image-data"), content_type="image/jpeg")
+    # Build a fake UploadFile — content_type is read from headers in this Starlette version
+    from starlette.datastructures import Headers
+    file = UploadFile(
+        filename="cert.jpg",
+        file=BytesIO(b"fake-image-data"),
+        headers=Headers({"content-type": "image/jpeg"}),
+    )
 
     db = AsyncMock()
     user_id = "user-1"
