@@ -30,6 +30,7 @@ export default function SettingsPage() {
     avatarUrl: '',
   })
   const [interests, setInterests] = useState<string[]>([])
+  const [newInterest, setNewInterest] = useState('')
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'security'>('profile')
@@ -357,42 +358,100 @@ export default function SettingsPage() {
                       />
                     </div>
 
-                    <div className="mb-8">
+                    <div>
                       <div className="mb-3">
                         <p className="text-sm font-semibold text-[rgba(30,30,30,0.80)] mb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-                          Career of interest
-                      </p>
-                      <p className="text-[13px] text-[rgba(30,30,30,0.40)]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                        These tags help Lynk suggest tailored mentorships, tasks, and
-                        opportunities in your backyard.
-                      </p>
+                          Career Interests
+                        </p>
+                        <p className="text-[13px] text-[rgba(30,30,30,0.40)]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                          These tags help Lynk suggest tailored mentorships, tasks, and
+                          opportunities in your backyard.
+                        </p>
+                      </div>
+
+                      {interests.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {interests.map((interest) => (
+                            <span
+                              key={interest}
+                              className="flex items-center gap-1.5 py-1.5 px-3 rounded-full bg-[#EDE3FF] text-[#6B26EA] text-[13px] font-medium"
+                              style={{ fontFamily: "'Inter', sans-serif" }}
+                            >
+                              {interest}
+                              <button
+                                onClick={() => toggleInterest(interest)}
+                                className="w-4 h-4 rounded-full bg-[#6B26EA] text-white flex items-center justify-center hover:bg-[#5A1FD0] transition-colors"
+                              >
+                                <X size={10} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 mb-4">
+                        <input
+                          type="text"
+                          value={newInterest}
+                          onChange={(e) => setNewInterest(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              if (newInterest.trim() && !interests.includes(newInterest.trim())) {
+                                setInterests(prev => [...prev, newInterest.trim()])
+                                setNewInterest('')
+                              }
+                            }
+                          }}
+                          placeholder="Add a custom interest..."
+                          className="flex-1 py-2.5 px-4 rounded-[10px] border border-[rgba(0,0,0,0.20)] bg-[rgba(215,212,212,0.10)] text-[14px] text-[#1E1E1E] focus:outline-none focus:border-[#6B26EA] transition-colors"
+                          style={{ fontFamily: "'Inter', sans-serif" }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (newInterest.trim() && !interests.includes(newInterest.trim())) {
+                              setInterests(prev => [...prev, newInterest.trim()])
+                              setNewInterest('')
+                            }
+                          }}
+                          disabled={!newInterest.trim() || interests.includes(newInterest.trim())}
+                          className="py-2.5 px-4 rounded-[10px] bg-[#6B26EA] text-white text-[13px] font-semibold hover:bg-[#5A1FD0] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Add
+                        </button>
+                      </div>
+
+                      <div>
+                        <p className="text-[12px] text-[rgba(30,30,30,0.40)] mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+                          Suggested interests
+                        </p>
+                        <div className="flex flex-wrap gap-2.5">
+                          {CAREER_INTERESTS.map((interest) => {
+                            const isActive = interests.includes(interest)
+                            return (
+                              <button
+                                key={interest}
+                                onClick={() => toggleInterest(interest)}
+                                className={cn(
+                                  'flex items-center gap-2 py-2 px-4 rounded-[20px] text-[13px] font-medium transition-all',
+                                  isActive
+                                    ? 'bg-[#EDE3FF] text-[#6B26EA]'
+                                    : 'bg-[rgba(30,30,30,0.04)] text-[rgba(30,30,30,0.60)] hover:bg-[#EDE3FF] hover:text-[#6B26EA]'
+                                )}
+                                style={{ fontFamily: "'Inter', sans-serif" }}
+                              >
+                                {interest}
+                                {isActive ? (
+                                  <Check size={14} className="text-[#6B26EA]" />
+                                ) : (
+                                  <Plus size={14} />
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2.5">
-                      {CAREER_INTERESTS.map((interest) => {
-                        const isActive = interests.includes(interest)
-                        return (
-                          <button
-                            key={interest}
-                            onClick={() => toggleInterest(interest)}
-                            className={cn(
-                              'flex items-center gap-2 py-2 px-4 rounded-[20px] text-[13px] font-medium transition-all',
-                              isActive
-                                ? 'bg-[#EDE3FF] text-[#6B26EA]'
-                                : 'bg-[rgba(30,30,30,0.04)] text-[rgba(30,30,30,0.60)] hover:bg-[#EDE3FF] hover:text-[#6B26EA]'
-                            )}
-                            style={{ fontFamily: "'Inter', sans-serif" }}
-                          >
-                            {interest}
-                            {isActive ? (
-                              <X size={14} className="text-[#6B26EA]" />
-                            ) : (
-                              <Plus size={14} />
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
 
                   <div className="h-px bg-[rgba(30,30,30,0.07)] mb-6" />
                   <div className="flex justify-end gap-3">
