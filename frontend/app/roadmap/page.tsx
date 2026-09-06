@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Map, Loader2, Sparkles } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Map, Loader2, Sparkles, ChevronRight, Check, Circle } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getRoadmap, generateRoadmap, type Roadmap } from '@/lib/roadmap-api'
@@ -16,6 +16,8 @@ export default function RoadmapPage() {
   const [activeStep, setActiveStep] = useState<string | null>(null)
   const [startedSteps, setStartedSteps] = useState<Set<string>>(new Set())
   const [userId, setUserId] = useState<string | null>(null)
+  const [tasksPanelOpen, setTasksPanelOpen] = useState(true)
+  const stepsPanelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -49,6 +51,15 @@ export default function RoadmapPage() {
       setActiveStep(inProgress?.step_id || sorted[0].step_id)
     }
   }, [roadmap, activeStep])
+
+  useEffect(() => {
+    if (activeStep && stepsPanelRef.current) {
+      const activeEl = stepsPanelRef.current.querySelector(`[data-step-id="${activeStep}"]`)
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }
+  }, [activeStep])
 
   const loadRoadmap = async () => {
     setLoading(true)
@@ -95,6 +106,9 @@ export default function RoadmapPage() {
   }
 
   const sortedSteps = roadmap?.steps ? [...roadmap.steps].sort((a, b) => a.order - b.order) : []
+
+  const totalTasks = sortedSteps.reduce((sum, s) => sum + (s.tasks?.length || 0), 0)
+  const totalDone = sortedSteps.reduce((sum, s) => sum + (s.tasks?.filter(t => t.status === 'complete').length || 0), 0)
 
   return (
     <AppLayout>
@@ -304,6 +318,120 @@ export default function RoadmapPage() {
               )}
             </div>
           </div>
+
+          {/* Right panel — Steps list */}
+          {roadmap && sortedSteps.length > 0 && (
+            <div className="w-[340px] shrink-0 bg-white border-l border-[#E9E3F5] flex flex-col h-full">
+              {/* Panel header */}
+              <div className="px-5 py-4 border-b border-[#E9E3F5]">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[20px] font-semibold text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                    Steps
+                  </h2>
+                  {totalTasks > 0 && (
+                    <span className="text-[11px] font-bold text-[#22C55E] bg-[#E8FBF0] px-2.5 py-1 rounded-full">
+                      {totalDone}/{totalTasks} DONE
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Steps list */}
+              <div ref={stepsPanelRef} className="flex-1 overflow-y-auto">
+                {sortedSteps.map((step, stepIndex) => {
+                  const completedCount = step.tasks?.filter(t => t.status === 'complete').length || 0
+                  const totalCount = step.tasks?.length || 0
+                  const allComplete = totalCount > 0 && completedCount === totalCount
+                  const isActive = activeStep === step.step_id
+                  const sortedTasks = step.tasks ? [...step.tasks].sort((a, b) => a.order - b.order) : []
+                  const hasStarted = startedSteps.has(step.step_id)
+
+                  return (
+                    <div key={step.step_id} data-step-id={step.step_id}>
+                      <button
+                        onClick={() => setActiveStep(isActive ? null : step.step_id)}
+                        className={cn(
+                          'w-full px-5 py-3.5 flex items-center gap-3 transition-colors text-left border-b border-[#F3EFFC]',
+                          isActive ? 'bg-[#F7F3FE]' : 'hover:bg-[#FAFAFE]'
+                        )}
+                      >
+                        <span className={cn(
+                          'text-[13px] font-medium w-6 text-center shrink-0',
+                          allComplete ? 'text-[#22C55E]' : isActive ? 'text-[#6B26EA]' : 'text-[#8B898E]'
+                        )}>
+                          {stepIndex + 1}.
+                        </span>
+                        <span className={cn(
+                          'text-[14px] font-medium flex-1 leading-tight',
+                          allComplete ? 'text-[#22C55E]' : isActive ? 'text-[#6B26EA]' : 'text-[#4A3572]'
+                        )} style={{ fontFamily: "'Inter', sans-serif" }}>
+                          {step.title}
+                        </span>
+                        {allComplete ? (
+                          <Check size={16} className="text-[#22C55E] shrink-0" />
+                        ) : isActive ? (
+                          <div className="w-2 h-2 rounded-full bg-[#6B26EA] shrink-0" />
+                        ) : (
+                          <ChevronRight size={14} className="text-[#B1AEAE] shrink-0" />
+                        )}
+                      </button>
+
+                      {/* Expanded tasks when step is active */}
+                      {isActive && sortedTasks.length > 0 && (
+                        <div className="bg-[#FAFAFE] border-b border-[#F3EFFC] px-5 pb-3">
+                          <div className="ml-6 space-y-1.5 pt-1">
+                            {sortedTasks.map((task) => {
+                              const taskDone = task.status === 'complete'
+                              return (
+                                <div key={task.task_id} className="flex items-center gap-2.5 py-1.5">
+                                  <div className={cn(
+                                    'w-4 h-4 rounded-full flex items-center justify-center shrink-0',
+                                    taskDone
+                                      ? 'bg-[#22C55E]'
+                                      : 'border-2 border-[#C8B0FF]'
+                                  )}>
+                                    {taskDone && (
+                                      <Check size={10} className="text-white" strokeWidth={3} />
+                                    )}
+                                  </div>
+                                  <span className={cn(
+                                    'text-[12px] leading-snug',
+                                    taskDone ? 'text-[#22C55E] line-through' : 'text-[#4A3572]'
+                                  )}>
+                                    {task.title}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          {/* Begin / Continue button */}
+                          <div className="ml-6 mt-3">
+                            <button
+                              onClick={() => {
+                                markStepStarted(step.step_id)
+                                const taskList = sortedTasks.map((t, i) => `${i + 1}. ${t.title}`).join('\n')
+                                const prompt = hasStarted
+                                  ? `I want to continue working on Step ${stepIndex + 1}: "${step.title}"\n\nHere are the tasks I need to complete:\n${taskList}\n\nPlease help me pick up where I left off and continue with the next task.`
+                                  : `I want to begin working on Step ${stepIndex + 1}: "${step.title}"\n\nHere are the tasks I need to complete:\n${taskList}\n\nPlease help me get started. Break down the first task into actionable steps and guide me through it.`
+                                const params = new URLSearchParams({ roadmap_step: prompt })
+                                window.location.href = `/chat?${params.toString()}`
+                              }}
+                              className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-[#6B26EA] text-white text-[11px] font-semibold hover:bg-[#5A1FD0] transition-colors"
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                              </svg>
+                              {hasStarted ? 'Continue in Chat' : 'Begin in Chat'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>
