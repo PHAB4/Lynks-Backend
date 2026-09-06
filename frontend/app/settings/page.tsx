@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Camera, X, Plus, Check } from 'lucide-react'
+import { ArrowLeft, Camera, X, Plus, Check, Bell, BellOff, CheckCheck } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
@@ -24,6 +24,8 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'security'>('profile')
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; body: string; type: string; is_read: boolean; created_at: string; link?: string }>>([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -138,6 +140,32 @@ export default function SettingsPage() {
       alert(err instanceof Error ? err.message : 'Failed to remove photo')
     }
   }
+
+  useEffect(() => {
+    if (activeTab !== 'notifications') return
+    setNotificationsLoading(true)
+    fetchAPI<{ notifications: Array<{ id: string; title: string; body: string; type: string; is_read: boolean; created_at: string; link?: string }> }>('/notifications')
+      .then(data => setNotifications(data.notifications || []))
+      .catch(() => {})
+      .finally(() => setNotificationsLoading(false))
+  }, [activeTab])
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await fetchAPI(`/notifications/${id}/read`, { method: 'PATCH' })
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+    } catch { /* ignore */ }
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      await fetchAPI('/notifications/read-all', { method: 'POST' })
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+    } catch { /* ignore */ }
+  }
+
+  const unreadNotifications = notifications.filter(n => !n.is_read)
+  const readNotifications = notifications.filter(n => n.is_read)
 
   const sidebarItems = [
     { key: 'profile', label: 'Profile' },
@@ -469,7 +497,7 @@ export default function SettingsPage() {
                           <Check size={16} />
                           Saved!
                         </span>
-                      ) : 'Continue'}
+                      ) : 'Save'}
                     </button>
                   </div>
                 </>
@@ -481,16 +509,92 @@ export default function SettingsPage() {
               {/* Notifications Tab */}
               {activeTab === 'notifications' && (
                 <div>
-                  <h1 className="text-[28px] font-semibold text-[#1E1E1E] mb-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                    Notification Settings
-                  </h1>
-                  <p className="text-[15px] text-[rgba(30,30,30,0.60)]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    Manage how and when you receive notifications from Lynks.
+                  <div className="flex items-center justify-between mb-2">
+                    <h1 className="text-[28px] font-semibold text-[#1E1E1E]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                      Notifications
+                    </h1>
+                    {unreadNotifications.length > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="flex items-center gap-2 py-2 px-4 rounded-xl bg-[#6B26EA] text-white text-[13px] font-semibold hover:bg-[#5A1FD0] transition-colors"
+                      >
+                        <CheckCheck size={14} />
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[15px] text-[rgba(30,30,30,0.60)] mb-6" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Stay up to date with your career journey.
                   </p>
-                  <div className="h-px bg-[rgba(30,30,30,0.07)] mt-6 mb-8" />
-                  <p className="text-sm text-[rgba(30,30,30,0.40)]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    Notification settings coming soon.
-                  </p>
+                  <div className="h-px bg-[rgba(30,30,30,0.07)] mb-6" />
+
+                  {notificationsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="w-6 h-6 border-2 border-[#6B26EA] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-16 h-16 rounded-full bg-[#F9F5FF] flex items-center justify-center mb-4">
+                        <BellOff size={24} className="text-[#D1D5DB]" />
+                      </div>
+                      <p className="text-[15px] font-semibold text-[#1E1E1E] mb-1">No notifications yet</p>
+                      <p className="text-[13px] text-[rgba(30,30,30,0.40)]">We&apos;ll notify you when something happens.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {unreadNotifications.length > 0 && (
+                        <div>
+                          <p className="text-[12px] font-semibold text-[rgba(30,30,30,0.40)] uppercase tracking-wider mb-3">Unread ({unreadNotifications.length})</p>
+                          <div className="space-y-2">
+                            {unreadNotifications.map(n => (
+                              <div
+                                key={n.id}
+                                onClick={() => handleMarkRead(n.id)}
+                                className="flex items-start gap-3 p-4 rounded-xl bg-[#F9F5FF] border border-[#EDE3FF] cursor-pointer hover:bg-[#F0E8FF] transition-colors"
+                              >
+                                <div className="w-8 h-8 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0 mt-0.5">
+                                  <Bell size={14} className="text-[#6B26EA]" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[14px] font-semibold text-[#1E1E1E] mb-0.5">{n.title}</p>
+                                  <p className="text-[13px] text-[rgba(30,30,30,0.60)] leading-relaxed">{n.body}</p>
+                                  <p className="text-[11px] text-[rgba(30,30,30,0.30)] mt-1.5">
+                                    {new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                                <div className="w-2 h-2 rounded-full bg-[#6B26EA] shrink-0 mt-2" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {readNotifications.length > 0 && (
+                        <div>
+                          <p className="text-[12px] font-semibold text-[rgba(30,30,30,0.40)] uppercase tracking-wider mb-3">Earlier</p>
+                          <div className="space-y-2">
+                            {readNotifications.map(n => (
+                              <div
+                                key={n.id}
+                                className="flex items-start gap-3 p-4 rounded-xl border border-[rgba(30,30,30,0.07)]"
+                              >
+                                <div className="w-8 h-8 rounded-full bg-[rgba(30,30,30,0.04)] flex items-center justify-center shrink-0 mt-0.5">
+                                  <Bell size={14} className="text-[rgba(30,30,30,0.30)]" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[14px] font-medium text-[rgba(30,30,30,0.50)] mb-0.5">{n.title}</p>
+                                  <p className="text-[13px] text-[rgba(30,30,30,0.35)] leading-relaxed">{n.body}</p>
+                                  <p className="text-[11px] text-[rgba(30,30,30,0.25)] mt-1.5">
+                                    {new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

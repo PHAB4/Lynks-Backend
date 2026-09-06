@@ -193,3 +193,36 @@ async def get_resume(
         "created_at": resume.created_at.isoformat() if resume.created_at else None,
         "updated_at": resume.updated_at.isoformat() if resume.updated_at else None,
     }
+
+
+class ResumeUpdateRequest(BaseModel):
+    content: dict
+
+
+@router.patch("")
+async def update_resume(
+    body: ResumeUpdateRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the user's resume content (user-edited fields)."""
+    result = await db.execute(
+        select(Resume).where(Resume.user_id == user_id).order_by(Resume.created_at.desc()).limit(1)
+    )
+    resume = result.scalar_one_or_none()
+    if not resume:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": {"code": "no_resume", "message": "No resume found. Create one first."}},
+        )
+
+    resume.content = body.content
+    await db.commit()
+    await db.refresh(resume)
+
+    return {
+        "resume_id": resume.id,
+        "content": resume.content,
+        "created_at": resume.created_at.isoformat() if resume.created_at else None,
+        "updated_at": resume.updated_at.isoformat() if resume.updated_at else None,
+    }

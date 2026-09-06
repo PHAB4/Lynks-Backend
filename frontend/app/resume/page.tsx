@@ -2,24 +2,46 @@
 
 import { useState, useEffect } from 'react'
 import { resume } from '@/lib/api'
-import type { ResumeResponse, ResumeData } from '@/lib/types'
+import type { ResumeData } from '@/lib/types'
 import AppLayout from '@/components/AppLayout'
 import { Button } from '@/components/ui/button'
-import { Loader2, RefreshCw, FileText, ArrowLeft } from 'lucide-react'
+import { Loader2, Plus, Trash2, ArrowLeft, Save, Check } from 'lucide-react'
 import Link from 'next/link'
 import ResumePreview from '@/components/ResumePreview'
-import { ResumePDFDownload } from '@/components/ResumePDF'
+
+const EMPTY_RESUME: ResumeData = {
+  name: '',
+  email: '',
+  phone: '',
+  address: '',
+  objective: '',
+  education: [],
+  skills: [],
+  experience: [],
+  projects: [],
+  certifications: [],
+  interests: [],
+}
 
 export default function ResumePage() {
-  const [resumeData, setResumeData] = useState<ResumeResponse | null>(null)
+  const [resumeData, setResumeData] = useState<ResumeData>(EMPTY_RESUME)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [newSkill, setNewSkill] = useState('')
+  const [newCert, setNewCert] = useState('')
+  const [newInterest, setNewInterest] = useState('')
 
   useEffect(() => {
     resume.get()
-      .then(data => setResumeData(data))
-      .catch(() => setResumeData(null))
+      .then(data => {
+        if (data?.content) {
+          setResumeData({ ...EMPTY_RESUME, ...data.content } as ResumeData)
+        }
+      })
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
@@ -28,12 +50,31 @@ export default function ResumePage() {
       setGenerating(true)
       setError('')
       const data = await resume.generate()
-      setResumeData(data)
+      if (data?.content) {
+        setResumeData({ ...EMPTY_RESUME, ...data.content } as ResumeData)
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate resume')
     } finally {
       setGenerating(false)
     }
+  }
+
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      await resume.save(resumeData as unknown as Record<string, unknown>)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const update = (field: keyof ResumeData, value: unknown) => {
+    setResumeData(prev => ({ ...prev, [field]: value }))
   }
 
   if (loading) {
@@ -46,12 +87,10 @@ export default function ResumePage() {
     )
   }
 
-  const content = resumeData?.content as ResumeData | undefined
-
   return (
     <AppLayout>
       <div className="min-h-screen bg-[#F7F3FE]">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-12">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-12">
           <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-[#6B26EA] hover:text-[#5A1FD0] font-medium mb-6">
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
           </Link>
@@ -61,41 +100,343 @@ export default function ResumePage() {
               <h1 className="text-[28px] md:text-[36px] font-semibold text-[#0D0026] leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
                 My Resume
               </h1>
-              <p className="text-sm text-[#8B898E] mt-1">AI-generated resume based on your profile and completed tasks</p>
+              <p className="text-sm text-[#8B898E] mt-1">Edit your details below — the preview updates live</p>
             </div>
             <div className="flex gap-2">
-              {content && <ResumePDFDownload data={content} />}
-              <Button onClick={handleGenerate} disabled={generating} className="bg-[#6B26EA] hover:bg-[#5A1FD0] text-white">
-                {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                {resumeData ? 'Regenerate' : 'Generate Resume'}
+              <Button
+                onClick={handleGenerate}
+                disabled={generating}
+                variant="outline"
+                className="border-[#6B26EA] text-[#6B26EA] hover:bg-[#F7F3FE]"
+              >
+                {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                {generating ? 'Generating...' : 'Auto-fill from profile'}
+              </Button>
+              <Button onClick={handleSave} disabled={saving} className="bg-[#6B26EA] hover:bg-[#5A1FD0] text-white">
+                {saved ? <Check className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                {saved ? 'Saved!' : saving ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </div>
 
           {error && <p className="text-red-500 text-sm mb-4 bg-red-50 p-3 rounded-lg">{error}</p>}
 
-          {content ? (
-            <div className="flex flex-col gap-6">
-              <ResumePreview data={content} />
-              <div className="text-xs text-[#8B898E] text-center">
-                Last generated: {resumeData?.created_at ? new Date(resumeData.created_at).toLocaleDateString() : 'Unknown'}
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Editor */}
+            <div className="space-y-4">
+              {/* Personal Info */}
+              <EditorSection title="Personal Information">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Full Name" value={resumeData.name} onChange={v => update('name', v)} placeholder="John Doe" />
+                  <Field label="Email" value={resumeData.email} onChange={v => update('email', v)} placeholder="john@email.com" type="email" />
+                  <Field label="Phone" value={resumeData.phone} onChange={v => update('phone', v)} placeholder="+1 (868) 555-1234" />
+                  <Field label="Address" value={resumeData.address} onChange={v => update('address', v)} placeholder="Port of Spain, Trinidad" />
+                </div>
+              </EditorSection>
+
+              {/* Objective */}
+              <EditorSection title="Career Objective">
+                <textarea
+                  value={resumeData.objective}
+                  onChange={e => update('objective', e.target.value)}
+                  placeholder="A brief summary of your career goals and what you bring..."
+                  className="w-full py-2.5 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] text-[#1E1E1E] focus:outline-none focus:border-[#6B26EA] transition-colors resize-none h-20"
+                />
+              </EditorSection>
+
+              {/* Education */}
+              <EditorSection title="Education">
+                {resumeData.education.map((edu, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-2 items-start">
+                    <input
+                      value={edu.institution}
+                      onChange={e => {
+                        const updated = [...resumeData.education]
+                        updated[i] = { ...updated[i], institution: e.target.value }
+                        update('education', updated)
+                      }}
+                      placeholder="Institution"
+                      className="py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                    />
+                    <input
+                      value={edu.level}
+                      onChange={e => {
+                        const updated = [...resumeData.education]
+                        updated[i] = { ...updated[i], level: e.target.value }
+                        update('education', updated)
+                      }}
+                      placeholder="Degree / Level"
+                      className="py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                    />
+                    <button onClick={() => update('education', resumeData.education.filter((_, j) => j !== i))} className="p-2 text-[#D14444] hover:bg-red-50 rounded-lg">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => update('education', [...resumeData.education, { institution: '', level: '', details: '' }])}
+                  className="flex items-center gap-1 text-[12px] text-[#6B26EA] font-semibold hover:underline"
+                >
+                  <Plus size={12} /> Add education
+                </button>
+              </EditorSection>
+
+              {/* Experience */}
+              <EditorSection title="Experience">
+                {resumeData.experience.map((exp, i) => (
+                  <div key={i} className="space-y-2 mb-3 pb-3 border-b border-[rgba(0,0,0,0.05)] last:border-0">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        value={exp.title}
+                        onChange={e => {
+                          const updated = [...resumeData.experience]
+                          updated[i] = { ...updated[i], title: e.target.value }
+                          update('experience', updated)
+                        }}
+                        placeholder="Job title / Role"
+                        className="py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          value={exp.organization}
+                          onChange={e => {
+                            const updated = [...resumeData.experience]
+                            updated[i] = { ...updated[i], organization: e.target.value }
+                            update('experience', updated)
+                          }}
+                          placeholder="Organization"
+                          className="flex-1 py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                        />
+                        <button onClick={() => update('experience', resumeData.experience.filter((_, j) => j !== i))} className="p-2 text-[#D14444] hover:bg-red-50 rounded-lg shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <textarea
+                      value={exp.description}
+                      onChange={e => {
+                        const updated = [...resumeData.experience]
+                        updated[i] = { ...updated[i], description: e.target.value }
+                        update('experience', updated)
+                      }}
+                      placeholder="Describe your role and achievements..."
+                      className="w-full py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[12px] focus:outline-none focus:border-[#6B26EA] resize-none h-16"
+                    />
+                  </div>
+                ))}
+                <button
+                  onClick={() => update('experience', [...resumeData.experience, { title: '', organization: '', description: '' }])}
+                  className="flex items-center gap-1 text-[12px] text-[#6B26EA] font-semibold hover:underline"
+                >
+                  <Plus size={12} /> Add experience
+                </button>
+              </EditorSection>
+
+              {/* Projects */}
+              <EditorSection title="Projects">
+                {resumeData.projects.map((proj, i) => (
+                  <div key={i} className="space-y-2 mb-3 pb-3 border-b border-[rgba(0,0,0,0.05)] last:border-0">
+                    <div className="flex gap-2">
+                      <input
+                        value={proj.title}
+                        onChange={e => {
+                          const updated = [...resumeData.projects]
+                          updated[i] = { ...updated[i], title: e.target.value }
+                          update('projects', updated)
+                        }}
+                        placeholder="Project name"
+                        className="flex-1 py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                      />
+                      <button onClick={() => update('projects', resumeData.projects.filter((_, j) => j !== i))} className="p-2 text-[#D14444] hover:bg-red-50 rounded-lg shrink-0">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <textarea
+                      value={proj.description}
+                      onChange={e => {
+                        const updated = [...resumeData.projects]
+                        updated[i] = { ...updated[i], description: e.target.value }
+                        update('projects', updated)
+                      }}
+                      placeholder="Describe the project..."
+                      className="w-full py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[12px] focus:outline-none focus:border-[#6B26EA] resize-none h-16"
+                    />
+                  </div>
+                ))}
+                <button
+                  onClick={() => update('projects', [...resumeData.projects, { title: '', description: '', skills_used: [] }])}
+                  className="flex items-center gap-1 text-[12px] text-[#6B26EA] font-semibold hover:underline"
+                >
+                  <Plus size={12} /> Add project
+                </button>
+              </EditorSection>
+
+              {/* Skills */}
+              <EditorSection title="Skills">
+                {resumeData.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {resumeData.skills.map((skill, i) => (
+                      <span key={i} className="flex items-center gap-1 py-1 px-2.5 rounded-full bg-[#EDE3FF] text-[#6B26EA] text-[12px] font-medium">
+                        {skill}
+                        <button onClick={() => update('skills', resumeData.skills.filter((_, j) => j !== i))} className="w-3.5 h-3.5 rounded-full bg-[#6B26EA] text-white flex items-center justify-center hover:bg-[#5A1FD0]">
+                          <span className="text-[8px]">×</span>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    value={newSkill}
+                    onChange={e => setNewSkill(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newSkill.trim()) {
+                        update('skills', [...resumeData.skills, newSkill.trim()])
+                        setNewSkill('')
+                      }
+                    }}
+                    placeholder="Add a skill..."
+                    className="flex-1 py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newSkill.trim()) {
+                        update('skills', [...resumeData.skills, newSkill.trim()])
+                        setNewSkill('')
+                      }
+                    }}
+                    disabled={!newSkill.trim()}
+                    className="px-3 py-2 rounded-lg bg-[#6B26EA] text-white text-[12px] font-semibold hover:bg-[#5A1FD0] disabled:opacity-40"
+                  >
+                    Add
+                  </button>
+                </div>
+              </EditorSection>
+
+              {/* Certifications */}
+              <EditorSection title="Certifications">
+                {resumeData.certifications.map((cert, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input
+                      value={cert}
+                      onChange={e => {
+                        const updated = [...resumeData.certifications]
+                        updated[i] = e.target.value
+                        update('certifications', updated)
+                      }}
+                      placeholder="Certification name"
+                      className="flex-1 py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                    />
+                    <button onClick={() => update('certifications', resumeData.certifications.filter((_, j) => j !== i))} className="p-2 text-[#D14444] hover:bg-red-50 rounded-lg">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    value={newCert}
+                    onChange={e => setNewCert(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newCert.trim()) {
+                        update('certifications', [...resumeData.certifications, newCert.trim()])
+                        setNewCert('')
+                      }
+                    }}
+                    placeholder="Add certification..."
+                    className="flex-1 py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newCert.trim()) {
+                        update('certifications', [...resumeData.certifications, newCert.trim()])
+                        setNewCert('')
+                      }
+                    }}
+                    disabled={!newCert.trim()}
+                    className="px-3 py-2 rounded-lg bg-[#6B26EA] text-white text-[12px] font-semibold hover:bg-[#5A1FD0] disabled:opacity-40"
+                  >
+                    Add
+                  </button>
+                </div>
+              </EditorSection>
+
+              {/* Interests */}
+              <EditorSection title="Interests">
+                {resumeData.interests.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {resumeData.interests.map((interest, i) => (
+                      <span key={i} className="flex items-center gap-1 py-1 px-2.5 rounded-full bg-[#F7F3FE] text-[#6B26EA] text-[12px] font-medium">
+                        {interest}
+                        <button onClick={() => update('interests', resumeData.interests.filter((_, j) => j !== i))} className="w-3.5 h-3.5 rounded-full bg-[#6B26EA] text-white flex items-center justify-center hover:bg-[#5A1FD0]">
+                          <span className="text-[8px]">×</span>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    value={newInterest}
+                    onChange={e => setNewInterest(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newInterest.trim()) {
+                        update('interests', [...resumeData.interests, newInterest.trim()])
+                        setNewInterest('')
+                      }
+                    }}
+                    placeholder="Add an interest..."
+                    className="flex-1 py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (newInterest.trim()) {
+                        update('interests', [...resumeData.interests, newInterest.trim()])
+                        setNewInterest('')
+                      }
+                    }}
+                    disabled={!newInterest.trim()}
+                    className="px-3 py-2 rounded-lg bg-[#6B26EA] text-white text-[12px] font-semibold hover:bg-[#5A1FD0] disabled:opacity-40"
+                  >
+                    Add
+                  </button>
+                </div>
+              </EditorSection>
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-[#EDE3FF] p-12 text-center">
-              <FileText className="w-16 h-16 text-[#EDE3FF] mx-auto mb-4" />
-              <h2 className="text-lg font-semibold text-[#0D0026] mb-2">No resume yet</h2>
-              <p className="text-sm text-[#8B898E] mb-6 max-w-sm mx-auto">
-                Generate a professional resume using your profile information, completed roadmap tasks, and uploaded evidence.
-              </p>
-              <Button onClick={handleGenerate} disabled={generating} className="bg-[#6B26EA] hover:bg-[#5A1FD0] text-white">
-                {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                {generating ? 'Generating...' : 'Generate My Resume'}
-              </Button>
+
+            {/* Live Preview */}
+            <div className="lg:sticky lg:top-4 lg:self-start">
+              <p className="text-[12px] font-semibold text-[#8B898E] uppercase tracking-wider mb-3">Preview</p>
+              <ResumePreview data={resumeData} />
             </div>
-          )}
+          </div>
         </div>
       </div>
     </AppLayout>
+  )
+}
+
+function EditorSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-2xl border border-[#EDE3FF] p-5">
+      <h3 className="text-[14px] font-semibold text-[#0D0026] mb-3">{title}</h3>
+      {children}
+    </div>
+  )
+}
+
+function Field({ label, value, onChange, placeholder, type = 'text' }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string
+}) {
+  return (
+    <div>
+      <label className="block text-[11px] font-semibold text-[rgba(30,30,30,0.50)] mb-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] text-[#1E1E1E] focus:outline-none focus:border-[#6B26EA] transition-colors"
+      />
+    </div>
   )
 }

@@ -1,6 +1,6 @@
 # Lynks Database Schema
 
-> **Last updated:** September 5, 2026
+> **Last updated:** September 6, 2026
 > **Source:** Exported from Supabase SQL Editor (live database)
 
 ---
@@ -260,6 +260,7 @@ In-app notification center. The system creates notifications for new matching op
 
 **Notification Types:**
 - `opportunity` — new matching opportunity found by the scraper
+- `opportunity_scrape` — batch notification from scheduled scrape (new opportunities found by background scheduler)
 - `task` — task milestone or reminder
 - `badge` — badge earned
 - `reminder` — general system reminder
@@ -292,3 +293,4 @@ opportunities (standalone)
 - **2026-09-05:** Added `is_pinned` (boolean) and `sort_order` (integer) columns to `conversations` table for manual reordering. New endpoints: `PATCH /chat/conversations/{id}` (toggle pin), `POST /chat/conversations/reorder`, `DELETE /chat/conversations/{id}`.
 - **2026-09-05:** Added `phone` (text, nullable) column to `users` table. Updated `GET /profile` and `PATCH /profile` to include phone field.
 - **2026-09-05:** Added `avatar_url` (text, nullable) column to `users` table. Created `profile-pictures` Supabase storage bucket. Added `POST /profile/avatar` and `DELETE /profile/avatar` endpoints.
+- **2026-09-06:** Added background opportunity scheduler (`services/scheduler.py`) — asyncio task runs every 6 hours on FastAPI startup. Scrapes all sources, generates `opportunity_scrape` notifications. New endpoint: `GET /opportunities/scheduler/status`. Fixed `POST /opportunities/refresh` decorator bug (was stacked on wrong function).

@@ -1,6 +1,6 @@
 # Lynks — Product Requirement Document
 
-**Last updated:** September 5, 2026
+**Last updated:** September 6, 2026
 
 ## 1. Problem Statement
 
@@ -57,6 +57,7 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 - Structured salary data for jobs (salary_min, salary_max, salary_currency) with **priority-based currency detection** (22+ currencies, source-context-aware)
 - Category-based filtering, time-based filtering, relevance sorting
 - **Rule-based matching engine** (`scoring.py`): scores each opportunity 0–100 against the user's profile (career path, education, age, interests, location). Returns matches ≥ 50 via `GET /opportunities/matches`.
+- **Background scheduler** (`scheduler.py`): asyncio task runs every 6 hours on FastAPI startup, scrapes all sources, generates batch notifications. Status via `GET /opportunities/scheduler/status`.
 - Users can save/bookmark opportunities for later
 - New-opportunity notification polling via `GET /opportunities/new-count`
 - Social media scraping (Facebook, Instagram) — stretch goal
@@ -122,7 +123,7 @@ The Mentor is a conversational AI assistant that also serves as the system orche
 - Notifications created for: new matching opportunities, task milestones, badges, reminders
 - Frontend polls `GET /notifications/unread/count` for badge indicator
 - Users can mark individual or all notifications as read
-- Notification types: `opportunity`, `task`, `badge`, `reminder`
+- Notification types: `opportunity`, `opportunity_scrape`, `task`, `badge`, `reminder`
 - Notifications include deep-link data for navigation
 
 ### 4.8 Resume Builder
@@ -165,7 +166,7 @@ The dashboard is the first screen users see after login. It provides an at-a-gla
 | Job Scout | Sources Caribbean-relevant opportunities, scores them against user profiles (0–100) | Internet scraping + curated database | Scored & matched opportunities list |
 | Mentor-Orchestrator | Conversational assistant + agent router | User chat messages | Natural language response (possibly agent-assisted) |
 | Memory Extractor | Extracts key user facts from conversations | Conversation messages + existing memories | New user memories (up to 5 per extraction) |
-| Opportunity Scraper | Scrapes opportunities from multiple sources | RSS feeds, APIs, social media, LLM generation | Structured opportunity data |
+| Opportunity Scraper | Scrapes opportunities from multiple sources on a schedule | RSS feeds, APIs, social media, LLM generation | Structured opportunity data |
 
 ## 6. Technical Constraints
 
@@ -198,7 +199,7 @@ Implemented via FastAPI middleware in `app/middleware.py`:
 | # | Question | Status |
 |---|---|---|
 | 1 | Should the "Ask About This" button use pre-filled messages or context objects? | **Resolved** — pre-filled messages (Phase 1) |
-| 2 | How often should the Job Scout scrape for new opportunities? | **Resolved** — in-memory cache with 1-hour TTL, on-demand refresh |
+| 2 | How often should the Job Scout scrape for new opportunities? | **Resolved** — background scheduler scrapes every 6 hours automatically on FastAPI startup. Manual refresh available via `POST /opportunities/refresh`. Scheduler status via `GET /opportunities/scheduler/status`. |
 | 3 | Should notifications be real-time or check-on-load? | **Resolved** — polling via `/opportunities/new-count` and `/notifications/unread/count` |
 | 4 | What LLM model to use for the Mentor chatbot? | **Resolved** — Groq (Llama 3 70B) for now |
 | 5 | How should evidence verification handle ambiguous uploads? | **Resolved** — lenient verification with `pending` fallback. Gemini 3.5 Flash (free tier) with career-context-aware analysis. Status stays `pending` if API is down. |
