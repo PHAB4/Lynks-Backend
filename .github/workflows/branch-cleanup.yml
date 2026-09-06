@@ -1,0 +1,100 @@
+name: Branch Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    # Run weekly on Sunday at 00:00 UTC to prune stale refs
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # Auto-delete head branch after PR merge
+  delete-merged-branch:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete merged branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            try {
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref: `heads/${branch}`,
+              });
+              console.log(`✅ Deleted branch: ${branch}`);
+            } catch (error) {
+              console.log(`⚠️ Could not delete branch ${branch}: ${error.message}`);
+            }
+
+  # Weekly prune of stale remote tracking branches
+  prune-stale-refs:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete stale remote branches (merged PRs, no open PR)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Get all open PRs (to avoid deleting branches with active PRs)
+            const openPRs = await github.rest.pulls.list({
+              owner, repo, state: 'open', per_page: 100
+            });
+            const openBranches = new Set(
+              openPRs.data.map(pr => pr.head.ref)
+            );
+
+            // Get all branches
+            const branches = await github.rest.repos.listBranches({
+              owner, repo, per_page: 100
+            });
+
+            let deleted = 0;
+            for (const branch of branches.data) {
+              const name = branch.name;
+
+              // Skip protected branches
+              if (['main', 'develop', 'staging', 'production'].includes(name)) continue;
+
+              // Skip branches with open PRs
+              if (openBranches.has(name)) continue;
+
+              // Check if branch is behind main (merged)
+              try {
+                const comparison = await github.rest.repos.compareCommits({
+                  owner, repo,
+                  base: 'main',
+                  head: name,
+                });
+
+                // If branch is 0 commits ahead and behind main, it's fully merged
+                if (comparison.data.ahead_by === 0) {
+                  await github.rest.git.deleteRef({
+                    owner, repo,
+                    ref: `heads/${name}`,
+                  });
+                  console.log(`🗑️ Deleted stale branch: ${name}`);
+                  deleted++;
+                }
+              } catch (error) {
+                console.log(`⚠️ Skipping ${name}: ${error.message}`);
+              }
+            }
+
+            console.log(`\n✅ Cleanup complete: ${deleted} branches deleted`);
