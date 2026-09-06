@@ -3,6 +3,8 @@
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { Send, Loader2, Sparkles } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
 import {
@@ -179,7 +181,27 @@ function ChatContent() {
                         </div>
                       )}
                       <div className={`rounded-2xl px-4 py-3 text-sm shadow-[0_4px_12px_rgba(107,38,234,0.07)] ${msg.role === 'user' ? 'bg-[#6B26EA] text-white ml-auto max-w-[85%]' : 'bg-white text-[#1E1E1E] max-w-[85%]'}`}>
-                        <p style={{ whiteSpace: 'pre-wrap', fontFamily: "'Inter', sans-serif" }}>{msg.content}</p>
+                        {msg.role === 'assistant' ? (
+                          <div className="prose prose-sm prose-purple max-w-none break-words
+                            prose-headings:font-semibold prose-headings:text-[#1E1E1E] prose-headings:mt-3 prose-headings:mb-1.5
+                            prose-p:my-1.5 prose-p:leading-relaxed
+                            prose-strong:text-[#1E1E1E] prose-strong:font-semibold
+                            prose-a:text-[#6B26EA] prose-a:no-underline hover:prose-a:underline
+                            prose-code:bg-[#F5F0FF] prose-code:text-[#6B26EA] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[13px] prose-code:font-normal prose-code:before:content-none prose-code:after:content-none
+                            prose-pre:bg-[#1E1E1E] prose-pre:text-gray-100 prose-pre:rounded-xl prose-pre:border prose-pre:border-[#EDE3FF]
+                            prose-li:my-0.5
+                            prose-ul:my-2 prose-ol:my-2
+                            prose-table:border-collapse prose-table:w-full prose-table:text-sm
+                            prose-th:bg-[#F5F0FF] prose-th:text-[#6B26EA] prose-th:font-semibold prose-th:px-3 prose-th:py-2 prose-th:border prose-th:border-[#EDE3FF] prose-th:text-left
+                            prose-td:px-3 prose-td:py-2 prose-td:border prose-td:border-[#EDE3FF]
+                            prose-blockquote:border-l-[#6B26EA] prose-blockquote:bg-[#F9F7FE] prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
+                            prose-hr:border-[#EDE3FF]
+                          ">
+                            <Markdown remarkPlugins={[remarkGfm]}>{msg.content}</Markdown>
+                          </div>
+                        ) : (
+                          <p style={{ whiteSpace: 'pre-wrap', fontFamily: "'Inter', sans-serif" }}>{msg.content}</p>
+                        )}
                       </div>
                       {msg.created_at && (
                         <p className="text-[11px] text-[rgba(30,30,30,0.50)] mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -239,16 +261,26 @@ function ChatContent() {
           )}
 
           <div className="px-4 md:px-6 pb-4 md:pb-6 shrink-0">
-            <div className="flex items-center gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] mx-auto shadow-[0_0_5px_rgba(0,0,0,0.05)]">
-              <input
-                type="text"
+            <div className="flex items-end gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] mx-auto shadow-[0_0_5px_rgba(0,0,0,0.05)]">
+              <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !sending && handleSend()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !sending) {
+                    e.preventDefault()
+                    handleSend()
+                  }
+                }}
                 placeholder="Ask Lynks anything..."
                 disabled={sending}
-                className="flex-1 bg-transparent text-sm text-[#0D0026] placeholder:text-[rgba(30,30,30,0.31)] focus:outline-none disabled:opacity-50"
-                style={{ fontFamily: "'Inter', sans-serif" }}
+                rows={1}
+                className="flex-1 bg-transparent text-sm text-[#0D0026] placeholder:text-[rgba(30,30,30,0.31)] focus:outline-none disabled:opacity-50 resize-none max-h-[120px] min-h-[20px]"
+                style={{ fontFamily: "'Inter', sans-serif", height: 'auto', overflowY: message.split('\n').length > 4 ? 'auto' : 'hidden' }}
+                onInput={(e) => {
+                  const target = e.currentTarget
+                  target.style.height = 'auto'
+                  target.style.height = Math.min(target.scrollHeight, 120) + 'px'
+                }}
               />
               <button
                 onClick={handleSend}
