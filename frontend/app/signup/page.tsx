@@ -11,6 +11,7 @@ export default function SignupPage() {
   const router = useRouter()
   const [form, setForm] = useState({ email: '', password: '', confirm: '' })
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [serverError, setServerError] = useState('')
@@ -87,7 +88,12 @@ export default function SignupPage() {
           </div>
           <div>
             <label className="text-xs font-medium text-[#8B898E] mb-1 block">Confirm Password</label>
-            <input type="password" value={form.confirm} onChange={(e) => setForm(f => ({ ...f, confirm: e.target.value }))} className={cn('w-full py-3 px-4 rounded-xl border bg-white text-sm text-[#0D0026] focus:outline-none focus:border-[#6B26EA] transition-colors', errors.confirm ? 'border-red-400' : 'border-[#EDE3FF]')} placeholder="••••••••" />
+            <div className="relative">
+              <input type={showConfirm ? 'text' : 'password'} value={form.confirm} onChange={(e) => setForm(f => ({ ...f, confirm: e.target.value }))} className={cn('w-full py-3 px-4 pr-10 rounded-xl border bg-white text-sm text-[#0D0026] focus:outline-none focus:border-[#6B26EA] transition-colors', errors.confirm ? 'border-red-400' : 'border-[#EDE3FF]')} placeholder="••••••••" />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A8A8] hover:text-[#0D0026] transition-colors">
+                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             {errors.confirm && <p className="text-xs text-red-500 mt-1">{errors.confirm}</p>}
           </div>
           <button type="submit" disabled={loading} className="py-3 rounded-xl bg-[#6B26EA] text-white text-sm font-semibold hover:bg-[#5A1FD0] transition-colors mt-2 disabled:opacity-50">
