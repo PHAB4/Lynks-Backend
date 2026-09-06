@@ -55,8 +55,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     try {
-      // Save main profile fields
-      await fetchAPI<Record<string, unknown>>('/profile', {
+      await fetchAPI<{ name?: string; email?: string; employment_status?: string; career_path?: string; interests?: string[] }>('/profile', {
         method: 'PATCH',
         body: JSON.stringify({
           name: profile.name,
@@ -65,7 +64,6 @@ export default function SettingsPage() {
           interests: interests,
         }),
       })
-      // Save career path via dedicated endpoint (backend may not support it in main PATCH yet)
       await fetchAPI<{ career_path: string }>('/profile/career-path', {
         method: 'PATCH',
         body: JSON.stringify({
