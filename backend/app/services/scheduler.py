@@ -108,10 +108,20 @@ class OpportunityScheduler:
 
         try:
             from app.agents.opportunity_scraper import scrape_opportunities
+            from app.agents.scout import upsert_opportunities_to_db
             from app.db.postgres import async_session
             from app.services.notification_service import generate_scrape_notifications
 
             opportunities = await scrape_opportunities()
+
+            # Upsert scraped opportunities to the DB
+            try:
+                async with async_session() as db:
+                    upserted = await upsert_opportunities_to_db(db, opportunities)
+                    logger.info("Scheduler upserted %d opportunities to DB", upserted)
+            except Exception as e:
+                logger.warning("Failed to upsert opportunities to DB: %s", e)
+
             elapsed = round(time.time() - start_time, 1)
             sources = list({o.get("source_name", "unknown") for o in opportunities})
 

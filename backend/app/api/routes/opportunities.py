@@ -141,13 +141,16 @@ async def refresh_opportunities(
     """Trigger a manual refresh of the opportunity database."""
     try:
         from app.agents.opportunity_scraper import scrape_opportunities
+        from app.agents.scout import upsert_opportunities_to_db
 
         opportunities = await scrape_opportunities()
+        upserted = await upsert_opportunities_to_db(db, opportunities)
         return {
             "status": "ok",
             "count": len(opportunities),
+            "upserted": upserted,
             "sources": list({o.get("source_name", "unknown") for o in opportunities}),
-            "message": f"Scraped {len(opportunities)} opportunities",
+            "message": f"Scraped {len(opportunities)} opportunities, upserted {upserted} to DB",
         }
     except (OSError, ValueError) as e:
         return {
@@ -192,8 +195,8 @@ async def list_saved_opportunities(
     if not saved_ids:
         return {"saved": [], "total": 0}
 
-    # Get all opportunities and filter to saved ones
-    from app.agents.scout import CARIBBEAN_OPPORTUNITIES
+    # Query opportunities from DB, fall back to curated list
+    from app.agents.scout import CARIBBEAN_OPPORTUNITIES, fetch_all_opportunities_from_db
     from app.models.db_models import User
 
     # Load user profile for scoring
@@ -206,9 +209,15 @@ async def list_saved_opportunities(
         "interests": (user.interests or []) if user else [],
     }
 
+    # Try DB first
+    all_opps = await fetch_all_opportunities_from_db(db)
+    if not all_opps:
+        # Fallback to curated list
+        all_opps = CARIBBEAN_OPPORTUNITIES
+
     results = []
-    for opp in CARIBBEAN_OPPORTUNITIES:
-        opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
+    for opp in all_opps:
+        opp_id = opp.get("id") or hashlib.md5(opp["title"].encode()).hexdigest()[:16]
         if opp_id in saved_ids:
             opp_score = score_opportunity(opp, profile)
             results.append(

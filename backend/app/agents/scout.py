@@ -21,6 +21,7 @@ Caribbean focus:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import uuid
@@ -617,8 +618,209 @@ async def get_saved_opportunity_ids(db: AsyncSession, user_id: str) -> set[str]:
         return set()
 
 
+# ── DB opportunity helpers ──────────────────────────────────────────────────
+
+
+def _row_to_dict(row) -> dict:
+    """Convert a SQLAlchemy Row to a plain dict."""
+    return dict(row._mapping)
+
+
+async def fetch_opportunities_from_db(
+    db: AsyncSession,
+    category: str | None = None,
+    timeframe: str | None = None,
+    sort: str = "relevance",
+    page: int = 1,
+    limit: int = 20,
+) -> tuple[list[dict], int]:
+    """Query the opportunities table with filtering, sorting, and pagination.
+
+    Returns (opportunities, total_count).
+    Falls back to empty list if the table doesn't exist or is empty.
+    """
+    from sqlalchemy import text as sql_text
+
+    try:
+        # Build WHERE clause
+        conditions = []
+        params: dict = {}
+
+        if category:
+            conditions.append("category = :category")
+            params["category"] = category
+
+        if timeframe:
+            cutoff = get_timeframe_cutoff(timeframe)
+            conditions.append("posted_at >= :cutoff")
+            params["cutoff"] = cutoff
+
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+        # Count total
+        count_sql = f"SELECT COUNT(*) FROM opportunities {where}"
+        count_result = await db.execute(sql_text(count_sql), params)
+        total = count_result.scalar() or 0
+
+        # Sort
+        order = {
+            "recent": "posted_at DESC NULLS LAST",
+            "salary": "salary_max DESC NULLS LAST",
+        }.get(sort, "posted_at DESC NULLS LAST")
+
+        # Paginate
+        offset = (page - 1) * limit
+        query_sql = f"""
+            SELECT id, title, company, location, pay, url, category,
+                   description, salary_min, salary_max, salary_currency,
+                   age_requirement, experience_required, posted_at,
+                   first_seen_at, source_name, image_url
+            FROM opportunities {where}
+            ORDER BY {order}
+            LIMIT :limit OFFSET :offset
+        """
+        params["limit"] = limit
+        params["offset"] = offset
+
+        result = await db.execute(sql_text(query_sql), params)
+        rows = result.fetchall()
+
+        opportunities = [_row_to_dict(row) for row in rows]
+        return opportunities, total
+
+    except (SQLAlchemyError, AttributeError) as e:
+        logger.warning("Could not query opportunities table: %s", e)
+        return [], 0
+
+
+async def fetch_all_opportunities_from_db(db: AsyncSession) -> list[dict]:
+    """Fetch all opportunities from the DB (for scoring)."""
+    from sqlalchemy import text as sql_text
+
+    try:
+        result = await db.execute(sql_text("""
+            SELECT id, title, company, location, pay, url, category,
+                   description, salary_min, salary_max, salary_currency,
+                   age_requirement, experience_required, posted_at,
+                   first_seen_at, source_name, image_url
+            FROM opportunities
+            ORDER BY posted_at DESC NULLS LAST
+        """))
+        rows = result.fetchall()
+        return [_row_to_dict(row) for row in rows]
+    except (SQLAlchemyError, AttributeError) as e:
+        logger.warning("Could not query opportunities table: %s", e)
+        return []
+
+
+async def get_new_count_from_db(db: AsyncSession) -> dict:
+    """Count opportunities first seen in the last 24 hours from the DB."""
+    from sqlalchemy import text as sql_text
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    try:
+        result = await db.execute(
+            sql_text("SELECT COUNT(*) FROM opportunities WHERE first_seen_at >= :cutoff"),
+            {"cutoff": cutoff},
+        )
+        count = result.scalar() or 0
+        return {"new_count": count, "new_since": cutoff.isoformat()}
+    except (SQLAlchemyError, AttributeError) as e:
+        logger.warning("Could not query new opportunity count: %s", e)
+        return {"new_count": 0, "new_since": cutoff.isoformat()}
+
+
+async def upsert_opportunities_to_db(
+    db: AsyncSession, opportunities: list[dict]
+) -> int:
+    """Upsert a list of opportunities into the DB.
+
+    Uses title-based dedup (md5 hash as id). Returns count of upserted rows.
+    """
+    from sqlalchemy import text as sql_text
+
+    upserted = 0
+    try:
+        for opp in opportunities:
+            opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
+            await db.execute(
+                sql_text("""
+                    INSERT INTO opportunities
+                        (id, title, company, location, pay, url, category,
+                         description, salary_min, salary_max, salary_currency,
+                         age_requirement, experience_required, posted_at,
+                         first_seen_at, source_name, image_url)
+                    VALUES
+                        (:id, :title, :company, :location, :pay, :url, :category,
+                         :description, :salary_min, :salary_max, :salary_currency,
+                         :age_requirement, :experience_required, :posted_at,
+                         :first_seen_at, :source_name, :image_url)
+                    ON CONFLICT (id) DO UPDATE SET
+                        title = EXCLUDED.title,
+                        company = EXCLUDED.company,
+                        location = EXCLUDED.location,
+                        pay = EXCLUDED.pay,
+                        url = EXCLUDED.url,
+                        category = EXCLUDED.category,
+                        description = EXCLUDED.description,
+                        salary_min = EXCLUDED.salary_min,
+                        salary_max = EXCLUDED.salary_max,
+                        salary_currency = EXCLUDED.salary_currency,
+                        age_requirement = EXCLUDED.age_requirement,
+                        experience_required = EXCLUDED.experience_required,
+                        posted_at = EXCLUDED.posted_at,
+                        source_name = EXCLUDED.source_name,
+                        image_url = EXCLUDED.image_url
+                """),
+                {
+                    "id": opp_id,
+                    "title": opp.get("title", "Unknown"),
+                    "company": opp.get("company", "Unknown"),
+                    "location": opp.get("location", "Caribbean"),
+                    "pay": opp.get("pay", "Varies"),
+                    "url": opp.get("url", ""),
+                    "category": opp.get("category", "event"),
+                    "description": opp.get("description", ""),
+                    "salary_min": opp.get("salary_min"),
+                    "salary_max": opp.get("salary_max"),
+                    "salary_currency": opp.get("salary_currency"),
+                    "age_requirement": opp.get("age_requirement"),
+                    "experience_required": opp.get("experience_required", "None"),
+                    "posted_at": opp.get("posted_at"),
+                    "first_seen_at": opp.get("first_seen_at") or _now_iso(),
+                    "source_name": opp.get("source_name", "curated"),
+                    "image_url": opp.get("image_url"),
+                },
+            )
+            upserted += 1
+
+        await db.commit()
+        logger.info("Upserted %d opportunities to DB", upserted)
+        return upserted
+
+    except (SQLAlchemyError, AttributeError) as e:
+        logger.warning("Failed to upsert opportunities: %s", e)
+        await db.rollback()
+        return 0
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 async def get_available_categories(db: AsyncSession) -> list[str]:
-    """Get all unique categories from the curated list."""
+    """Get all unique categories from the DB, falling back to curated list."""
+    from sqlalchemy import text as sql_text
+
+    try:
+        result = await db.execute(sql_text("SELECT DISTINCT category FROM opportunities"))
+        categories = {row[0] for row in result.fetchall()}
+        if categories:
+            return sorted(categories)
+    except (SQLAlchemyError, AttributeError):
+        pass
+
+    # Fallback to curated list
     categories = set()
     for opp in CARIBBEAN_OPPORTUNITIES:
         categories.add(opp.get("category", "event"))
@@ -629,19 +831,8 @@ async def get_available_categories(db: AsyncSession) -> list[str]:
 
 
 async def get_new_count(db: AsyncSession) -> dict:
-    """Count opportunities first seen in the last 24 hours.
-
-    For now, counts from the curated list (which uses a static timestamp).
-    In production, this would query the opportunities table.
-    """
-    # Since we're using a curated list (not a DB table), we return 0
-    # Once the opportunities table is populated by the scraper,
-    # this will query first_seen_at >= cutoff
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-    return {
-        "new_count": 0,
-        "new_since": cutoff.isoformat(),
-    }
+    """Count opportunities first seen in the last 24 hours."""
+    return await get_new_count_from_db(db)
 
 
 # ── Public API ──────────────────────────────────────────────────────────────
@@ -679,7 +870,72 @@ async def discover_opportunities(
         "interests": user.interests or [],
     }
 
-    # Start with curated opportunities
+    # Try to load opportunities from DB first
+    db_pool, db_total = await fetch_opportunities_from_db(
+        db, category=category, timeframe=timeframe, sort=sort, page=page, limit=limit
+    )
+
+    if db_pool:
+        # Opportunities exist in DB — use them directly
+        # For relevance sort, we still need to score and LLM-rank
+        if sort == "relevance":
+            db_pool = score_all_opportunities(db_pool, profile)
+            matched = await asyncio.to_thread(match_opportunities_with_llm, profile, db_pool)
+            score_map = {o["title"]: o.get("relevance_score", 0) for o in db_pool}
+            for m in matched:
+                m["relevance_score"] = score_map.get(m["title"], m.get("relevance_score", 0))
+            # Re-paginate after LLM ranking
+            total_available = len(matched)
+            start_idx = (page - 1) * limit
+            end_idx = start_idx + limit
+            paginated = matched[start_idx:end_idx]
+        else:
+            total_available = db_total
+            paginated = db_pool
+
+        saved_ids = await get_saved_opportunity_ids(db, user_id)
+        results = []
+        for opp in paginated:
+            opp_id = opp.get("id") or hashlib.md5(opp["title"].encode()).hexdigest()[:16]
+            results.append({
+                "id": opp_id,
+                "title": opp.get("title", "Unknown"),
+                "company": opp.get("company", "Unknown"),
+                "location": opp.get("location", "Caribbean"),
+                "pay": opp.get("pay", "Varies"),
+                "salary_min": opp.get("salary_min"),
+                "salary_max": opp.get("salary_max"),
+                "salary_currency": opp.get("salary_currency"),
+                "age_requirement": opp.get("age_requirement"),
+                "experience_required": opp.get("experience_required", "None"),
+                "url": opp.get("url", ""),
+                "category": opp.get("category", "event"),
+                "description": opp.get("description", ""),
+                "posted_at": opp.get("posted_at"),
+                "first_seen_at": opp.get("first_seen_at"),
+                "source_name": opp.get("source_name", "curated"),
+                "image_url": opp.get("image_url"),
+                "is_saved": opp_id in saved_ids,
+                "relevance_score": opp.get("relevance_score"),
+            })
+        return {
+            "opportunities": results,
+            "metadata": {
+                "total_available": total_available,
+                "returned": len(results),
+                "page": page,
+                "limit": limit,
+                "has_more": end_idx < total_available if sort == "relevance" else (page * limit) < total_available,
+                "available_categories": await get_available_categories(db),
+                "filters_applied": {
+                    "category": category,
+                    "timeframe": timeframe,
+                    "sort": sort,
+                },
+            },
+        }
+
+    # Fallback: use hardcoded curated list when DB is empty
     pool = list(CARIBBEAN_OPPORTUNITIES)
 
     # Filter by category if specified
@@ -726,9 +982,6 @@ async def discover_opportunities(
     saved_ids = await get_saved_opportunity_ids(db, user_id)
 
     # Build results with is_saved flag
-    # Generate deterministic IDs based on title hash
-    import hashlib
-
     results = []
     for opp in paginated:
         opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
@@ -799,8 +1052,11 @@ async def get_user_matches(
         "interests": user.interests or [],
     }
 
-    # Score all curated opportunities
-    all_scored = score_all_opportunities(CARIBBEAN_OPPORTUNITIES, profile)
+    # Score all opportunities — try DB first, fall back to curated
+    all_from_db = await fetch_all_opportunities_from_db(db)
+    source_pool = all_from_db if all_from_db else CARIBBEAN_OPPORTUNITIES
+
+    all_scored = score_all_opportunities(source_pool, profile)
 
     # Filter to matches above threshold
     matches = [o for o in all_scored if o.get("relevance_score", 0) >= MATCH_THRESHOLD]
@@ -816,10 +1072,9 @@ async def get_user_matches(
     saved_ids = await get_saved_opportunity_ids(db, user_id)
 
     # Build results
-    import hashlib
     results = []
     for opp in paginated:
-        opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
+        opp_id = opp.get("id") or hashlib.md5(opp["title"].encode()).hexdigest()[:16]
         results.append({
             "id": opp_id,
             "title": opp.get("title", "Unknown"),
