@@ -857,15 +857,15 @@ function ResumePanel() {
   )
 
   return (
-    <div className="p-4">
-      <div className="bg-[#F9F5FF] rounded-2xl border border-[#EDE3FF] p-4 mb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-[#EADFFF] flex items-center justify-center">
-            <User size={16} className="text-[#6B26EA]" />
+    <div className="p-4 overflow-y-auto h-full">
+      <div className="bg-[#F9F5FF] rounded-2xl border border-[#EDE3FF] p-4 mb-3">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 rounded-full bg-[#EADFFF] flex items-center justify-center">
+            <User size={14} className="text-[#6B26EA]" />
           </div>
           <div>
-            <p className="text-[13px] font-semibold text-[#0D0026]">Your Resume</p>
-            <p className="text-[11px] text-[#8B898E]">AI-generated resume</p>
+            <p className="text-[13px] font-semibold text-[#0D0026]">{resumeData?.name || 'Resume'}</p>
+            <p className="text-[10px] text-[#8B898E]">{resumeData?.email || ''}</p>
           </div>
         </div>
 
@@ -874,25 +874,66 @@ function ResumePanel() {
             <Loader2 size={14} className="text-[#6B26EA] animate-spin" />
           </div>
         ) : hasContent ? (
-          <div className="space-y-3">
-            <div>
-              <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">EXPERIENCE</h4>
-              <p className="text-[11px] text-[#4A3572]">
-                {resumeData.experience?.length || 0} position{(resumeData.experience?.length || 0) !== 1 ? 's' : ''} listed
+          <div className="space-y-2.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+            {/* Objective */}
+            {resumeData?.objective && (
+              <p className="text-[10px] text-[#4A3572] leading-relaxed line-clamp-2 italic">
+                {resumeData.objective}
               </p>
-            </div>
-            <div>
-              <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">EDUCATION</h4>
-              <p className="text-[11px] text-[#4A3572]">
-                {resumeData.education?.length || 0} institution{(resumeData.education?.length || 0) !== 1 ? 's' : ''} listed
-              </p>
-            </div>
-            <div>
-              <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">SKILLS</h4>
-              <p className="text-[11px] text-[#4A3572]">
-                {resumeData.skills?.length || 0} skill{(resumeData.skills?.length || 0) !== 1 ? 's' : ''} listed
-              </p>
-            </div>
+            )}
+
+            {/* Education */}
+            {resumeData?.education?.length > 0 && (
+              <div>
+                <h4 className="text-[9px] font-bold text-[rgba(0,0,0,0.45)] tracking-widest mb-1">EDUCATION</h4>
+                {resumeData.education.slice(0, 2).map((edu, i) => (
+                  <p key={i} className="text-[10px] text-[#4A3572] leading-snug">
+                    <span className="font-semibold">{edu.institution}</span>
+                    {edu.level && <span className="text-[#8B898E]"> — {edu.level}</span>}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {/* Experience */}
+            {resumeData?.experience?.length > 0 && (
+              <div>
+                <h4 className="text-[9px] font-bold text-[rgba(0,0,0,0.45)] tracking-widest mb-1">EXPERIENCE</h4>
+                {resumeData.experience.slice(0, 3).map((exp, i) => (
+                  <p key={i} className="text-[10px] text-[#4A3572] leading-snug">
+                    <span className="font-semibold">{exp.title}</span>
+                    {exp.organization && <span className="text-[#8B898E]"> at {exp.organization}</span>}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {/* Skills */}
+            {resumeData?.skills?.length > 0 && (
+              <div>
+                <h4 className="text-[9px] font-bold text-[rgba(0,0,0,0.45)] tracking-widest mb-1">SKILLS</h4>
+                <div className="flex flex-wrap gap-1">
+                  {(Array.isArray(resumeData.skills) ? resumeData.skills : String(resumeData.skills).split(',').map(s => s.trim())).slice(0, 8).map((skill, i) => (
+                    <span key={i} className="text-[9px] bg-white border border-[#EDE3FF] text-[#6B26EA] px-1.5 py-0.5 rounded-full">
+                      {skill}
+                    </span>
+                  ))}
+                  {(Array.isArray(resumeData.skills) ? resumeData.skills : String(resumeData.skills).split(',')).length > 8 && (
+                    <span className="text-[9px] text-[#8B898E] py-0.5">+{(Array.isArray(resumeData.skills) ? resumeData.skills : String(resumeData.skills).split(',')).length - 8} more</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Certifications */}
+            {resumeData?.certifications?.length > 0 && (
+              <div>
+                <h4 className="text-[9px] font-bold text-[rgba(0,0,0,0.45)] tracking-widest mb-1">CERTIFICATIONS</h4>
+                {resumeData.certifications.slice(0, 3).map((cert, i) => (
+                  <p key={i} className="text-[10px] text-[#4A3572] leading-snug">• {cert}</p>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-[11px] text-[#A8A8A8]">No resume yet. Complete your profile and generate one.</p>
