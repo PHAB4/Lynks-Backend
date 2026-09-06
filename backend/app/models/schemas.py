@@ -35,6 +35,7 @@ class ProfileResponse(BaseModel):
     country: str
     education_level: str
     employment_status: str
+    phone: str | None = None
     career_path: str
     interests: list[str]
     created_at: datetime
@@ -46,6 +47,7 @@ class ProfileUpdate(BaseModel):
     country: Optional[str] = None
     education_level: Optional[str] = None
     employment_status: Optional[str] = None
+    phone: Optional[str] = None
     interests: Optional[list[str]] = None
 
 

@@ -39,6 +39,8 @@ Response 200: {
   "age": "int | null",
   "country": "string | null",
   "education_level": "string | null",
+  "employment_status": "string | null",
+  "phone": "string | null",
   "career_path": "string | null",
   "interests": ["string"] | null,
   "created_at": "datetime"
@@ -55,6 +57,7 @@ Request: {
   "age": 17,                 // optional
   "country": "Jamaica",      // optional
   "education_level": "High School",  // optional
+  "phone": "+1-876-555-1234",    // optional
   "interests": ["coding", "AI"]      // optional
 }
 

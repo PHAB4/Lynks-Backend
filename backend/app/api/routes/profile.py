@@ -18,6 +18,7 @@ class ProfileUpdate(BaseModel):
     country: Optional[str] = None
     education_level: Optional[str] = None
     employment_status: Optional[str] = None
+    phone: Optional[str] = None
     interests: Optional[list[str]] = None
     career_path: Optional[str] = None
 
@@ -36,6 +37,7 @@ def _profile_dict(user: User) -> dict:
         "country": user.country,
         "education_level": user.education_level,
         "employment_status": user.employment_status,
+        "phone": user.phone,
         "career_path": user.career_path,
         "interests": user.interests,
         "created_at": user.created_at.isoformat() if user.created_at else None,
