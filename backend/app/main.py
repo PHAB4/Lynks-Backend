@@ -31,6 +31,52 @@ from app.db.postgres import engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Auto-migrate: ensure the opportunities table exists with all required columns
+    try:
+        from sqlalchemy import text
+        from app.db.postgres import async_session
+        async with async_session() as db:
+            await db.execute(text("""
+                CREATE TABLE IF NOT EXISTS opportunities (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    company TEXT DEFAULT 'Unknown',
+                    location TEXT DEFAULT 'Caribbean',
+                    pay TEXT DEFAULT 'Varies',
+                    url TEXT DEFAULT '',
+                    age_requirement TEXT,
+                    experience_required TEXT DEFAULT 'None',
+                    category TEXT NOT NULL DEFAULT 'event',
+                    description TEXT DEFAULT '',
+                    posted_at TIMESTAMPTZ DEFAULT now(),
+                    first_seen_at TIMESTAMPTZ DEFAULT now(),
+                    source_name TEXT DEFAULT 'curated',
+                    salary_min NUMERIC,
+                    salary_max NUMERIC,
+                    salary_currency TEXT DEFAULT 'JMD',
+                    image_url TEXT
+                )
+            """))
+            # Add any missing columns (idempotent)
+            for col_sql in [
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS age_requirement TEXT",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS experience_required TEXT DEFAULT 'None'",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'event'",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS posted_at TIMESTAMPTZ DEFAULT now()",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS first_seen_at TIMESTAMPTZ DEFAULT now()",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS source_name TEXT DEFAULT 'curated'",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS salary_min NUMERIC",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS salary_max NUMERIC",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS salary_currency TEXT DEFAULT 'JMD'",
+                "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS image_url TEXT",
+            ]:
+                await db.execute(text(col_sql))
+            await db.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Opportunities table migration failed (non-fatal): %s", e)
+
     # Start the background opportunity scraper scheduler
     from app.services.scheduler import get_scheduler
     scheduler = get_scheduler()

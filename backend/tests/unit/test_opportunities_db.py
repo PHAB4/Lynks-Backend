@@ -160,7 +160,7 @@ class TestUpsertOpportunities:
         assert mock_db.execute.call_count == 3
 
     async def test_upsert_handles_db_error(self):
-        """DB error during upsert should rollback and return 0."""
+        """DB error during upsert should rollback per-row and return 0."""
         from sqlalchemy.exc import SQLAlchemyError
 
         mock_db = AsyncMock(spec=AsyncSession)
@@ -172,7 +172,7 @@ class TestUpsertOpportunities:
         count = await upsert_opportunities_to_db(mock_db, SAMPLE_OPPORTUNITIES)
 
         assert count == 0
-        mock_db.rollback.assert_called_once()
+        assert mock_db.rollback.call_count >= 1
 
     async def test_upsert_passes_correct_params(self):
         """Each upsert call should include all expected fields."""
