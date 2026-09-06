@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
@@ -18,9 +18,8 @@ export default function OnboardingPage() {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [suggestedInterests, setSuggestedInterests] = useState<string[]>([])
 
-  const steps = ['welcome', 'name', 'country', 'age', 'employment', 'education', 'careerPath', 'interests']
+  const steps = ['welcome', 'name', 'country', 'age', 'employment', 'education', 'careerPath']
   const totalSteps = steps.length
 
   const handleFinish = async () => {
@@ -49,7 +48,7 @@ export default function OnboardingPage() {
           age: profile.age ? parseInt(profile.age) : null,
           employment_status: profile.employment,
           education_level: profile.education,
-          interests: profile.interests,
+          interests: profile.interests.length > 0 ? profile.interests : [profile.careerPath],
         }),
       })
 
@@ -98,28 +97,8 @@ export default function OnboardingPage() {
     if (step === 4) return profile.employment.length > 0
     if (step === 5) return profile.education.length > 0
     if (step === 6) return profile.careerPath.trim().length > 0
-    if (step === 7) return profile.interests.length > 0
     return false
   }
-
-  const fetchSuggestedInterests = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
-      const res = await fetch(`${BACKEND_URL}/profile/suggested-interests`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data.suggestions) setSuggestedInterests(data.suggestions)
-      }
-    } catch { /* fallback handled below */ }
-  }
-
-  useEffect(() => {
-    if (step === 7) fetchSuggestedInterests()
-  }, [step])
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F7F3FE]">
@@ -265,7 +244,6 @@ export default function OnboardingPage() {
             </>
           )}
 
-          {/* Step 7: Interests */}
           {/* Step 6: Career Path */}
           {step === 6 && (
             <>
@@ -281,29 +259,6 @@ export default function OnboardingPage() {
                   placeholder="e.g. Software Engineering"
                   className="w-full py-3.5 px-5 rounded-xl border border-[#EDE3FF] bg-white text-sm text-[#0D0026] focus:outline-none focus:border-[#6B26EA] transition-colors"
                 />
-              </div>
-            </>
-          )}
-
-          {step === 7 && (
-            <>
-              <div className="text-center mb-8">
-                <h1 className="text-[32px] font-bold text-[#0D0026] mb-3 leading-tight" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>What career are you most interested in?</h1>
-                <p className="text-[16px] text-[#0D0026] leading-relaxed">Be as specific as possible so LYNKS can give you the most appropriate response.</p>
-              </div>
-              <div className="max-w-md mx-auto mb-8">
-                <div className="flex flex-wrap gap-2">
-                  {(suggestedInterests.length > 0 ? suggestedInterests : ['Frontend Engineering', 'Backend Engineering', 'AI & Machine Learning', 'Data Analytics', 'UX Design', 'Product Management', 'DevOps', 'Career Strategy']).map((interest) => {
-                    const selected = profile.interests.includes(interest)
-                    return (
-                      <button key={interest} onClick={() => {
-                        setProfile(p => ({ ...p, interests: selected ? p.interests.filter(i => i !== interest) : [...p.interests, interest] }))
-                      }} className={cn('py-2.5 px-5 rounded-full text-sm border transition-colors', selected ? 'bg-[#6B26EA] text-white border-[#6B26EA]' : 'border-[#EDE3FF] bg-white text-[#0D0026] hover:border-[#6B26EA]')}>
-                        {interest}
-                      </button>
-                    )
-                  })}
-                </div>
               </div>
             </>
           )}
