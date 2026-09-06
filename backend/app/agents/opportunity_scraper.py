@@ -29,7 +29,8 @@ from datetime import datetime, timezone
 from xml.etree import ElementTree as ET
 
 import httpx
-from openai import APIError as OpenAIError, OpenAI
+from openai import APIError as OpenAIError
+from app.services.model_router import call_llm
 
 from app.core.config import settings
 
@@ -739,7 +740,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free to enter",
         "age_requirement": "High school students (ages 13-19)",
         "experience_required": "None — open to all high school students",
-        "url": "https://jamaicaletters.com",
+        "url": "https://www.scienceteachersassociation.org/",
         "category": "competition",
         "description": "Annual science competition for Jamaican high school students covering biology, chemistry, physics, and earth science.",
     },
@@ -750,7 +751,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free to enter",
         "age_requirement": "High school students",
         "experience_required": "None — introductory level problems provided",
-        "url": "https://cxc.org",
+        "url": "https://www.cxc.org/our-services/caribbean-csec-computer-science/",
         "category": "competition",
         "description": "Programming competition for Caribbean high school students with problems ranging from beginner to advanced.",
     },
@@ -761,7 +762,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Funding for winning projects",
         "age_requirement": "Youth ages 15-25",
         "experience_required": "Social impact project idea",
-        "url": "https://digicelfoundation.com",
+        "url": "https://www.digicelfoundation.com/bright-stars",
         "category": "competition",
         "description": "Youth entrepreneurship challenge supporting social impact projects across the Caribbean.",
     },
@@ -772,7 +773,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free to enter, prizes for winners",
         "age_requirement": "Ages 16+",
         "experience_required": "Basic coding skills recommended",
-        "url": "https://devpost.com",
+        "url": "https://devpost.com/hackathons?search=caribbean",
         "category": "competition",
         "description": "Regional hackathon bringing together Caribbean developers to build innovative solutions.",
     },
@@ -783,7 +784,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Prizes for top 3 teams",
         "age_requirement": "Ages 16-30",
         "experience_required": "Basic programming knowledge",
-        "url": "https://devpost.com",
+        "url": "https://devpost.com/hackathons?search=jamaica",
         "category": "competition",
         "description": "Annual hackathon in Jamaica focused on solving local challenges with technology.",
     },
@@ -817,7 +818,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free",
         "age_requirement": "University students",
         "experience_required": "None",
-        "url": "https://uwi.edu",
+        "url": "https://www.mona.uwi.edu/faculty/science-departments/comp-sci/",
         "category": "club",
         "description": "Student-led coding club at UWI with workshops, projects, and networking events.",
     },
@@ -828,7 +829,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free",
         "age_requirement": "Ages 16+",
         "experience_required": "Interest in AI/data science",
-        "url": "https://www.linkedin.com/groups",
+        "url": "https://www.linkedin.com/groups/13636557/",
         "category": "club",
         "description": "Online community for Caribbean professionals and students interested in AI and data science.",
     },
@@ -839,7 +840,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free",
         "age_requirement": "Women and non-binary in tech",
         "experience_required": "None",
-        "url": "https://girlgeekdinner.com",
+        "url": "https://girlgeekdinner.com/chapters/",
         "category": "club",
         "description": "Networking events for women and non-binary people in Caribbean tech.",
     },
@@ -850,7 +851,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free",
         "age_requirement": "Ages 16+",
         "experience_required": "Interest in software development",
-        "url": "https://www.meetup.com",
+        "url": "https://www.meetup.com/Jamaica-Developers/",
         "category": "club",
         "description": "Developer meetup group for Jamaican software engineers and tech enthusiasts.",
     },
@@ -872,7 +873,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free",
         "age_requirement": "Ages 15-25",
         "experience_required": "None",
-        "url": "https://www.mdt.gov.tt",
+        "url": "https://www.mdt.gov.tt/digital-transformation/",
         "category": "club",
         "description": "Government initiative connecting young Trinidadians with technology training and opportunities.",
     },
@@ -884,7 +885,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Full tuition scholarship",
         "age_requirement": "High school graduates",
         "experience_required": "Strong CXC/CSEC results",
-        "url": "https://cxc.org",
+        "url": "https://www.cxc.org/scholarships/",
         "category": "scholarship",
         "description": "Merit-based scholarships for Caribbean students with outstanding CSEC results.",
     },
@@ -895,7 +896,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Full funding for UK Master's degree",
         "age_requirement": "Ages 18+",
         "experience_required": "Bachelor's degree, 2+ years work experience",
-        "url": "https://chevening.org",
+        "url": "https://www.chevening.org/scholarships/",
         "category": "scholarship",
         "description": "UK government scholarship for Caribbean professionals to pursue a Master's degree in the UK.",
     },
@@ -906,7 +907,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Variable",
         "age_requirement": "Graduate students",
         "experience_required": "Bachelor's degree in STEM",
-        "url": "https://aasciences.africa",
+        "url": "https://aasciences.africa/opportunities/",
         "category": "scholarship",
         "description": "STEM scholarship for graduate students including Caribbean nationals.",
     },
@@ -962,7 +963,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Free to enter, prizes",
         "age_requirement": "Ages 18-35",
         "experience_required": "Innovation or business idea",
-        "url": "https://wipo.int",
+        "url": "https://wipo.int/hackathons/",
         "category": "event",
         "description": "Global IP hackathon with a Caribbean track, focusing on intellectual property innovation.",
     },
@@ -1029,7 +1030,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Teaching stipend",
         "age_requirement": "University graduates",
         "experience_required": "Bachelor's degree",
-        "url": "https://teachforall.org",
+        "url": "https://www.teachforjamaica.org/",
         "category": "volunteer",
         "description": "Teaching fellowship placing graduates in underserved Jamaican schools.",
     },
@@ -1040,7 +1041,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Living stipend + readjustment allowance",
         "age_requirement": "Ages 18-34",
         "experience_required": "Bachelor's degree preferred",
-        "url": "https://peacecorps.gov",
+        "url": "https://www.peacecorps.gov/volunteer/",
         "category": "volunteer",
         "description": "Peace Corps service in Caribbean countries focusing on education and community development.",
     },
@@ -1051,7 +1052,7 @@ CARIBBEAN_OPPORTUNITIES: list[dict] = [
         "pay": "Volunteer (unpaid)",
         "age_requirement": "Ages 15-30",
         "experience_required": "None",
-        "url": "https://icrc.org",
+        "url": "https://www.icrc.org/how-we-work/volunteering",
         "category": "volunteer",
         "description": "Youth volunteering program with Red Cross societies across the Caribbean.",
     },
@@ -1141,13 +1142,7 @@ def generate_opportunities_with_llm() -> list[Opportunity]:
         return [Opportunity(**o) for o in cached]
 
     try:
-        client = OpenAI(
-            api_key=settings.LLM_API_KEY,
-            base_url=settings.LLM_API_BASE_URL,
-        )
-
-        response = client.chat.completions.create(
-            model=settings.LLM_MODEL,
+        raw_content, _, _ = call_llm(
             messages=[
                 {
                     "role": "system",
@@ -1164,8 +1159,7 @@ def generate_opportunities_with_llm() -> list[Opportunity]:
             temperature=0.6,
             max_tokens=4096,
         )
-
-        raw_content = response.choices[0].message.content.strip()
+        raw_content = raw_content.strip()
         if raw_content.startswith("```"):
             lines = raw_content.split("\n")
             lines = lines[1:]
@@ -1206,7 +1200,7 @@ def generate_opportunities_with_llm() -> list[Opportunity]:
         set_cached_opportunities(cache_key, [o.to_dict() for o in opportunities])
         return opportunities
 
-    except (OpenAIError, json.JSONDecodeError) as e:
+    except (OpenAIError, RuntimeError, json.JSONDecodeError) as e:
         logger.warning("LLM opportunity generation failed: %s", e)
         return []
 
