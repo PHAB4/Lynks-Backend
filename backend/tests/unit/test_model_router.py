@@ -90,9 +90,9 @@ class TestModelList:
         names = [m.name for m in models]
         assert "groq-120b" in names
         assert "groq-20b" in names
-        assert "gemini-2.5-flash" in names
+        assert "gemini-3.1-flash-lite" in names
+        assert "gemini-3.5-flash-lite" in names
         assert "gemini-3-flash" in names
-        assert "gemini-2.5-flash-lite" in names
 
     def test_sorted_by_priority(self):
         models = _build_model_list()
@@ -162,7 +162,7 @@ class TestSelectModel:
         assert model.supports_tools is True
 
     def test_returns_none_when_all_limited(self):
-        for name in ["groq-120b", "groq-20b", "gemini-2.5-flash", "gemini-3-flash", "gemini-2.5-flash-lite"]:
+        for name in ["groq-120b", "groq-20b", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash"]:
             _tracker.record_rate_limit(name)
         model = select_model()
         assert model is None
@@ -300,9 +300,9 @@ class TestGetStatus:
         status = get_status()
         assert "groq-120b" in status
         assert "groq-20b" in status
-        assert "gemini-2.5-flash" in status
+        assert "gemini-3.1-flash-lite" in status
+        assert "gemini-3.5-flash-lite" in status
         assert "gemini-3-flash" in status
-        assert "gemini-2.5-flash-lite" in status
 
     def test_status_shape(self):
         status = get_status()

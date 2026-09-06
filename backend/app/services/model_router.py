@@ -33,7 +33,7 @@ class ModelConfig:
     supports_vision: bool = False
 
 
-# Priority order: Groq 120B → Groq 20B → Gemini 2.5 Flash-Lite → Gemini 3 Flash → Gemini 2.5 Flash
+# Priority order: Groq 120B → Groq 20B → Gemini 3.1 Flash-Lite → Gemini 3.5 Flash-Lite → Gemini 3 Flash
 # Cheapest Gemini first. All pay-as-you-go limits.
 DEFAULT_MODELS: list[dict] = [
     {
@@ -59,9 +59,9 @@ DEFAULT_MODELS: list[dict] = [
         "supports_tools": True,
     },
     {
-        "name": "gemini-2.5-flash-lite",
+        "name": "gemini-3.1-flash-lite",
         "provider": "google",
-        "model": "gemini-2.5-flash-lite",
+        "model": "gemini-3.1-flash-lite",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/",
         "env_key": "GEMINI_API_KEY",
         "priority": 3,
@@ -71,9 +71,9 @@ DEFAULT_MODELS: list[dict] = [
         "supports_vision": True,
     },
     {
-        "name": "gemini-3-flash",
+        "name": "gemini-3.5-flash-lite",
         "provider": "google",
-        "model": "gemini-3-flash",
+        "model": "gemini-3.5-flash-lite",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/",
         "env_key": "GEMINI_API_KEY",
         "priority": 4,
@@ -83,9 +83,9 @@ DEFAULT_MODELS: list[dict] = [
         "supports_vision": True,
     },
     {
-        "name": "gemini-2.5-flash",
+        "name": "gemini-3-flash",
         "provider": "google",
-        "model": "gemini-2.5-flash",
+        "model": "gemini-3-flash",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/",
         "env_key": "GEMINI_API_KEY",
         "priority": 5,
