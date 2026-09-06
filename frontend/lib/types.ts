@@ -90,6 +90,7 @@ export interface ResumeData {
   projects: { title: string; description: string; skills_used: string[] }[]
   certifications: string[]
   interests: string[]
+  custom_sections?: { title: string; content: string }[]
 }
 
 export interface ResumeResponse {

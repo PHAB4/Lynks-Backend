@@ -127,10 +127,21 @@ export const resume = {
     request<ResumeResponse>('/resume', { method: 'PATCH', body: JSON.stringify({ content }) }),
 }
 
+export interface NotificationItem {
+  id: string
+  title: string
+  body: string
+  type: string
+  link?: string
+  is_read: boolean
+  created_at: string
+}
+
 export const notifications = {
-  list: () => request<{ id: string; title: string; message: string; read: boolean; created_at: string }[]>('/notifications'),
-  markRead: (id: string) => request<{ success: boolean }>(`/notifications/${id}/read`, { method: 'POST' }),
-  markAllRead: () => request<{ success: boolean }>('/notifications/read-all', { method: 'POST' }),
+  list: () => request<{ notifications: NotificationItem[]; unread_count: number }>('/notifications'),
+  markRead: (id: string) => request<{ status: string }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllRead: () => request<{ status: string; message: string }>('/notifications/read-all', { method: 'POST' }),
+  unreadCount: () => request<{ unread_count: number }>('/notifications/unread/count'),
 }
 
 export const health = {

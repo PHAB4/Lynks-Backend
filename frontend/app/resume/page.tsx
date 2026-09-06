@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Plus, Trash2, ArrowLeft, Save, Check } from 'lucide-react'
 import Link from 'next/link'
 import ResumePreview from '@/components/ResumePreview'
+import { ResumePDFDownload } from '@/components/ResumePDF'
 
 const EMPTY_RESUME: ResumeData = {
   name: '',
@@ -21,6 +22,7 @@ const EMPTY_RESUME: ResumeData = {
   projects: [],
   certifications: [],
   interests: [],
+  custom_sections: [],
 }
 
 export default function ResumePage() {
@@ -54,7 +56,12 @@ export default function ResumePage() {
         setResumeData({ ...EMPTY_RESUME, ...data.content } as ResumeData)
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to generate resume')
+      const msg = err instanceof Error ? err.message : 'Failed to generate resume'
+      if (msg.includes('429') || msg.toLowerCase().includes('rate limit')) {
+        setError('Rate limited — the AI service is busy. Please try again in a minute.')
+      } else {
+        setError(msg)
+      }
     } finally {
       setGenerating(false)
     }
@@ -112,6 +119,7 @@ export default function ResumePage() {
                 {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {generating ? 'Generating...' : 'Auto-fill from profile'}
               </Button>
+              <ResumePDFDownload data={resumeData} />
               <Button onClick={handleSave} disabled={saving} className="bg-[#6B26EA] hover:bg-[#5A1FD0] text-white">
                 {saved ? <Check className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                 {saved ? 'Saved!' : saving ? 'Saving...' : 'Save'}
@@ -400,6 +408,49 @@ export default function ResumePage() {
                     Add
                   </button>
                 </div>
+              </EditorSection>
+
+              {/* Custom Sections */}
+              <EditorSection title="Custom Sections">
+                <p className="text-[11px] text-[#8B898E] mb-3">Add your own sections — Volunteer Work, Publications, Languages, etc.</p>
+                {(resumeData.custom_sections || []).map((section, i) => (
+                  <div key={i} className="mb-3 pb-3 border-b border-[rgba(0,0,0,0.05)] last:border-0 last:mb-0 last:pb-0">
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        value={section.title}
+                        onChange={e => {
+                          const updated = [...(resumeData.custom_sections || [])]
+                          updated[i] = { ...updated[i], title: e.target.value }
+                          update('custom_sections', updated)
+                        }}
+                        placeholder="Section title (e.g. Volunteer Work)"
+                        className="flex-1 py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] font-semibold focus:outline-none focus:border-[#6B26EA]"
+                      />
+                      <button
+                        onClick={() => update('custom_sections', (resumeData.custom_sections || []).filter((_, j) => j !== i))}
+                        className="p-2 text-[#D14444] hover:bg-red-50 rounded-lg shrink-0"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <textarea
+                      value={section.content}
+                      onChange={e => {
+                        const updated = [...(resumeData.custom_sections || [])]
+                        updated[i] = { ...updated[i], content: e.target.value }
+                        update('custom_sections', updated)
+                      }}
+                      placeholder="Describe this section..."
+                      className="w-full py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[12px] focus:outline-none focus:border-[#6B26EA] resize-none h-20"
+                    />
+                  </div>
+                ))}
+                <button
+                  onClick={() => update('custom_sections', [...(resumeData.custom_sections || []), { title: '', content: '' }])}
+                  className="flex items-center gap-1 text-[12px] text-[#6B26EA] font-semibold hover:underline"
+                >
+                  <Plus size={12} /> Add custom section
+                </button>
               </EditorSection>
             </div>
 
