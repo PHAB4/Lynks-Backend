@@ -167,8 +167,8 @@ function ChatContent() {
                 {messages.map((msg, i) => (
                   <div key={i} className="flex gap-3">
                     {msg.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
-                        <span className="text-[#6B26EA] text-xs font-bold">L</span>
+                      <div className="w-8 h-8 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0 overflow-hidden">
+                        <img src="/lynks-chain-link.png" alt="Lynks" className="w-5 h-5 object-contain" />
                       </div>
                     )}
                     <div className="flex-1">
@@ -219,8 +219,8 @@ function ChatContent() {
 
                 {sending && messages[messages.length - 1]?.role === 'user' && (
                   <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
-                      <span className="text-[#6B26EA] text-xs font-bold">L</span>
+                    <div className="w-8 h-8 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0 overflow-hidden">
+                      <img src="/lynks-chain-link.png" alt="Lynks" className="w-5 h-5 object-contain" />
                     </div>
                     <div className="bg-white rounded-2xl px-4 py-3 shadow-[0_4px_12px_rgba(107,38,234,0.07)]">
                       <div className="flex items-center gap-1.5">

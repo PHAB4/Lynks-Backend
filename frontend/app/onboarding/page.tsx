@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
@@ -18,6 +18,7 @@ export default function OnboardingPage() {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [suggestedInterests, setSuggestedInterests] = useState<string[]>([])
 
   const steps = ['welcome', 'name', 'country', 'age', 'employment', 'education', 'careerPath', 'interests']
   const totalSteps = steps.length
@@ -102,6 +103,25 @@ export default function OnboardingPage() {
   }
 
   return (
+  const fetchSuggestedInterests = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
+      const res = await fetch(`${BACKEND_URL}/profile/suggested-interests`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.suggestions) setSuggestedInterests(data.suggestions)
+      }
+    } catch { /* fallback handled below */ }
+  }
+
+  useEffect(() => {
+    if (step === 7) fetchSuggestedInterests()
+  }, [step])
+
     <div className="flex flex-col min-h-screen bg-[#F7F3FE]">
       {/* Logo */}
       <div className="px-9 py-5">
@@ -273,7 +293,7 @@ export default function OnboardingPage() {
               </div>
               <div className="max-w-md mx-auto mb-8">
                 <div className="flex flex-wrap gap-2">
-                  {['Technology', 'Design', 'Business', 'Healthcare', 'Education', 'Finance', 'Marketing', 'Engineering', 'Data Science', 'AI/ML'].map((interest) => {
+                  {(suggestedInterests.length > 0 ? suggestedInterests : ['Frontend Engineering', 'Backend Engineering', 'AI & Machine Learning', 'Data Analytics', 'UX Design', 'Product Management', 'DevOps', 'Career Strategy']).map((interest) => {
                     const selected = profile.interests.includes(interest)
                     return (
                       <button key={interest} onClick={() => {

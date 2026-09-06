@@ -261,18 +261,6 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "generate_roadmap",
-            "description": (
-                "Generate or regenerate the user's personalized career roadmap. "
-                "Use when the user asks for a roadmap, a career plan, what steps to take, "
-                "or wants to change their career path."
-            ),
-            "parameters": {"type": "object", "properties": {}, "required": []},
-        },
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "get_portfolio",
             "description": (
                 "Get the user's portfolio — their completed tasks and verified evidence. "
