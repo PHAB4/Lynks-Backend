@@ -92,6 +92,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null)
   const convMenuRef = useRef<HTMLDivElement>(null)
 
+  const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null)
+  const convMenuRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string; email?: string } } | null) => {
       if (session?.user) {
@@ -139,7 +141,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setSidebarExpanded(false)
   }
 
-  const handleClearConversations = async () => {
+  const handleToggleConvPin = async (conversationId: string) => {
     try {
       setConversations([])
     } catch { /* ignore */ }
@@ -465,7 +467,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           "hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0",
           (pathname === '/dashboard' || pathname === '/settings' || pathname === '/onboarding') && "invisible h-0 border-none py-0 overflow-hidden"
         )}>
-          {PANEL_ICONS.map((item) => {
+          {PANEL_ICONS.filter((item) => {
+            const route = PANEL_ROUTES[item.id]
+            return !route || !pathname.startsWith(route)
+          }).map((item) => {
             const isPanelActive = openPanels.includes(item.id)
             return (
               <button
@@ -532,7 +537,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t border-[#EDE3FF] px-2 py-2">
-        {PANEL_ICONS.map((item) => {
+        {PANEL_ICONS.filter((item) => {
+          const route = PANEL_ROUTES[item.id]
+          return !route || !pathname.startsWith(route)
+        }).map((item) => {
           const isPanelActive = openPanels.includes(item.id)
           return (
             <button

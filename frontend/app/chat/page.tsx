@@ -238,7 +238,6 @@ function ChatContent() {
             </div>
           )}
 
-          {/* Chat input — always visible */}
           <div className="px-4 md:px-6 pb-4 md:pb-6 shrink-0">
             <div className="flex items-center gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] mx-auto shadow-[0_0_5px_rgba(0,0,0,0.05)]">
               <input
