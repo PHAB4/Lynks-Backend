@@ -89,6 +89,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [loadingConversations, setLoadingConversations] = useState(false)
   const conversationsFetched = useRef(false)
+  const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null)
+  const convMenuRef = useRef<HTMLDivElement>(null)
 
   const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null)
   const convMenuRef = useRef<HTMLDivElement>(null)
@@ -137,6 +139,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleSelectConversation = (conversationId: string) => {
     router.push(`/chat?conversation=${conversationId}`)
     setSidebarExpanded(false)
+  }
+
+  const handleToggleConvPin = async (conversationId: string) => {
+    try {
+      setConversations([])
+    } catch { /* ignore */ }
   }
 
   const handleToggleConvPin = async (conversationId: string) => {
@@ -272,18 +280,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </button>
 
       <div className="flex flex-col items-center gap-0.5 flex-1 mt-2">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.filter((item) => !isActive(item.href)).map((item) => (
           <button
             key={item.id}
             onClick={() => { router.push(item.href); setSidebarExpanded(false) }}
             className={cn(
               'flex items-center justify-center w-[48px] h-[48px] rounded-xl transition-all',
-              isActive(item.href)
-                ? 'bg-[#EADFFF] text-[#6B26EA]'
-                : 'text-[rgba(0,0,0,0.40)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]'
+              'text-[rgba(0,0,0,0.40)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]'
             )}
           >
-            <item.icon size={18} strokeWidth={isActive(item.href) ? 2.5 : 1.5} />
+            <item.icon size={18} strokeWidth={1.5} />
           </button>
         ))}
       </div>
@@ -314,16 +320,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="flex flex-col gap-0.5 mt-1">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.filter((item) => !isActive(item.href)).map((item) => (
           <button
             key={item.id}
             onClick={() => { router.push(item.href); setSidebarExpanded(false) }}
             className={cn(
               'flex items-center gap-[5px] rounded-2xl p-2.5 w-full transition-all',
-              isActive(item.href) ? 'text-[#6B26EA] font-medium' : 'text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)]'
+              'text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)]'
             )}
           >
-            <item.icon size={14} strokeWidth={isActive(item.href) ? 2.5 : 1.5} />
+            <item.icon size={14} strokeWidth={1.5} />
             <span className="text-[13px]">{item.label}</span>
           </button>
         ))}

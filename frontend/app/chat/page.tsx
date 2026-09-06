@@ -154,6 +154,7 @@ function ChatContent() {
     <AppLayout>
       <div className="flex h-screen bg-[#F7F3FE]">
         <div className="flex-1 flex flex-col min-w-0">
+          {/* Messages area */}
           {loadingMessages ? (
             <div className="flex-1 flex items-center justify-center">
               <Loader2 size={20} className="text-[#6B26EA] animate-spin" />
@@ -221,6 +222,7 @@ function ChatContent() {
               </div>
             </div>
           ) : (
+            /* Empty state — welcome centered above input */
             <div className="flex-1 flex flex-col items-center justify-center px-4">
               <div className="flex flex-col items-center max-w-[480px] mb-8">
                 <div className="w-14 h-14 rounded-full bg-[#EADFFF] flex items-center justify-center mb-5">
