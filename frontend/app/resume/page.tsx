@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 import { resume } from '@/lib/api'
-import DashboardLayout from '@/components/DashboardLayout'
+import AppLayout from '@/components/AppLayout'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, FileText, Loader2, Download, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
@@ -48,16 +48,16 @@ export default function ResumePage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <AppLayout>
         <div className="flex items-center justify-center h-full py-20">
           <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
         </div>
-      </DashboardLayout>
+      </AppLayout>
     )
   }
 
   return (
-    <DashboardLayout>
+    <AppLayout>
       <div className="max-w-3xl mx-auto p-6">
         <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700 font-medium mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
@@ -107,6 +107,6 @@ export default function ResumePage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </AppLayout>
   )
 }

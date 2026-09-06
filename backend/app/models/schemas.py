@@ -36,6 +36,7 @@ class ProfileResponse(BaseModel):
     education_level: str
     employment_status: str
     phone: str | None = None
+    avatar_url: str | None = None
     career_path: str
     interests: list[str]
     created_at: datetime

@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, Paperclip, Loader2, MessageSquare, Plus, Trash2, MoreVertical, Pin, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown } from 'lucide-react'
-import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { Send, Loader2, MessageSquare, Plus, Trash2, MoreVertical, Pin, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown } from 'lucide-react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import { supabase } from '@/lib/supabase'
 import {
@@ -34,6 +33,7 @@ export default function ChatPage() {
 
 function ChatContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const roadmapStep = searchParams.get('roadmap_step')
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -83,7 +83,13 @@ function ChatContent() {
     }
     loadUser()
     loadConversations()
-  }, [])
+
+    const urlConversationId = searchParams.get('conversation')
+    if (urlConversationId) {
+      setActiveConversationId(urlConversationId)
+      loadMessages(urlConversationId)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (roadmapStep && !sending && messages.length === 0) {
@@ -138,12 +144,14 @@ function ChatContent() {
   const handleSelectConversation = (conversationId: string) => {
     setActiveConversationId(conversationId)
     loadMessages(conversationId)
+    router.replace(`/chat?conversation=${conversationId}`, { scroll: false })
   }
 
   const handleNewChat = () => {
     setActiveConversationId(null)
     setMessages([])
     setError('')
+    router.replace('/chat', { scroll: false })
   }
 
   const handleClearHistory = async () => {
