@@ -1,6 +1,6 @@
 # Lynks — Product Requirement Document
 
-**Last updated:** September 6, 2026
+**Last updated:** September 10, 2026
 
 ## 1. Problem Statement
 
@@ -52,15 +52,18 @@ A platform that gives each user a personalized, step-by-step career roadmap, let
 ### 4.4 Career Opportunities (Job Scout Agent)
 
 - Sources Caribbean-specific opportunities: jobs, competitions, clubs, scholarships, events, volunteer roles
-- Opportunities are scraped from multiple sources (Devpost API, Eventbrite API, RSS feeds, curated list)
+- Opportunities are scraped from multiple sources (Devpost API, Eventbrite API, RSS feeds, curated list, LLM-generated)
 - Cached in-memory with 1-hour TTL for fast responses
 - Structured salary data for jobs (salary_min, salary_max, salary_currency) with **priority-based currency detection** (22+ currencies, source-context-aware)
+- Salary/pay information is displayed on opportunity cards in the frontend (green badge)
 - Category-based filtering, time-based filtering, relevance sorting
 - **Rule-based matching engine** (`scoring.py`): scores each opportunity 0–100 against the user's profile (career path, education, age, interests, location). Returns matches ≥ 50 via `GET /opportunities/matches`.
 - **Background scheduler** (`scheduler.py`): asyncio task runs every 6 hours on FastAPI startup, scrapes all sources, generates batch notifications. Status via `GET /opportunities/scheduler/status`.
+- **LLM-generated opportunities**: The scraper uses the model router to generate additional opportunities when API/RSS sources are exhausted
+- Curated URLs point to specific pages (program details, scholarship listings) rather than generic homepages
 - Users can save/bookmark opportunities for later
 - New-opportunity notification polling via `GET /opportunities/new-count`
-- Social media scraping (Facebook, Instagram) — stretch goal
+- Social media scraping (Facebook, Instagram) — deferred post-competition
 
 ### 4.5 Career Opportunities Page — UX Pattern
 
@@ -166,14 +169,37 @@ The dashboard is the first screen users see after login. It provides an at-a-gla
 | Job Scout | Sources Caribbean-relevant opportunities, scores them against user profiles (0–100) | Internet scraping + curated database | Scored & matched opportunities list |
 | Mentor-Orchestrator | Conversational assistant + agent router | User chat messages | Natural language response (possibly agent-assisted) |
 | Memory Extractor | Extracts key user facts from conversations | Conversation messages + existing memories | New user memories (up to 5 per extraction) |
-| Opportunity Scraper | Scrapes opportunities from multiple sources on a schedule | RSS feeds, APIs, social media, LLM generation | Structured opportunity data |
+| Opportunity Scraper | Scrapes opportunities from multiple sources on a schedule | RSS feeds, APIs, curated list, LLM generation | Structured opportunity data |
+| **Model Router** | Routes all LLM calls to the optimal model based on task type, cost, and availability | Task type (chat, roadmap, analysis, memory extraction, embeddings) | Selected model + provider with automatic fallback |
+
+### Model Routing Architecture
+
+All agent LLM calls go through a centralized model router (`backend/app/services/model_router.py`) instead of directly to OpenAI/Groq. The router:
+
+1. **Reads task type** from the calling agent (e.g., `chat`, `roadmap_generation`, `analysis`, `memory_extraction`, `opportunity_extraction`)
+2. **Selects the optimal model** from `models.json` based on task requirements, context window, cost tier, and capabilities
+3. **Implements fallback chains** — if the primary model is unavailable, tries secondary then tertiary models
+4. **Logs model selection** for monitoring and debugging
+
+**Task categories and routing:**
+
+| Task Type | Primary Model | Use Case |
+|---|---|---|
+| `chat` | Groq Llama 3 70B | Mentor conversations, career guidance |
+| `roadmap_generation` | Groq Llama 3 70B | Career roadmap generation |
+| `analysis` | Groq Llama 3 70B | Resume generation, opportunity matching |
+| `memory_extraction` | Groq Llama 3 8B | Extracting user facts from conversations |
+| `opportunity_extraction` | Groq Llama 3 8B | Generating structured opportunities from prompts |
+| `embeddings` | Sentence transformers | Semantic search for memory retrieval |
+
+**All agents using the model router:** mentor.py, architect.py, scout.py, memory_extractor.py, opportunity_scraper.py
 
 ## 6. Technical Constraints
 
 - **Backend:** Python 3.11+, FastAPI, async/await
 - **Database:** PostgreSQL (via Supabase), SQLAlchemy ORM
 - **Auth:** Supabase Auth — backend only verifies JWTs, never issues them
-- **LLM (text):** Groq (openai/gpt-oss-120b) via OpenAI-compatible API — roadmap generation, chat, resume, opportunity extraction
+- **LLM (text):** Groq (Llama 3 70B + 8B) via OpenAI-compatible API — all calls routed through `model_router.py` for optimal model selection and fallback
 - **LLM (vision):** Google Gemini 3.5 Flash via Google AI Studio API (free tier, 1,500 RPD) — evidence verification
 - **File Storage:** Supabase Storage (public `evidence` bucket)
 - **Note:** Impala/Highrise AI gateway is no longer accessible — all LLM calls go directly to Groq or Google AI Studio
@@ -201,9 +227,9 @@ Implemented via FastAPI middleware in `app/middleware.py`:
 | 1 | Should the "Ask About This" button use pre-filled messages or context objects? | **Resolved** — pre-filled messages (Phase 1) |
 | 2 | How often should the Job Scout scrape for new opportunities? | **Resolved** — background scheduler scrapes every 6 hours automatically on FastAPI startup. Manual refresh available via `POST /opportunities/refresh`. Scheduler status via `GET /opportunities/scheduler/status`. |
 | 3 | Should notifications be real-time or check-on-load? | **Resolved** — polling via `/opportunities/new-count` and `/notifications/unread/count` |
-| 4 | What LLM model to use for the Mentor chatbot? | **Resolved** — Groq (Llama 3 70B) for now |
+| 4 | What LLM model to use for the Mentor chatbot? | **Resolved** — Model router (`call_llm()`) selects optimal model per task type: Llama 3 70B for chat/roadmap/analysis, Llama 3 8B for memory extraction/opportunity generation. Automatic fallback chain if primary model is unavailable. |
 | 5 | How should evidence verification handle ambiguous uploads? | **Resolved** — lenient verification with `pending` fallback. Gemini 3.5 Flash (free tier) with career-context-aware analysis. Status stays `pending` if API is down. |
-| 6 | Social media scraping feasibility? | **Open** — deferred post-competition, public page scraping as stretch goal |
+| 6 | Social media scraping feasibility? | **Deferred post-competition** — public page scraping as stretch goal, not required for competition submission |
 
 ## 8. Deployment
 

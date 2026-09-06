@@ -25,7 +25,7 @@
 
 | Page | Backend Connected? | Current State |
 |---|---|---|
-| **`/dashboard`** | ✅ **Connected** | Calls backend via 5 separate API calls (`getProfile`, `getRoadmap`, `getOpportunities`, `getUnreadNotificationCount`, `getPortfolio`). Has tab navigation (Overview, Skills, Experience, Goals, Resources). Could be consolidated into 1 call to `GET /dashboard/summary`. |
+| **`/dashboard`** | ✅ **Connected** | Uses `GET /dashboard/summary` (single-call aggregation). Has tab navigation (Overview, Skills, Experience, Goals, Resources). |
 | **`/roadmap`** | ✅ **Connected** | Uses `roadmap-api.ts` — fetches roadmap, generates, regenerates. Task completion wired. |
 | **`/opportunities`** | ✅ **Connected** | Full backend integration — fetching, filtering, save/unsave, new count badge, refresh all wired via backend API. No more hardcoded data. |
 | **`/resume`** | ✅ **Connected** | Uses backend API (`GET /resume`, `POST /resume/generate`, `PATCH /resume`). Editing UI built by frontend teammate. Download PDF available. |
@@ -72,9 +72,12 @@
 
 | Priority | Gap | Effort |
 |---|---|---|
-| 🟡 Medium | Onboarding bypasses backend — writes to Supabase directly | Should call `PATCH /profile` instead |
-| ~~🟢 Low~~ | ~~Dashboard could use `/dashboard/summary`~~ | ✅ **RESOLVED** — Dashboard already uses summary endpoint |
+| 🟡 Medium | Onboarding bypasses backend — writes to Supabase directly | Should call `PATCH /profile` instead — deferred post-competition |
 | ✅ Done | Scheduled opportunity scraping | ✅ Done — asyncio background task every 6h, auto-generates notifications |
-| ✅ Done | Resume editing UI | ✅ Built by frontend teammate — live but needs end-to-end verification |
+| ✅ Done | Resume editing UI | ✅ Built by frontend teammate — live and deployed |
+| ✅ Done | Dashboard uses `/dashboard/summary` | ✅ Single-call aggregation, consolidated |
+| ✅ Done | Model routing | ✅ All agents use `call_llm()` — task-based model selection with fallback |
+| ✅ Done | Salary/pay on opportunity cards | ✅ Green salary badge displayed on cards |
 | ⏸️ Post-competition | Portfolio/Evidence page | Postponed until after competition — backend endpoints ready |
 | ⏸️ Post-competition | Notifications page (bell icon, list, mark-as-read) | Backend 100% ready, frontend UI deferred |
+| ⏸️ Post-competition | Wire onboarding to `PATCH /profile` | Backend PATCH endpoint ready, frontend needs wiring |
