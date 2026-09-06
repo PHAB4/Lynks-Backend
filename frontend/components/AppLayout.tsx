@@ -94,6 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const conversationsFetched = useRef(false)
   const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null)
   const convMenuRef = useRef<HTMLDivElement>(null)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string; email?: string } } | null) => {
@@ -257,6 +258,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [router])
 
   const handleLogout = async () => {
+    setShowLogoutConfirm(true)
+  }
+
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false)
     await supabase.auth.signOut()
     localStorage.removeItem('lynks_user')
     router.push('/')
@@ -571,6 +577,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="text-[10px] font-medium">Settings</span>
         </Link>
       </nav>
+
+      {/* Logout confirmation modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40" onClick={() => setShowLogoutConfirm(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[16px] font-semibold text-[#0D0026] mb-2" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Log out?</h3>
+            <p className="text-[13px] text-[#8B898E] mb-5">Are you sure you want to log out of your account?</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 rounded-xl text-[13px] font-medium text-[#0D0026] bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-4 py-2 rounded-xl text-[13px] font-medium text-white bg-[#D14444] hover:bg-[#B91C1C] transition-colors"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

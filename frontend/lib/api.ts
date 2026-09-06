@@ -77,9 +77,10 @@ export const portfolio = {
 }
 
 export const opportunities = {
-  list: async (filters?: { category?: string; page?: number; limit?: number }) => {
+  list: async (filters?: { category?: string; sort?: string; page?: number; limit?: number }) => {
     const params = new URLSearchParams()
     if (filters?.category && filters.category !== 'All') params.set('category', filters.category)
+    if (filters?.sort) params.set('sort', filters.sort)
     if (filters?.page) params.set('page', String(filters.page))
     if (filters?.limit) params.set('limit', String(filters.limit))
     const qs = params.toString()

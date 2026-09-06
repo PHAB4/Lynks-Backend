@@ -245,7 +245,7 @@ function ChatContent() {
             </div>
           ) : (
             /* Empty state — welcome centered above input */
-            <div className="flex-1 flex flex-col items-center justify-center px-4">
+            <div className="flex-1 flex flex-col items-center justify-center pb-16 px-4">
               <div className="flex flex-col items-center max-w-[480px] mb-8">
                 <div className="w-14 h-14 rounded-full bg-[#EADFFF] flex items-center justify-center mb-5">
                   <Sparkles size={24} className="text-[#6B26EA]" />
@@ -260,7 +260,7 @@ function ChatContent() {
             </div>
           )}
 
-          <div className="px-4 md:px-6 pb-6 md:pb-8 pt-2 shrink-0">
+          <div className="px-4 md:px-6 pb-4 md:pb-5 pt-2 shrink-0">
             <div className="flex items-end gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] mx-auto shadow-[0_0_5px_rgba(0,0,0,0.05)]">
               <textarea
                 value={message}

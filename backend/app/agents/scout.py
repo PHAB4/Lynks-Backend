@@ -369,11 +369,11 @@ def match_opportunities_with_llm(
             return data
         if isinstance(data, dict) and "opportunities" in data:
             return data["opportunities"]
-        return opportunities[:8]
+        return opportunities
 
     except Exception as e:
-        logger.warning("LLM opportunity matching failed, returning curated list: %s", e)
-        return opportunities[:8]
+        logger.warning("LLM opportunity matching failed, returning rule-scored list: %s", e)
+        return opportunities
 
 
 # ── Saved opportunities helpers ───────────────────────────────────────────
@@ -657,14 +657,19 @@ async def discover_opportunities(
         "interests": user.interests or [],
     }
 
-    # Try to load opportunities from DB first
-    db_pool, db_total = await fetch_opportunities_from_db(
-        db, category=category, timeframe=timeframe, sort=sort, page=page, limit=limit
-    )
+    if sort == "relevance":
+        # For relevance sort: fetch ALL opportunities (no pagination) so the
+        # LLM can rank the full set, then we paginate the ranked results.
+        db_pool, db_total = await fetch_opportunities_from_db(
+            db, category=category, timeframe=timeframe, sort=sort, page=1, limit=500
+        )
+    else:
+        # For non-relevance sorts: paginate at the DB level directly.
+        db_pool, db_total = await fetch_opportunities_from_db(
+            db, category=category, timeframe=timeframe, sort=sort, page=page, limit=limit
+        )
 
     if db_pool:
-        # Opportunities exist in DB — use them directly
-        # For relevance sort, we still need to score and LLM-rank
         if sort == "relevance":
             db_pool = score_all_opportunities(db_pool, profile)
             try:
@@ -674,11 +679,10 @@ async def discover_opportunities(
                 )
             except asyncio.TimeoutError:
                 logger.warning("LLM matching timed out — using rule-based scores")
-                matched = db_pool[:limit]
+                matched = db_pool
             score_map = {o["title"]: o.get("relevance_score", 0) for o in db_pool}
             for m in matched:
                 m["relevance_score"] = score_map.get(m["title"], m.get("relevance_score", 0))
-            # Re-paginate after LLM ranking
             total_available = len(matched)
             start_idx = (page - 1) * limit
             end_idx = start_idx + limit
@@ -764,7 +768,7 @@ async def discover_opportunities(
             )
         except asyncio.TimeoutError:
             logger.warning("LLM matching timed out (curated fallback) — using rule-based scores")
-            matched = pool[:limit]
+            matched = pool
         # Preserve scores from rule-based scoring
         score_map = {o["title"]: o.get("relevance_score", 0) for o in pool}
         for m in matched:

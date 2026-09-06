@@ -36,10 +36,11 @@ export default function OpportunitiesPage() {
     try {
       setLoading(true)
       setError('')
-      const res = await opportunities.list({ category: category || undefined, page, limit: 20 })
+      const res = await opportunities.list({ category: category || undefined, sort: 'recent', page, limit: 20 })
       setAllOpps(res.opportunities ?? [])
-      setTotalPages(res.metadata?.total_pages ?? 1)
-      setTotalResults(res.metadata?.total_available ?? 0)
+      const total = res.metadata?.total_available ?? 0
+      setTotalPages(Math.max(1, Math.ceil(total / 20)))
+      setTotalResults(total)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load opportunities')
     } finally {
