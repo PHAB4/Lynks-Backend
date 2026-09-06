@@ -167,10 +167,10 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-[15px] font-semibold mb-0.5">Your Roadmap</p>
-                    <p className="text-[13px] text-white/70">{(roadmap?.total_tasks ?? 0) > 0 ? `${roadmap?.completed_tasks} of ${roadmap?.total_tasks} tasks completed` : 'No roadmap yet — generate one to get started'}</p>
+                    <p className="text-[13px] text-white/70">{roadmap?.has_roadmap ? `${roadmap?.completed_tasks} of ${roadmap?.total_tasks} tasks completed` : 'No roadmap yet — generate one to get started'}</p>
                   </div>
                 </div>
-                {(roadmap?.total_tasks ?? 0) > 0 ? (
+                {roadmap?.has_roadmap ? (
                   <div>
                     <div className="w-full bg-white/20 rounded-full h-2.5 mb-3">
                       <div className="bg-white rounded-full h-2.5 transition-all" style={{ width: `${roadmap?.progress_percent ?? 0}%` }} />
