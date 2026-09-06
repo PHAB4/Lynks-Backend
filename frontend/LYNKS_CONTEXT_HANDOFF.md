@@ -24,7 +24,10 @@ Lynks is an **AI-powered career accelerator for Caribbean youth**. It provides p
 | Notifications | ✅ Built | Opportunity alerts, task milestones, reminders |
 | Evidence AI verification | ✅ Built | Gemini 3.5 Flash vision verification |
 | Conversation management | ✅ Built | Pin/unpin, reorder, delete, conversation list |
+| Suggested interests | ✅ Built | `GET /profile/suggested-interests` returns career-path-aware suggestions (14 career domains) |
+| Profile avatar upload | ✅ Built | `POST /profile/avatar` |
 | Frontend | ✅ Built | Full Next.js app with all pages connected to backend |
+| Frontend deployed | ✅ Live | `https://lynks-gen-ai.web.app` (Firebase Hosting) |
 
 ---
 
@@ -150,6 +153,20 @@ All endpoints require a Supabase JWT token in the `Authorization: Bearer <token>
 | GET | `/chat/history` | Get conversation history |
 | DELETE | `/chat/history` | Clear conversation history |
 
+| GET | `/chat/conversations` | List all conversations |
+| GET | `/chat/conversations/{id}` | Get messages for a specific conversation |
+| PATCH | `/chat/conversations/{id}` | Pin/unpin a conversation |
+| POST | `/chat/conversations/reorder` | Reorder conversations |
+| DELETE | `/chat/conversations/{id}` | Delete a single conversation |
+
+### Profile
+| Method | Endpoint | What it does |
+|--------|----------|-------------|
+| GET | `/profile` | Returns full user profile |
+| PATCH | `/profile` | Updates name, age, country, education, interests |
+| PATCH | `/profile/career-path` | Updates career_path field |
+| POST | `/profile/avatar` | Upload profile avatar |
+| GET | `/profile/suggested-interests` | Returns career-path-aware interest suggestions (14 career domains with matched interests) |
 **POST /chat/message request:**
 ```json
 {
@@ -174,28 +191,31 @@ All endpoints require a Supabase JWT token in the `Authorization: Bearer <token>
 | Page | Route | What it shows |
 |------|-------|--------------|
 | Landing | `/` | Hero section, CTA to sign up |
-| Login | `/login` | Email/password login (Supabase Auth) with password validation (uppercase, lowercase, number, special char, 8+ chars) |
-| Signup | `/signup` | Email/password signup with real-time password validation indicators |
-| Onboarding | `/onboarding` | 7-step profile setup (full name, country, age, education, career interest, employment, bio) |
-| Dashboard | `/dashboard` | Overview — welcome message, recent activity, quick actions |
+| Login | `/login` | Email/password login (Supabase Auth) with password validation |
+| Signup | `/signup` | Email/password signup with confirm password. Both fields have eye toggle (peek button). Real-time password validation indicators. No name field — name is collected in onboarding. |
+| Onboarding | `/onboarding` | 7-step profile setup (full name, country, age, employment, education, career path, interests) |
+| Dashboard | `/dashboard` | Tab navigation: Overview, Skills, Experience, Goals, Resources |
 | Roadmap | `/roadmap` | Visual timeline of steps + tasks |
 | Opportunities | `/opportunities` | Two VIEW modes (Career/General), filter tabs (Personal/All), time filter, save, cards |
 | Portfolio | `/portfolio` | Verified achievements + evidence |
-| Chat | `/chat` | Mentor chatbot interface |
+| Chat | `/chat` | Mentor chatbot interface. No conversations list screen — loads last conversation or starts new. Conversation management in expanded sidebar. |
 | Resume | `/resume` | Resume preview with PDF/Word download, edit button |
-| Settings | `/settings` | Profile editor — name, email, phone, career interests |
+| Settings | `/settings` | Profile editor — name, email, phone, career interests (dynamic suggestions from `GET /profile/suggested-interests` based on career path) |
 
 ### Split-Screen System
 
 The app uses a split-screen layout with a collapsible sidebar and up to 2 simultaneous panels:
 
-**Sidebar:**
+**Left Sidebar (always visible):**
 - **Collapsed (75px):** LYNKS logo (expands), Home, Opportunities, Profile, avatar
 - **Expanded (305px):** Full nav with LYNKS title, back arrow, Home, Opportunities, Projects list, Profile/Settings/Logout
+- Left sidebar nav icons are **ALWAYS visible** — never filtered or hidden
 - Clicking any panel icon auto-collapses the sidebar
+- **Chat conversation management** (pin/reorder/delete) lives in the expanded sidebar with 3-dot menus
 
-**Top Icon Bar (hidden on `/dashboard`):**
-- 4 icons: Steps, Roadmap, Chat, Resume — right-justified on all non-dashboard pages
+**Top Icon Bar (context-aware):**
+- 4 icons: Steps, Roadmap, Chat, Resume — right-justified
+- Panel icons **hide when you're on that page's route** (e.g., on `/chat`, the Chat icon hides; on `/roadmap`, the Roadmap icon hides)
 - Click icon → opens/closes corresponding panel
 
 **Panel Rules:**
@@ -217,7 +237,16 @@ The app uses a split-screen layout with a collapsible sidebar and up to 2 simult
 6. **Evidence verification** is synchronous — user uploads, LLM checks, returns verified/rejected immediately
 7. **Split-screen system** — max 2 panels open at once; sidebar collapses when panels are active; center content hides when 2 panels fill the width
 8. **Password validation** — both login and signup require uppercase, lowercase, number, special character, and 8+ characters
-9. **Auth flow** — signup routes to `/onboarding` (7 steps), login routes to `/dashboard`
+9. **Auth flow** — "Get started" and "Sign up" both go to `/signup` (email + password only, no name field). After signup → `/onboarding` (7 steps including name) → after onboarding → `/dashboard`
+10. **Auth guard** — uses `useAuthGate()` which returns `{ checked, loading, user }`. Protected pages show spinner while `!checked`, redirect to login only when `checked && !user`
+11. **Suggested interests are dynamic** — fetched from `GET /profile/suggested-interests` based on user's career path (14 career domains). No hardcoded `CAREER_INTERESTS` array.
+
+---
+
+## Deployment
+
+- **Backend:** Railway — `https://lynks-backend-production.up.railway.app`
+- **Frontend:** Firebase Hosting — `https://lynks-gen-ai.web.app`
 
 ---
 

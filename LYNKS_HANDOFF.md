@@ -8,11 +8,11 @@
 
 ## Project Overview
 
-Lynks is a **Caribbean-focused career mentorship platform** for young people. Users sign up, answer onboarding questions, and get a personalized AI-generated career roadmap. A mentor chatbot (Llama 3 8B via Groq) guides them through their journey, tracks progress, and connects them with Caribbean opportunities.
+Lynks is a **Caribbean-focused career mentorship platform** for young people. Users sign up, answer onboarding questions, and get a personalized AI-generated career roadmap. A mentor chatbot (GPT-SS-20B via Groq) guides them through their journey, tracks progress, and connects them with Caribbean opportunities.
 
 **Tech Stack:**
 - **Backend:** FastAPI + SQLAlchemy async + Supabase (PostgreSQL + Auth + Storage) + Groq LLM
-- **LLM Model:** `openai/gpt-oss-120b` via Groq (configured in `.env` as `LLM_MODEL`)
+- **LLM Model:** `openai/gpt-ss-20b` via Groq (configured in `.env` as `LLM_MODEL`)
 - **Auth:** Supabase Auth (JWT tokens, not session-based)
 - **Database:** Supabase PostgreSQL (NOT local SQLite)
 - **Storage:** Supabase Storage (evidence bucket, public)
@@ -102,11 +102,11 @@ Frontend → Route (extract user_id from JWT) → Agent (do the work) → Route 
 ```
 
 ### Routes
-- `routes/profile.py` — GET/PATCH /profile, PATCH /profile/career-path, POST /resume/generate, GET /resume
+- `routes/profile.py` — GET/PATCH /profile, PATCH /profile/career-path, POST /profile/avatar, GET /profile/suggested-interests, POST /resume/generate, GET /resume
 - `routes/roadmap.py` — POST /roadmap/generate, GET /roadmap, POST /roadmap/regenerate
 - `routes/portfolio.py` — GET /portfolio, POST /tasks/{task_id}/evidence
 - `routes/opportunities.py` — GET /opportunities (with optional category filter)
-- `routes/chat.py` — POST /chat/message, GET /chat/history, DELETE /chat/history
+- `routes/chat.py` — POST /chat/message, GET /chat/history, DELETE /chat/history, GET /chat/conversations, GET /chat/conversations/{id}, PATCH /chat/conversations/{id}, POST /chat/conversations/reorder, DELETE /chat/conversations/{id}
 - `routes/auth.py` — POST /auth/signup
 
 ### Agents
@@ -174,19 +174,16 @@ Frontend → Route (extract user_id from JWT) → Agent (do the work) → Route 
 5. **Evidence AI verification** ✅ DONE — AI analyzes uploaded images to verify task completion
 6. **Notifications** ✅ DONE — deadline reminders, new opportunity alerts, task milestones
 7. **Conversation management** ✅ DONE — pin/unpin, reorder, delete, conversation list
+8. **Suggested interests** ✅ DONE — `GET /profile/suggested-interests` returns career-path-aware suggestions (14 career domains)
+9. **Profile avatar upload** ✅ DONE — `POST /profile/avatar`
 
-### Real web scraping (see docs/SCRAPER_PLAN.md)
-- **Phase 1:** RSS feeds from Caribbean news sites (Jamaica Gleaner, Loop Caribbean, Devpost, UWI) — reliable, structured data
-- **Phase 2:** Web scraping from job boards (CaribbeanJobs, JEF, ScholarshipScanada) — more complete but fragile
-- **Fallback:** Curated hardcoded list (always works)
-- **Strategy:** Try RSS first → if fail, try scraping → if fail, return curated list
+### Deployment
+- **Backend:** Railway — `https://lynks-backend-production.up.railway.app`
+- **Frontend:** Firebase Hosting — `https://lynks-gen-ai.web.app`
 
-### Future improvements
-- Conversation summarization (instead of last-3 limit) — summarize each conversation into 2-3 sentences when it ends
-- Vector database (pgvector on Supabase) for embedding-based conversation search
-- Full web scraping for live opportunity data
-- Resume download as PDF
-- Evidence verification (AI-powered image analysis)
+### Remaining work
+- **Migrate onboarding to backend** — Currently writes to Supabase directly via client SDK, should call `PATCH /profile`
+- **Opportunity scraper scheduling** — needs cron job or background worker for periodic execution
 
 ---
 
@@ -223,10 +220,10 @@ backend/
 │   │   └── scout.py          # Opportunity discovery
 │   ├── api/routes/
 │   │   ├── auth.py           # POST /auth/signup
-│   │   ├── chat.py           # POST /chat/message, GET/DELETE /chat/history
+│   │   ├── chat.py           # POST /chat/message, GET/DELETE /chat/history, GET/PATCH/DELETE /chat/conversations, POST /chat/conversations/reorder
 │   │   ├── opportunities.py  # GET /opportunities
 │   │   ├── portfolio.py      # GET /portfolio, POST /tasks/{id}/evidence
-│   │   ├── profile.py        # GET/PATCH /profile, PATCH /profile/career-path, resume endpoints
+│   │   ├── profile.py        # GET/PATCH /profile, PATCH /profile/career-path, POST /profile/avatar, GET /profile/suggested-interests, resume endpoints
 │   │   └── roadmap.py        # POST /roadmap/generate, GET /roadmap, POST /roadmap/regenerate
 │   ├── core/
 │   │   ├── config.py         # Settings (env vars)

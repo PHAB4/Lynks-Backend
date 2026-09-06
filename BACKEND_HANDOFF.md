@@ -29,11 +29,13 @@ Lynks is an **AI-powered career accelerator for Caribbean youth**. The backend i
 
 | File | Prefix | Endpoints |
 |------|--------|----------|
+| `profile.py` | `/profile` | `GET /`, `PATCH /`, `PATCH /career-path`, `POST /avatar`, `GET /suggested-interests`, `POST /resume/generate`, `GET /resume` |
 | `roadmap.py` | `/roadmap` | `POST /generate`, `GET /`, `POST /regenerate` |
 | `portfolio.py` | `/` | `POST /tasks/{task_id}/evidence`, `GET /portfolio` |
 | `opportunities.py` | `/opportunities` | `GET /?category=...` |
 | `chat.py` | `/chat` | `POST /message`, `GET /history`, `DELETE /history`, `GET /conversations`, `GET /conversations/{id}`, `PATCH /conversations/{id}` (pin), `POST /conversations/reorder`, `DELETE /conversations/{id}` |
 | `notifications.py` | `/notifications` | `GET /`, `GET /unread/count`, `GET /{id}`, `POST /`, `PATCH /{id}/read`, `POST /read-all` |
+| `auth.py` | `/auth` | `POST /signup` |
 
 ### Infrastructure
 
@@ -110,6 +112,8 @@ With a valid JWT token, the test results were:
 | Evidence AI verification | ✅ Built — Gemini 3.5 Flash vision verification |
 | Conversation management | ✅ Built — pin/unpin, reorder, delete, conversation list |
 | Opportunity scraper scheduling | Needs cron job or background worker for periodic execution |
+| Suggested interests | ✅ Built — `GET /profile/suggested-interests` returns career-path-aware interest suggestions (14 career domains) |
+| Profile avatar upload | ✅ Built — `POST /profile/avatar` |
 | Supabase Storage bucket | ✅ `evidence` bucket created as public |
 | Supabase trigger | ✅ `auth.users → public.users` sync trigger |
 
@@ -148,17 +152,44 @@ python tests/test_endpoints.py
 5. **Mentor-Orchestrator is ONE agent** — not separate router + assistant. It has personality + tool access
 6. **All imports use `from app.xxx`** (not `from backend.app.xxx`) — the server runs from inside `backend/` directory
 7. **Original PRD decisions are documented** — see `docs/ORIGINAL_PRD.md` for what the team decided before backend work began
+8. **Suggested interests are career-path-aware** — `GET /profile/suggested-interests` returns dynamic interest suggestions based on the user's career path (14 career domains). No hardcoded `CAREER_INTERESTS` array on the frontend.
+9. **Onboarding writes to Supabase directly** — the frontend onboarding flow (7 steps: name, country, age, employment, education, career path, interests) writes directly to Supabase via client SDK, not through the backend API
+
+---
+
+## Deployment
+
+- **Backend:** Railway — `https://lynks-backend-production.up.railway.app`
+- **Frontend:** Firebase Hosting — `https://lynks-gen-ai.web.app`
+
+---
+
+## Auth Flow
+
+- **"Get started"** and **"Sign up"** both go to `/signup` (email + password only, no name field)
+- After signup → `/onboarding` (7 steps including name)
+- After onboarding → `/dashboard`
+- Auth guard uses `useAuthGate()` which returns `{ checked, loading, user }`
+- Protected pages show spinner while `!checked`, redirect to login only when `checked && !user`
+
+---
+
+## Frontend Sidebar & Chat Behavior
+
+- **Left sidebar nav icons are ALWAYS visible** — never filtered or hidden
+- **Top bar panel icons** (Steps, Roadmap, Chat, Resume) hide when you're on that page's route
+- **Chat page:** No conversations list screen. Loads last conversation or starts new. Conversation management (pin/reorder/delete) is in the expanded sidebar with 3-dot menus
+- **Dashboard:** Has tab navigation (Overview, Skills, Experience, Goals, Resources)
 
 ---
 
 ## What Needs to Be Done Next
 
-1. **Fix the database connection** — test on unrestricted network, resolve IPv6 issue
-2. **Run the full test suite** — get all 16 tests passing
-3. ~~Build the notification system~~ — ✅ Done. See `services/notifications.py` and `api/routes/notifications.py`
-4. **Build the resume builder** — agent + routes for the `resumes` table
-5. **Set up opportunity scraper scheduling** — cron job or Supabase Edge Function
-6. **Create the `evidence` bucket** in Supabase Storage
+1. ~~Fix the database connection~~ — Resolved (deployed on Railway)
+2. ~~Build the notification system~~ — ✅ Done. See `services/notifications.py` and `api/routes/notifications.py`
+3. ~~Build the resume builder~~ — ✅ Done. `POST /resume/generate`, `GET /resume` via portfolio_manager agent
+4. **Migrate onboarding to backend** — Currently writes to Supabase directly, should call `PATCH /profile` instead
+5. **Set up opportunity scraper scheduling** — cron job or Supabase Edge Function for periodic execution
 
 ---
 

@@ -1,23 +1,24 @@
-# Lynks Frontend Handoff — Opportunities Upgrade
+# Lynks Frontend Handoff — Current Build State
 
-**Date:** August 27, 2026 (updated September 5, 2026)
-**Branch:** `feature/opportunities-scraper-upgrade` (now on `main`)
+**Date:** August 27, 2026 (updated September 10, 2026)
+**Branch:** `main`
 **Backend URL:** `https://lynks-backend-production.up.railway.app`
+**Frontend URL:** `https://lynks-gen-ai.web.app` (Firebase Hosting)
 
 ---
 
-## Integration Status (as of Sept 5, 2026)
+## Integration Status (as of Sept 10, 2026)
 
 All frontend pages are now connected to the backend API:
 
 | Page | Status | Notes |
 |---|---|---|
-| `/dashboard` | ✅ Connected | Uses `dashboard-api.ts` |
+| `/dashboard` | ✅ Connected | Uses `dashboard-api.ts`. Has tab navigation (Overview, Skills, Experience, Goals, Resources) |
 | `/roadmap` | ✅ Connected | Uses `roadmap-api.ts` |
 | `/opportunities` | ✅ Connected | Full backend integration (filtering, save/unsave, refresh) |
 | `/resume` | ✅ Connected | Uses backend `GET /resume`, `POST /resume/generate` |
-| `/settings` | ✅ Connected | Uses `GET /profile`, `PATCH /profile` |
-| `/chat` | ✅ Connected | Full backend integration (conversations, pin, reorder, delete) |
+| `/settings` | ✅ Connected | Uses `GET /profile`, `PATCH /profile`. Suggested interests are **dynamic** — fetched from `GET /profile/suggested-interests` based on user's career path |
+| `/chat` | ✅ Connected | Full backend integration. No conversations list screen — loads last conversation or starts new. Conversation management (pin/reorder/delete) is in the expanded sidebar with 3-dot menus |
 | `/onboarding` | ⚠️ Partial | Writes to Supabase directly — should use `PATCH /profile` |
 
 ---
@@ -196,15 +197,17 @@ Each card should display:
 
 The app uses a split-screen layout with a collapsible sidebar and up to 2 simultaneous panels:
 
-**Sidebar:**
+**Left Sidebar (always visible):**
 - **Collapsed (75px):** LYNKS logo (click to expand), Home icon, Opportunities icon, Profile icon, avatar
 - **Expanded (305px):** LYNKS title, Back arrow (collapse), Home link, Opportunities link, Projects list, Profile section with Settings/Logout
+- Left sidebar nav icons are **ALWAYS visible** — they are never filtered or hidden regardless of which page you're on
 - Clicking any panel icon auto-collapses the sidebar
 - Expanding sidebar closes the rightmost open panel
+- **Chat conversation management** (pin/reorder/delete) lives in the expanded sidebar with 3-dot menus
 
-**Top Icon Bar (hidden on dashboard):**
+**Top Icon Bar (context-aware):**
 - 4 icons: Steps, Roadmap, Chat, Resume — right-justified
-- All 4 icons always visible on every non-dashboard page
+- Panel icons **hide when you're on that page's route** (e.g., on `/chat`, the Chat icon hides; on `/roadmap`, the Roadmap icon hides)
 - Click icon → opens/closes corresponding panel
 
 **Panel Rules:**
@@ -217,7 +220,7 @@ The app uses a split-screen layout with a collapsible sidebar and up to 2 simult
 - Loading spinner (2s) shown while panel content generates
 
 **Panel Contents:**
-- **Chat:** Message input, AI response area
+- **Chat:** Message input, AI response area. No conversations list screen — loads the last conversation automatically, or starts a new one if none exist. Conversation management (pin/reorder/delete) is in the expanded sidebar with 3-dot menus.
 - **Steps:** Steps list (populated from roadmap)
 - **Roadmap:** Visual roadmap timeline
 - **Resume:** Resume preview with Word/PDF download and "Edit resume" button
@@ -247,7 +250,9 @@ Login and Signup require passwords with:
 - 1 number
 - 1 special character
 
-Real-time validation indicators (✓/✗) shown on the signup page.
+**Signup form** includes: email, password, and confirm password fields only (no name field). Both password fields have an **eye toggle (peek button)** to show/hide the entered text. **Real-time password validation indicators** (✓/✗) are shown on the signup page as the user types.
+
+After signup → redirect to `/onboarding` (7 steps, first step is name) → after onboarding → redirect to `/dashboard`.
 
 ---
 
@@ -278,3 +283,53 @@ All errors follow this shape:
 5. **Pagination is offset-based** — `page=1&limit=20`, increment page to load more
 6. **Opportunities refresh every hour** — data might not change immediately
 7. **`pay` is a fallback** — if salary_min/max are null, use the `pay` text field for display
+
+---
+
+## Auth Flow
+
+- **"Get started"** and **"Sign up"** both go to `/signup`
+- **Signup form:** email + password + confirm password only (no name field)
+- Both password fields have **eye toggle (peek button)** to show/hide text
+- Real-time password validation indicators on signup
+- After signup → redirect to `/onboarding` (7 steps: name, country, age, employment, education, career path, interests)
+- After onboarding → redirect to `/dashboard`
+
+### Auth Guard (`useAuthGate()`)
+
+Protected pages use the `useAuthGate()` hook which returns `{ checked, loading, user }`:
+- While `!checked` → show loading spinner (do NOT redirect)
+- When `checked && !user` → redirect to `/login`
+- When `checked && user` → render the page
+
+This prevents premature redirects before auth state is determined.
+
+---
+
+## Profile Routes
+
+| Method | Endpoint | Notes |
+|--------|----------|-------|
+| `GET` | `/profile` | Returns full user profile |
+| `PATCH` | `/profile` | Updates name, age, country, education, interests |
+| `PATCH` | `/profile/career-path` | Updates career_path field |
+| `POST` | `/profile/avatar` | Upload profile avatar |
+| `GET` | `/profile/suggested-interests` | Returns career-path-aware interest suggestions (14 career domains with matched interests). **Used by Settings page — no more hardcoded `CAREER_INTERESTS` array** |
+
+---
+
+## Dashboard
+
+The dashboard has **tab navigation** with the following tabs:
+- **Overview** — welcome message, recent activity, quick actions
+- **Skills** — user's skills and competencies
+- **Experience** — portfolio items and evidence
+- **Goals** — career goals and progress
+- **Resources** — recommended resources and opportunities
+
+---
+
+## Deployment
+
+- **Backend:** Railway — `https://lynks-backend-production.up.railway.app`
+- **Frontend:** Firebase Hosting — `https://lynks-gen-ai.web.app`
