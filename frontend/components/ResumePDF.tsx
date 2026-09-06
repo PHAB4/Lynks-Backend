@@ -128,7 +128,10 @@ function ResumePDFContent({ data }: { data: ResumeData }) {
           <Text style={styles.sectionTitle}>Experience</Text>
           {data.experience.map((exp, i) => (
             <View key={i} style={{ marginBottom: 5 }}>
-              <Text style={styles.itemTitle}>{exp.title}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={styles.itemTitle}>{exp.title}</Text>
+                {exp.dates && <Text style={styles.itemRight}>{exp.dates}</Text>}
+              </View>
               <Text style={styles.itemSubtitle}>{exp.organization}</Text>
               {exp.description && <Text style={styles.body}>{exp.description}</Text>}
             </View>

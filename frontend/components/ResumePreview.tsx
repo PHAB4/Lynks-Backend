@@ -75,7 +75,10 @@ export default function ResumePreview({ data }: { data: ResumeData }) {
           <Section title="Experience">
             {data.experience.map((exp, i) => (
               <div key={i} className="mb-2 last:mb-0">
-                <span className="text-[10.5px] font-bold text-black">{exp.title}</span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[10.5px] font-bold text-black">{exp.title}</span>
+                  {exp.dates && <span className="text-[9.5px] text-[#666] italic shrink-0">{exp.dates}</span>}
+                </div>
                 <p className="text-[10px] text-[#555] italic">{exp.organization}</p>
                 {exp.description && (
                   <p className="text-[10px] text-[#333] leading-[1.5] mt-0.5 whitespace-pre-line">{exp.description}</p>
