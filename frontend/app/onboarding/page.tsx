@@ -102,7 +102,6 @@ export default function OnboardingPage() {
     return false
   }
 
-  return (
   const fetchSuggestedInterests = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -122,6 +121,7 @@ export default function OnboardingPage() {
     if (step === 7) fetchSuggestedInterests()
   }, [step])
 
+  return (
     <div className="flex flex-col min-h-screen bg-[#F7F3FE]">
       {/* Logo */}
       <div className="px-9 py-5">
