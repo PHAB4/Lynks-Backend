@@ -60,12 +60,41 @@ export interface Opportunity {
   pay: string | null
   url: string | null
   age_requirement: string | null
+  source_name?: string | null
+  salary_min?: number | null
+  salary_max?: number | null
+  salary_currency?: string | null
+  relevance_score?: number | null
+  is_saved?: boolean
+  experience_required?: string | null
+  image_url?: string | null
+  posted_at?: string | null
+  first_seen_at?: string | null
 }
 
 export interface ChatSendResponse {
   message_id: string
   content: string
   conversation_id: string
+}
+
+export interface ResumeData {
+  name: string
+  email: string
+  objective: string
+  education: { institution: string; level: string; details: string }[]
+  skills: string[]
+  experience: { title: string; organization: string; description: string }[]
+  projects: { title: string; description: string; skills_used: string[] }[]
+  certifications: string[]
+  interests: string[]
+}
+
+export interface ResumeResponse {
+  resume_id: string
+  content: ResumeData
+  created_at: string
+  updated_at?: string
 }
 
 export interface ChatConversation {

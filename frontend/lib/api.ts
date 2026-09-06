@@ -1,6 +1,6 @@
 // API client for Lynks backend — matches their FastAPI endpoints
 import { supabase } from './supabase'
-import type { User, RoadmapResponse, EvidenceResponse, PortfolioEntry, Opportunity, ChatSendResponse, ChatConversation } from './types'
+import type { User, RoadmapResponse, EvidenceResponse, PortfolioEntry, Opportunity, ResumeResponse, ChatSendResponse, ChatConversation } from './types'
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://lynks-backend-production.up.railway.app'
 const BASE = BACKEND
@@ -77,14 +77,31 @@ export const portfolio = {
 }
 
 export const opportunities = {
-  list: (filters?: { category?: string }) => {
+  list: async (filters?: { category?: string; page?: number; limit?: number }) => {
     const params = new URLSearchParams()
-    if (filters?.category) params.set('category', filters.category)
+    if (filters?.category && filters.category !== 'All') params.set('category', filters.category)
+    if (filters?.page) params.set('page', String(filters.page))
+    if (filters?.limit) params.set('limit', String(filters.limit))
     const qs = params.toString()
-    return request<Opportunity[]>(`/opportunities${qs ? `?${qs}` : ''}`)
+    const res = await request<{ opportunities: Opportunity[]; metadata: { total_available: number; returned: number; page: number; total_pages: number } }>(`/opportunities${qs ? `?${qs}` : ''}`)
+    return res
   },
-  refresh: () => request<Opportunity[]>('/opportunities/refresh', { method: 'POST' }),
-  saved: () => request<Opportunity[]>('/opportunities/saved'),
+  matches: async (page?: number, limit?: number) => {
+    const params = new URLSearchParams()
+    if (page) params.set('page', String(page))
+    if (limit) params.set('limit', String(limit))
+    const qs = params.toString()
+    const res = await request<{ opportunities: Opportunity[]; metadata: Record<string, unknown> }>(`/opportunities/matches${qs ? `?${qs}` : ''}`)
+    return res
+  },
+  refresh: async () => {
+    const res = await request<{ opportunities: Opportunity[]; metadata: Record<string, unknown> }>('/opportunities/refresh', { method: 'POST' })
+    return res
+  },
+  saved: async () => {
+    const res = await request<{ saved: Opportunity[]; total: number }>('/opportunities/saved')
+    return res
+  },
   save: (id: string) => request<{ success: boolean }>(`/opportunities/${id}/save`, { method: 'POST' }),
   unsave: (id: string) => request<{ success: boolean }>(`/opportunities/${id}/save`, { method: 'DELETE' }),
   newCount: () => request<{ count: number }>('/opportunities/new-count'),
@@ -104,8 +121,8 @@ export const chat = {
 }
 
 export const resume = {
-  get: () => request<{ resume_id: string; content: string; created_at: string }>('/resume'),
-  generate: () => request<{ resume_id: string; content: string; created_at: string }>('/resume/generate', { method: 'POST' }),
+  get: () => request<ResumeResponse>('/resume'),
+  generate: () => request<ResumeResponse>('/resume/generate', { method: 'POST' }),
 }
 
 export const notifications = {
