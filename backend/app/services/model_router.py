@@ -33,7 +33,8 @@ class ModelConfig:
     supports_vision: bool = False
 
 
-# Priority order: Groq 120B → Groq 20B → Gemini 2.5 Flash → Gemini 2.5 Flash-Lite → Gemini 1.5 Flash
+# Priority order: Groq 120B → Groq 20B → Gemini 2.5 Flash → Gemini 3 Flash → Gemini 2.5 Flash-Lite
+# Rate limits reflect PAY-AS-YOU-GO tier (not free tier)
 DEFAULT_MODELS: list[dict] = [
     {
         "name": "groq-120b",
@@ -64,8 +65,20 @@ DEFAULT_MODELS: list[dict] = [
         "base_url": "https://generativelanguage.googleapis.com/v1beta/",
         "env_key": "GEMINI_API_KEY",
         "priority": 3,
-        "max_rpm": 10,
-        "max_rpd": 1500,
+        "max_rpm": 150,
+        "max_rpd": 50000,
+        "supports_tools": False,
+        "supports_vision": True,
+    },
+    {
+        "name": "gemini-3-flash",
+        "provider": "google",
+        "model": "gemini-3-flash",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/",
+        "env_key": "GEMINI_API_KEY",
+        "priority": 4,
+        "max_rpm": 150,
+        "max_rpd": 50000,
         "supports_tools": False,
         "supports_vision": True,
     },
@@ -75,21 +88,9 @@ DEFAULT_MODELS: list[dict] = [
         "model": "gemini-2.5-flash-lite",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/",
         "env_key": "GEMINI_API_KEY",
-        "priority": 4,
-        "max_rpm": 15,
-        "max_rpd": 1500,
-        "supports_tools": False,
-        "supports_vision": True,
-    },
-    {
-        "name": "gemini-1.5-flash",
-        "provider": "google",
-        "model": "gemini-1.5-flash",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/",
-        "env_key": "GEMINI_API_KEY",
         "priority": 5,
-        "max_rpm": 15,
-        "max_rpd": 1000000,
+        "max_rpm": 200,
+        "max_rpd": 50000,
         "supports_tools": False,
         "supports_vision": True,
     },
@@ -111,7 +112,7 @@ class RateLimitTracker:
         now = time.time()
 
         if model_name in self._permanently_limited:
-            if now - self._permanently_limited[model_name] < 3600:
+            if now - self._permanently_limited[model_name] < 30:
                 return False
             del self._permanently_limited[model_name]
 
@@ -136,7 +137,7 @@ class RateLimitTracker:
 
     def record_rate_limit(self, model_name: str):
         self._permanently_limited[model_name] = time.time()
-        logger.warning(f"Model {model_name} rate-limited — skipping for 1 hour")
+        logger.warning(f"Model {model_name} rate-limited — skipping for 30 seconds")
 
     def get_status(self) -> dict[str, dict]:
         now = time.time()
