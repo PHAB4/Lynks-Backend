@@ -363,28 +363,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {sidebarExpanded && expandedSidebar}
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {pathname !== '/dashboard' && pathname !== '/settings' && pathname !== '/onboarding' && (
-          <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0">
-            {PANEL_ICONS.map((item) => {
-              const isPanelActive = openPanels.includes(item.id)
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => togglePanel(item.id)}
-                  className={cn(
-                    'flex items-center justify-center w-[36px] h-[36px] rounded-lg transition-all',
-                    isPanelActive
-                      ? 'bg-[#EADFFF] text-[#6B26EA]'
-                      : 'text-[rgba(0,0,0,0.35)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]'
-                  )}
-                  title={item.label}
-                >
-                  <item.icon size={16} strokeWidth={isPanelActive ? 2 : 1.5} />
-                </button>
-              )
-            })}
-          </div>
-        )}
+        <div className={cn(
+          "hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0",
+          (pathname === '/dashboard' || pathname === '/settings' || pathname === '/onboarding') && "invisible h-0 border-none py-0 overflow-hidden"
+        )}>
+          {PANEL_ICONS.map((item) => {
+            const isPanelActive = openPanels.includes(item.id)
+            return (
+              <button
+                key={item.id}
+                onClick={() => togglePanel(item.id)}
+                className={cn(
+                  'flex items-center justify-center w-[36px] h-[36px] rounded-lg transition-all',
+                  isPanelActive
+                    ? 'bg-[#EADFFF] text-[#6B26EA]'
+                    : 'text-[rgba(0,0,0,0.35)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]'
+                )}
+                title={item.label}
+              >
+                <item.icon size={16} strokeWidth={isPanelActive ? 2 : 1.5} />
+              </button>
+            )
+          })}
+        </div>
 
         <div className="flex-1 flex overflow-hidden min-h-0">
           {openPanels.length >= 2 ? (
