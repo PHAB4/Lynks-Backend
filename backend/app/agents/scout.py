@@ -371,7 +371,7 @@ def match_opportunities_with_llm(
             return data["opportunities"]
         return opportunities[:8]
 
-    except (RuntimeError, json.JSONDecodeError) as e:
+    except Exception as e:
         logger.warning("LLM opportunity matching failed, returning curated list: %s", e)
         return opportunities[:8]
 
@@ -667,7 +667,14 @@ async def discover_opportunities(
         # For relevance sort, we still need to score and LLM-rank
         if sort == "relevance":
             db_pool = score_all_opportunities(db_pool, profile)
-            matched = await asyncio.to_thread(match_opportunities_with_llm, profile, db_pool)
+            try:
+                matched = await asyncio.wait_for(
+                    asyncio.to_thread(match_opportunities_with_llm, profile, db_pool),
+                    timeout=15.0,
+                )
+            except asyncio.TimeoutError:
+                logger.warning("LLM matching timed out — using rule-based scores")
+                matched = db_pool[:limit]
             score_map = {o["title"]: o.get("relevance_score", 0) for o in db_pool}
             for m in matched:
                 m["relevance_score"] = score_map.get(m["title"], m.get("relevance_score", 0))
@@ -750,7 +757,14 @@ async def discover_opportunities(
     else:
         # relevance — use rule-based scoring first, then LLM for top results
         pool = score_all_opportunities(pool, profile)
-        matched = await asyncio.to_thread(match_opportunities_with_llm, profile, pool)
+        try:
+            matched = await asyncio.wait_for(
+                asyncio.to_thread(match_opportunities_with_llm, profile, pool),
+                timeout=15.0,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("LLM matching timed out (curated fallback) — using rule-based scores")
+            matched = pool[:limit]
         # Preserve scores from rule-based scoring
         score_map = {o["title"]: o.get("relevance_score", 0) for o in pool}
         for m in matched:

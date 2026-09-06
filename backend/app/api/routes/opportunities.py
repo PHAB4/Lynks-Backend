@@ -12,6 +12,7 @@ DELETE /opportunities/{id}/save          → unsave an opportunity
 from __future__ import annotations
 
 import hashlib
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -23,6 +24,8 @@ from app.agents.scout import discover_opportunities, get_new_count, get_saved_op
 from app.core.security import get_current_user_id
 from app.db.postgres import get_db
 from app.services.scoring import score_opportunity
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 
@@ -95,6 +98,12 @@ async def list_opportunities(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": {"code": code, "message": message}},
+        )
+    except Exception as e:
+        logger.exception("Unexpected error in opportunities list")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": {"code": "internal_error", "message": str(e)[:200]}},
         )
 
     # If saved_only, filter to only saved opportunities
