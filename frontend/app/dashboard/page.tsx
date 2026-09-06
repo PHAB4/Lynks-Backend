@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Map, Briefcase, MessageSquare, FileText, Bell, ChevronRight, ArrowRight, TrendingUp, BookOpen } from 'lucide-react'
+import { Map, Briefcase, Bell, ArrowRight, TrendingUp, BookOpen } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
-import { cn } from '@/lib/cn'
 import { getProfile, getOpportunities, getUnreadNotificationCount, getPortfolio, DashboardProfile } from '@/lib/dashboard-api'
 import { getRoadmap, Roadmap } from '@/lib/roadmap-api'
 import { supabase } from '@/lib/supabase'
@@ -108,29 +107,6 @@ export default function DashboardPage() {
             <p className="text-sm text-[#8B898E] mt-1" style={{ fontFamily: "'Inter', sans-serif" }}>
               Here&apos;s what&apos;s happening in your career journey.
             </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-            {[
-              { icon: MessageSquare, label: 'Chat with LYNKS', desc: 'Ask anything', href: '/chat', color: 'bg-[#EADFFF] text-[#6B26EA]' },
-              { icon: Map, label: 'Your Roadmap', desc: 'Track progress', href: '/roadmap', color: 'bg-[#E0F2FE] text-[#0369A1]' },
-              { icon: Briefcase, label: 'Opportunities', desc: 'Browse jobs', href: '/opportunities', color: 'bg-[#ECFDF5] text-[#059669]' },
-              { icon: FileText, label: 'Your Resume', desc: 'View & export', href: '/resume', color: 'bg-[#FFF7ED] text-[#C2410C]' },
-            ].map((action) => (
-              <button
-                key={action.href}
-                onClick={() => router.push(action.href)}
-                className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[#EDE3FF] hover:shadow-[0_4px_16px_rgba(107,38,234,0.08)] hover:border-[#D4C4F7] transition-all text-left group"
-              >
-                <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', action.color)}>
-                  <action.icon size={18} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-[#0D0026] truncate">{action.label}</p>
-                  <p className="text-[11px] text-[#8B898E]">{action.desc}</p>
-                </div>
-                <ChevronRight size={14} className="text-[#D1D5DB] group-hover:text-[#6B26EA] transition-colors shrink-0" />
-              </button>
-            ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-4">
