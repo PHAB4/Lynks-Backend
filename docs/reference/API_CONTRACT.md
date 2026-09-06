@@ -815,6 +815,38 @@ Response 200: {
 
 ---
 
+### PATCH /resume
+Updates the user's resume content (field-by-field edit from the frontend editor). Only sends fields that are set.
+```json
+Request: {
+  "content": {
+    "name": "Jordan Williams",
+    "email": "jordan@example.com",
+    "phone": "+1-876-555-1234",
+    "address": "Kingston, Jamaica",
+    "objective": "Aspiring software developer...",
+    "education": [{ "institution": "University of the West Indies", "level": "BSc Computer Science", "details": "2024-2027" }],
+    "skills": ["Python", "React", "Git"],
+    "experience": [{ "title": "Junior Developer", "organization": "TechCo", "description": "Built web apps..." }],
+    "projects": [{ "title": "Lynks", "description": "Career development platform", "skills_used": ["Python", "FastAPI", "React"] }],
+    "certifications": ["AWS Cloud Practitioner"],
+    "interests": ["AI/ML", "Web Dev"]
+  }
+}
+
+Response 200: {
+  "resume_id": "uuid",
+  "content": { ... },
+  "updated_at": "datetime"
+}
+```
+
+**Errors:**
+- 404: `not_found` — no resume exists for this user
+- 422: `validation_error` — invalid content structure
+
+---
+
 ## Memory Endpoints
 
 ### GET /memory

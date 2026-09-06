@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Plus, Trash2, ArrowLeft, Save, Check } from 'lucide-react'
 import Link from 'next/link'
 import ResumePreview from '@/components/ResumePreview'
+import { ResumePDFDownload } from '@/components/ResumePDF'
 
 const EMPTY_RESUME: ResumeData = {
   name: '',
@@ -112,6 +113,7 @@ export default function ResumePage() {
                 {generating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {generating ? 'Generating...' : 'Auto-fill from profile'}
               </Button>
+              <ResumePDFDownload data={resumeData} />
               <Button onClick={handleSave} disabled={saving} className="bg-[#6B26EA] hover:bg-[#5A1FD0] text-white">
                 {saved ? <Check className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                 {saved ? 'Saved!' : saving ? 'Saving...' : 'Save'}
