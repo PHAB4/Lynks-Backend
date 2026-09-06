@@ -34,6 +34,7 @@ const PANEL_ICONS: { id: PanelId; icon: typeof MessageSquare; label: string }[] 
 
 const PANEL_ROUTES: Partial<Record<PanelId, string>> = {
   roadmap: '/roadmap',
+  steps: '/roadmap',
   chat: '/chat',
   resume: '/resume',
   steps: '/roadmap',

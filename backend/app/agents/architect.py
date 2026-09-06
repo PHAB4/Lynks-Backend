@@ -15,6 +15,7 @@ Flow:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -171,6 +172,7 @@ def _call_llm_sync(profile: ProfileData) -> str:
         api_key=settings.LLM_API_KEY,
         base_url=settings.LLM_API_BASE_URL,
         timeout=30.0,
+        max_retries=1,
     )
 
     user_message = build_user_message(profile) + "\n\n" + RESPONSE_FORMAT_INSTRUCTIONS
