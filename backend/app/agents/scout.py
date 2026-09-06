@@ -33,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.db_models import User
+from app.services.scoring import score_all_opportunities, get_personal_matches, MATCH_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -710,8 +711,13 @@ async def discover_opportunities(
     elif sort == "salary":
         pool.sort(key=lambda o: o.get("salary_max") or 0, reverse=True)
     else:
-        # relevance — use LLM to rank
+        # relevance — use rule-based scoring first, then LLM for top results
+        pool = score_all_opportunities(pool, profile)
         matched = match_opportunities_with_llm(profile, pool)
+        # Preserve scores from rule-based scoring
+        score_map = {o["title"]: o.get("relevance_score", 0) for o in pool}
+        for m in matched:
+            m["relevance_score"] = score_map.get(m["title"], m.get("relevance_score", 0))
         pool = matched
 
     # Get total before pagination
@@ -771,6 +777,91 @@ async def discover_opportunities(
                 "category": category,
                 "timeframe": timeframe,
                 "sort": sort,
+            },
+        },
+    }
+
+
+async def get_user_matches(
+    db: AsyncSession,
+    user_id: str,
+    page: int = 1,
+    limit: int = 20,
+) -> dict:
+    """Get personal opportunity matches for a user.
+
+    Uses rule-based scoring (no LLM). Returns opportunities with
+    relevance_score >= MATCH_THRESHOLD, sorted by score descending.
+    """
+    user = await db.get(User, user_id)
+    if not user:
+        raise ValueError("user_not_found: no user with this ID")
+
+    profile = {
+        "career_path": user.career_path,
+        "education_level": user.education_level,
+        "age": user.age,
+        "country": user.country,
+        "interests": user.interests or [],
+    }
+
+    # Score all curated opportunities
+    all_scored = score_all_opportunities(CARIBBEAN_OPPORTUNITIES, profile)
+
+    # Filter to matches above threshold
+    matches = [o for o in all_scored if o.get("relevance_score", 0) >= MATCH_THRESHOLD]
+
+    total = len(matches)
+
+    # Paginate
+    start = (page - 1) * limit
+    end = start + limit
+    paginated = matches[start:end]
+
+    # Get saved IDs
+    saved_ids = await get_saved_opportunity_ids(db, user_id)
+
+    # Build results
+    import hashlib
+    results = []
+    for opp in paginated:
+        opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
+        results.append({
+            "id": opp_id,
+            "title": opp.get("title", "Unknown"),
+            "company": opp.get("company", "Unknown"),
+            "location": opp.get("location", "Caribbean"),
+            "pay": opp.get("pay", "Varies"),
+            "salary_min": opp.get("salary_min"),
+            "salary_max": opp.get("salary_max"),
+            "salary_currency": opp.get("salary_currency"),
+            "age_requirement": opp.get("age_requirement"),
+            "experience_required": opp.get("experience_required", "None"),
+            "url": opp.get("url", ""),
+            "category": opp.get("category", "event"),
+            "description": opp.get("description", ""),
+            "posted_at": opp.get("posted_at"),
+            "first_seen_at": opp.get("first_seen_at"),
+            "source_name": opp.get("source_name", "curated"),
+            "image_url": opp.get("image_url"),
+            "is_saved": opp_id in saved_ids,
+            "relevance_score": opp.get("relevance_score", 0),
+        })
+
+    return {
+        "opportunities": results,
+        "metadata": {
+            "total_available": total,
+            "returned": len(results),
+            "page": page,
+            "limit": limit,
+            "has_more": end < total,
+            "available_categories": await get_available_categories(db),
+            "filters_applied": {
+                "category": None,
+                "timeframe": None,
+                "sort": "relevance",
+                "personal_match": True,
             },
         },
     }

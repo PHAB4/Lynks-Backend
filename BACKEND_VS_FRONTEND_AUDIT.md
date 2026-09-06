@@ -106,7 +106,7 @@ All major frontend pages are now connected to the backend API. The chat feature 
 | Refresh/scrape | `POST /opportunities/refresh` | ✅ Working |
 | New count | `GET /opportunities/new-count` | ✅ Working |
 
-**Note:** "Personal matches" tab uses the same list with profile-based filtering — no separate endpoint needed.
+**Note:** "Personal matches" tab now has a dedicated `GET /opportunities/matches` endpoint using rule-based scoring (career path, education, age, interests, location). Scores 0-100, returns only matches ≥ 50.
 
 ---
 
@@ -200,5 +200,5 @@ Backend has `POST /profile/avatar` and `DELETE /profile/avatar` endpoints. Stora
 | 🟢 Low | Dashboard → `GET /dashboard/summary` instead of 5 calls | Small |
 | 🟢 Low | Notification UI (bell, list, mark-read) | Medium |
 | 🟡 Medium | Profile picture upload (endpoint + storage + UI) | ✅ Done |
-| 🟡 Medium | Opportunity personal matching scoring | Medium |
+| ✅ Done | Opportunity personal matching scoring | ✅ Done — `GET /opportunities/matches` with rule-based scoring (23 unit tests) |
 | 🟡 Medium | Scheduled opportunity scraping (cron) | Medium |

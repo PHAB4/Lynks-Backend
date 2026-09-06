@@ -2,6 +2,7 @@
 Opportunities API routes — matches API_CONTRACT.md.
 
 GET    /opportunities                    → list with filtering, sorting, pagination
+GET    /opportunities/matches            → personal matches (rule-based scoring, score >= 50)
 GET    /opportunities/new-count          → new opportunity count (polling notifications)
 GET    /opportunities/saved              → list saved opportunities
 POST   /opportunities/{id}/save          → save an opportunity
@@ -18,9 +19,10 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.scout import discover_opportunities, get_new_count, get_saved_opportunity_ids
+from app.agents.scout import discover_opportunities, get_new_count, get_saved_opportunity_ids, get_user_matches
 from app.core.security import get_current_user_id
 from app.db.postgres import get_db
+from app.services.scoring import score_opportunity
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 
@@ -106,6 +108,32 @@ async def list_opportunities(
 
 
 @router.post("/refresh")
+@router.get("/matches")
+async def personal_matches(
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=50, description="Results per page"),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get personalized opportunity matches for the authenticated user.
+
+    Uses rule-based scoring (career path, education, age, interests, location).
+    Returns only opportunities with relevance_score >= 50, sorted by score.
+    """
+    try:
+        result = await get_user_matches(db, user_id, page, limit)
+    except ValueError as e:
+        code = str(e).split(":")[0]
+        message = str(e).split(":", 1)[1].strip() if ":" in str(e) else str(e)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": {"code": code, "message": message}},
+        )
+
+    return result
+
+
 async def refresh_opportunities(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
@@ -158,11 +186,23 @@ async def list_saved_opportunities(
 
     # Get all opportunities and filter to saved ones
     from app.agents.scout import CARIBBEAN_OPPORTUNITIES
+    from app.models.db_models import User
+
+    # Load user profile for scoring
+    user = await db.get(User, user_id)
+    profile = {
+        "career_path": user.career_path if user else None,
+        "education_level": user.education_level if user else None,
+        "age": user.age if user else None,
+        "country": user.country if user else None,
+        "interests": (user.interests or []) if user else [],
+    }
 
     results = []
     for opp in CARIBBEAN_OPPORTUNITIES:
         opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
         if opp_id in saved_ids:
+            opp_score = score_opportunity(opp, profile)
             results.append(
                 {
                     "id": opp_id,
@@ -183,7 +223,7 @@ async def list_saved_opportunities(
                     "source_name": opp.get("source_name", "curated"),
                     "image_url": opp.get("image_url"),
                     "is_saved": True,
-                    "relevance_score": None,
+                    "relevance_score": opp_score,
                 }
             )
 

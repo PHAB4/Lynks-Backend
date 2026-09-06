@@ -136,6 +136,14 @@ Ruff is configured in `backend/ruff.toml` with focused rules:
 - Profile pictures supported via `POST /profile/avatar` (upload) + `DELETE /profile/avatar` (remove)
 - Profile pictures stored in Supabase Storage bucket: `profile-pictures` (public, RLS-protected)
 
+### Opportunity Matching
+- `GET /opportunities/matches` — returns personalized matches using rule-based scoring (no LLM dependency)
+- Scoring factors: career path (30 pts), education (20 pts), age eligibility (20 pts), interest alignment (15 pts), location match (15 pts)
+- Only returns opportunities scoring ≥ 50, sorted by score descending
+- `GET /opportunities` with `sort=relevance` applies rule-based scoring + LLM ranking
+- `GET /opportunities/saved` now includes `relevance_score` for each saved opportunity
+- Scoring engine: `backend/app/services/scoring.py` — pure functions, no DB, no network, no LLM
+
 
 The scraper uses a **priority-based lookup table** (`_CURRENCY_TABLE`) to detect currencies from salary text. Detection priority:
 
