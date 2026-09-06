@@ -7,14 +7,17 @@ import {
   Home, Briefcase, MessageSquare, Map, FileText,
   ChevronLeft, ChevronRight, LogOut, Settings, User,
   Loader2, Plus, Trash2, ListChecks, Maximize2,
-  CheckCircle2, Circle,
+  CheckCircle2, Circle, MoreVertical, Pin, ArrowUp, ArrowDown,
+  ChevronsUp, ChevronsDown,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
 import { useAuthGate } from '@/lib/use-auth'
 import {
   listConversations,
-  deleteChatHistory,
+  togglePinConversation,
+  deleteConversation,
+  reorderConversation,
   type ConversationItem,
 } from '@/lib/chat-api'
 import { getRoadmap, type Roadmap } from '@/lib/roadmap-api'
@@ -87,6 +90,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [loadingConversations, setLoadingConversations] = useState(false)
   const conversationsFetched = useRef(false)
 
+  const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null)
+  const convMenuRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string; email?: string } } | null) => {
       if (session?.user) {
@@ -134,10 +139,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setSidebarExpanded(false)
   }
 
-  const handleClearConversations = async () => {
+  const handleToggleConvPin = async (conversationId: string) => {
     try {
-      await deleteChatHistory()
-      setConversations([])
+      const result = await togglePinConversation(conversationId)
+      setConversations(prev =>
+        prev.map(c =>
+          c.conversation_id === conversationId ? { ...c, is_pinned: result.is_pinned } : c
+        ).sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0))
+      )
+      setOpenConvMenuId(null)
+    } catch { /* ignore */ }
+  }
+
+  const handleDeleteConv = async (conversationId: string) => {
+    try {
+      await deleteConversation(conversationId)
+      setConversations(prev => prev.filter(c => c.conversation_id !== conversationId))
+      setOpenConvMenuId(null)
+    } catch { /* ignore */ }
+  }
+
+  const handleReorderConv = async (conversationId: string, action: 'top' | 'bottom' | 'up' | 'down') => {
+    try {
+      const result = await reorderConversation(conversationId, action)
+      if (result.conversations) {
+        setConversations(prev => {
+          const updated = prev.map(c => {
+            const match = result.conversations.find(r => r.conversation_id === c.conversation_id)
+            return match ? { ...c, is_pinned: match.is_pinned } : c
+          })
+          return updated.sort((a, b) => {
+            if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
+            const aMatch = result.conversations.find(r => r.conversation_id === a.conversation_id)
+            const bMatch = result.conversations.find(r => r.conversation_id === b.conversation_id)
+            return (aMatch?.sort_order ?? 0) - (bMatch?.sort_order ?? 0)
+          })
+        })
+      }
+      setOpenConvMenuId(null)
     } catch { /* ignore */ }
   }
 
@@ -294,24 +333,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="flex items-center justify-between px-2.5 mb-1.5 shrink-0">
         <p className="text-[11px] text-[rgba(0,0,0,0.30)] font-semibold uppercase tracking-wider">Conversations</p>
-        <div className="flex items-center gap-1">
-          {conversations.length > 0 && (
-            <button
-              onClick={handleClearConversations}
-              className="flex items-center justify-center w-5 h-5 rounded text-[rgba(0,0,0,0.25)] hover:text-[#D14444] transition-colors"
-              title="Clear all"
-            >
-              <Trash2 size={10} />
-            </button>
-          )}
-          <button
-            onClick={handleNewChat}
-            className="flex items-center justify-center w-5 h-5 rounded bg-[#6B26EA] text-white hover:bg-[#5A1FD0] transition-colors"
-            title="New chat"
-          >
-            <Plus size={10} />
-          </button>
-        </div>
+        <button
+          onClick={handleNewChat}
+          className="flex items-center justify-center w-5 h-5 rounded bg-[#6B26EA] text-white hover:bg-[#5A1FD0] transition-colors"
+          title="New chat"
+        >
+          <Plus size={10} />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 px-1">
@@ -324,16 +352,83 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <p className="text-[12px] text-[rgba(0,0,0,0.25)] text-center py-4 px-2">No conversations yet</p>
         )}
         {conversations.map((conv) => (
-          <button
-            key={conv.conversation_id}
-            onClick={() => handleSelectConversation(conv.conversation_id)}
-            className="w-full text-left px-2.5 py-2 rounded-lg text-[12px] text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)] transition-all truncate"
-          >
-            <div className="flex items-center gap-1.5 truncate">
-              <MessageSquare size={10} className="shrink-0 opacity-40" />
-              <span className="truncate">{conv.title || 'New conversation'}</span>
-            </div>
-          </button>
+          <div key={conv.conversation_id} className="relative group">
+            <button
+              onClick={() => handleSelectConversation(conv.conversation_id)}
+              className="w-full text-left px-2.5 py-2 rounded-lg text-[12px] text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)] transition-all truncate"
+            >
+              <div className="flex items-center gap-1.5 truncate">
+                {conv.is_pinned ? (
+                  <Pin size={10} className="shrink-0 text-[#6B26EA] fill-current" />
+                ) : (
+                  <MessageSquare size={10} className="shrink-0 opacity-40" />
+                )}
+                <span className="truncate">{conv.title || 'New conversation'}</span>
+              </div>
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenConvMenuId(openConvMenuId === conv.conversation_id ? null : conv.conversation_id)
+              }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[rgba(0,0,0,0.06)] transition-all text-[rgba(0,0,0,0.30)] hover:text-[#6B26EA]"
+            >
+              <MoreVertical size={12} />
+            </button>
+
+            {openConvMenuId === conv.conversation_id && (
+              <div
+                ref={convMenuRef}
+                className="absolute right-0 top-6 z-50 bg-white border border-[#EDE3FF] rounded-xl shadow-[0_8px_24px_rgba(107,38,234,0.15)] py-1 min-w-[160px]"
+              >
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleToggleConvPin(conv.conversation_id) }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                >
+                  <Pin size={11} className={conv.is_pinned ? 'fill-current text-[#6B26EA]' : 'text-[#8B898E]'} />
+                  {conv.is_pinned ? 'Unpin' : 'Pin'}
+                </button>
+                <div className="mx-2 my-0.5 h-px bg-[#EDE3FF]" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleReorderConv(conv.conversation_id, 'top') }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                >
+                  <ChevronsUp size={11} className="text-[#8B898E]" />
+                  Move to top
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleReorderConv(conv.conversation_id, 'up') }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                >
+                  <ArrowUp size={11} className="text-[#8B898E]" />
+                  Move up
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleReorderConv(conv.conversation_id, 'down') }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                >
+                  <ArrowDown size={11} className="text-[#8B898E]" />
+                  Move down
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleReorderConv(conv.conversation_id, 'bottom') }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#0D0026] hover:bg-[#F9F5FF] transition-colors"
+                >
+                  <ChevronsDown size={11} className="text-[#8B898E]" />
+                  Move to bottom
+                </button>
+                <div className="mx-2 my-0.5 h-px bg-[#EDE3FF]" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDeleteConv(conv.conversation_id) }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#D14444] hover:bg-[#FEF2F2] transition-colors"
+                >
+                  <Trash2 size={11} />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
@@ -366,7 +461,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           "hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0",
           (pathname === '/dashboard' || pathname === '/settings' || pathname === '/onboarding') && "invisible h-0 border-none py-0 overflow-hidden"
         )}>
-          {PANEL_ICONS.map((item) => {
+          {PANEL_ICONS.filter((item) => {
+            const route = PANEL_ROUTES[item.id]
+            return !route || !pathname.startsWith(route)
+          }).map((item) => {
             const isPanelActive = openPanels.includes(item.id)
             return (
               <button
@@ -433,7 +531,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t border-[#EDE3FF] px-2 py-2">
-        {PANEL_ICONS.map((item) => {
+        {PANEL_ICONS.filter((item) => {
+          const route = PANEL_ROUTES[item.id]
+          return !route || !pathname.startsWith(route)
+        }).map((item) => {
           const isPanelActive = openPanels.includes(item.id)
           return (
             <button
