@@ -249,16 +249,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         ))}
       </div>
 
-      <div className="flex flex-col items-center gap-2 mt-auto">
+     <div className="flex flex-col items-center gap-2 mt-auto">
         <button
           onClick={() => { router.push('/settings'); setSidebarExpanded(false) }}
-          className="flex items-center justify-center w-[48px] h-[48px] rounded-xl text-[rgba(0,0,0,0.40)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA] transition-colors"
+          className="w-[48px] h-[48px] rounded-full bg-[#EADFFF] flex items-center justify-center hover:bg-[#D4C4F7] transition-colors cursor-pointer"
         >
-          <Settings size={18} strokeWidth={1.5} />
-        </button>
-        <div className="w-[48px] h-[48px] rounded-full bg-[#EADFFF] flex items-center justify-center">
           <span className="text-[#6B26EA] text-sm font-semibold">{initials}</span>
-        </div>
+        </button>
       </div>
     </div>
   )
