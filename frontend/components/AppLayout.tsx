@@ -1,17 +1,30 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useEffect, useCallback, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  Home, Briefcase, MessageSquare, Map, FileText,
-  ChevronLeft, ChevronRight, LogOut, Settings, User,
-  ListChecks, Loader2, Maximize2, Plus, Trash2,
-  CheckCircle2, Circle,
-} from 'lucide-react'
-import { cn } from '@/lib/cn'
-import { supabase } from '@/lib/supabase'
-import { useAuthGate } from '@/lib/use-auth'
+  Home,
+  Briefcase,
+  MessageSquare,
+  Map,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Settings,
+  User,
+  ListChecks,
+  Loader2,
+  Maximize2,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Circle,
+} from "lucide-react";
+import { cn } from "@/lib/cn";
+import { supabase } from "@/lib/supabase";
+import { useAuthGate } from "@/lib/use-auth";
 import {
   sendMessage,
   listConversations,
@@ -19,190 +32,232 @@ import {
   deleteChatHistory,
   type ChatMessage,
   type ConversationItem,
-} from '@/lib/chat-api'
-import { getRoadmap, type Roadmap } from '@/lib/roadmap-api'
+} from "@/lib/chat-api";
+import { getRoadmap, type Roadmap } from "@/lib/roadmap-api";
 
-export type PanelId = 'chat' | 'steps' | 'resume' | 'roadmap'
+export type PanelId = "chat" | "steps" | "resume" | "roadmap";
 
-const PANEL_ICONS: { id: PanelId; icon: typeof MessageSquare; label: string }[] = [
-  { id: 'steps', icon: ListChecks, label: 'Steps' },
-  { id: 'roadmap', icon: Map, label: 'Roadmap' },
-  { id: 'chat', icon: MessageSquare, label: 'Chat' },
-  { id: 'resume', icon: FileText, label: 'Resume' },
-]
+const PANEL_ICONS: {
+  id: PanelId;
+  icon: typeof MessageSquare;
+  label: string;
+}[] = [
+  { id: "steps", icon: ListChecks, label: "Steps" },
+  { id: "roadmap", icon: Map, label: "Roadmap" },
+  { id: "chat", icon: MessageSquare, label: "Chat" },
+  { id: "resume", icon: FileText, label: "Resume" },
+];
 
 const PANEL_ROUTES: Partial<Record<PanelId, string>> = {
-  roadmap: '/roadmap',
-  chat: '/chat',
-  resume: '/resume',
-}
+  roadmap: "/roadmap",
+  chat: "/chat",
+  resume: "/resume",
+};
 
-export type PanelSide = 'left' | 'right'
+export type PanelSide = "left" | "right";
 
 function getPanelSide(id: PanelId): PanelSide {
-  if (id === 'chat' || id === 'roadmap') return 'left'
-  return 'right'
+  if (id === "chat" || id === "roadmap") return "left";
+  return "right";
 }
 
-function sortPanelsBySide(panels: PanelId[]): { left: PanelId[]; right: PanelId[] } {
-  const left: PanelId[] = []
-  const right: PanelId[] = []
+function sortPanelsBySide(panels: PanelId[]): {
+  left: PanelId[];
+  right: PanelId[];
+} {
+  const left: PanelId[] = [];
+  const right: PanelId[] = [];
   for (const id of panels) {
-    if (getPanelSide(id) === 'left') left.push(id)
-    else right.push(id)
+    if (getPanelSide(id) === "left") left.push(id);
+    else right.push(id);
   }
-  return { left, right }
+  return { left, right };
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const authState = useAuthGate()
-  const [sidebarExpanded, setSidebarExpanded] = useState(false)
-  const [openPanels, setOpenPanels] = useState<PanelId[]>([])
-  const [loadingPanels, setLoadingPanels] = useState<Set<PanelId>>(new Set())
-  const pathname = usePathname()
-  const router = useRouter()
+  const authState = useAuthGate();
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [openPanels, setOpenPanels] = useState<PanelId[]>([]);
+  const [loadingPanels, setLoadingPanels] = useState<Set<PanelId>>(new Set());
+  const pathname = usePathname();
+  const router = useRouter();
   const [userName, setUserName] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('lynks_user')
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("lynks_user");
       if (cached) {
-        try { return JSON.parse(cached).name || 'User' } catch { /* ignore */ }
-      }
-    }
-    return 'User'
-  })
-  const [recentProjects, setRecentProjects] = useState<{ id: string; name: string }[]>([])
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string; email?: string } } | null) => {
-      if (session?.user) {
-        const cached = localStorage.getItem('lynks_user')
-        if (!cached) {
-          try {
-            const { data } = await supabase.from('users').select('name').eq('id', session.user.id).single()
-            const name = data?.name || session.user.email?.split('@')[0] || 'User'
-            setUserName(name)
-            localStorage.setItem('lynks_user', JSON.stringify({ name }))
-          } catch {
-            const fallback = session.user.email?.split('@')[0] || 'User'
-            setUserName(fallback)
-            localStorage.setItem('lynks_user', JSON.stringify({ name: fallback }))
-          }
+        try {
+          return JSON.parse(cached).name || "User";
+        } catch {
+          /* ignore */
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUserName('User')
-        localStorage.removeItem('lynks_user')
       }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
+    }
+    return "User";
+  });
+  const [recentProjects, setRecentProjects] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   useEffect(() => {
-    if (pathname === '/roadmap' && !openPanels.includes('steps')) {
-      setOpenPanels(prev => {
-        if (prev.includes('steps')) return prev
-        return [...prev, 'steps']
-      })
-    }
-  }, [pathname])
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (
+        event: string,
+        session: { user: { id: string; email?: string } } | null,
+      ) => {
+        if (session?.user) {
+          const cached = localStorage.getItem("lynks_user");
+          if (!cached) {
+            try {
+              const { data } = await supabase
+                .from("users")
+                .select("name")
+                .eq("id", session.user.id)
+                .single();
+              const name =
+                data?.name || session.user.email?.split("@")[0] || "User";
+              setUserName(name);
+              localStorage.setItem("lynks_user", JSON.stringify({ name }));
+            } catch {
+              const fallback = session.user.email?.split("@")[0] || "User";
+              setUserName(fallback);
+              localStorage.setItem(
+                "lynks_user",
+                JSON.stringify({ name: fallback }),
+              );
+            }
+          }
+        } else if (event === "SIGNED_OUT") {
+          setUserName("User");
+          localStorage.removeItem("lynks_user");
+        }
+      },
+    );
+    return () => subscription.unsubscribe();
+  }, []);
 
-  const initials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+  useEffect(() => {
+    if (pathname === "/roadmap" && !openPanels.includes("steps")) {
+      setOpenPanels((prev) => {
+        if (prev.includes("steps")) return prev;
+        return [...prev, "steps"];
+      });
+    }
+  }, [pathname]);
+
+  const initials = userName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   const startLoading = useCallback((id: PanelId) => {
-    setLoadingPanels(prev => new Set(prev).add(id))
+    setLoadingPanels((prev) => new Set(prev).add(id));
     setTimeout(() => {
-      setLoadingPanels(prev => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
-    }, 2000)
-  }, [])
+      setLoadingPanels((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 2000);
+  }, []);
 
-  const togglePanel = useCallback((id: PanelId) => {
-    const panelRoute = PANEL_ROUTES[id]
-    if (panelRoute && pathname.startsWith(panelRoute)) {
-      setOpenPanels(prev => {
-        if (prev.length <= 1) return []
-        return [prev[prev.length - 1]]
-      })
-      return
-    }
-    setOpenPanels(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(p => p !== id)
+  const togglePanel = useCallback(
+    (id: PanelId) => {
+      const panelRoute = PANEL_ROUTES[id];
+      if (panelRoute && pathname.startsWith(panelRoute)) {
+        setOpenPanels((prev) => {
+          if (prev.length <= 1) return [];
+          return [prev[prev.length - 1]];
+        });
+        return;
       }
-      const side = getPanelSide(id)
-      const sameSide = prev.filter(p => getPanelSide(p) === side)
-      if (sameSide.length > 0) {
-        return prev.map(p => sameSide.includes(p) ? id : p)
-      }
-      if (prev.length >= 2) {
-        const oppSide = side === 'left' ? 'right' : 'left'
-        const oppPanel = prev.find(p => getPanelSide(p) === oppSide)
-        return oppPanel ? [oppPanel, id] : [prev[0], id]
-      }
-      return [...prev, id]
-    })
-    startLoading(id)
-    setSidebarExpanded(false)
-  }, [startLoading, pathname])
+      setOpenPanels((prev) => {
+        if (prev.includes(id)) {
+          return prev.filter((p) => p !== id);
+        }
+        const side = getPanelSide(id);
+        const sameSide = prev.filter((p) => getPanelSide(p) === side);
+        if (sameSide.length > 0) {
+          return prev.map((p) => (sameSide.includes(p) ? id : p));
+        }
+        if (prev.length >= 2) {
+          const oppSide = side === "left" ? "right" : "left";
+          const oppPanel = prev.find((p) => getPanelSide(p) === oppSide);
+          return oppPanel ? [oppPanel, id] : [prev[0], id];
+        }
+        return [...prev, id];
+      });
+      startLoading(id);
+      setSidebarExpanded(false);
+    },
+    [startLoading, pathname],
+  );
 
-  const openPanel = useCallback((id: PanelId) => {
-    setOpenPanels(prev => {
-      if (prev.includes(id)) return prev
-      if (prev.length >= 2) {
-        return [prev[1], id]
-      }
-      return [...prev, id]
-    })
-    startLoading(id)
-  }, [startLoading])
+  const openPanel = useCallback(
+    (id: PanelId) => {
+      setOpenPanels((prev) => {
+        if (prev.includes(id)) return prev;
+        if (prev.length >= 2) {
+          return [prev[1], id];
+        }
+        return [...prev, id];
+      });
+      startLoading(id);
+    },
+    [startLoading],
+  );
 
   const closePanel = useCallback((id: PanelId) => {
-    setOpenPanels(prev => prev.filter(p => p !== id))
-  }, [])
+    setOpenPanels((prev) => prev.filter((p) => p !== id));
+  }, []);
 
   const closeAllPanels = useCallback(() => {
-    setOpenPanels([])
-  }, [])
+    setOpenPanels([]);
+  }, []);
 
-  const expandPanel = useCallback((id: PanelId) => {
-    const route = PANEL_ROUTES[id]
-    setOpenPanels([])
-    if (route) {
-      router.push(route)
-    }
-  }, [router])
+  const expandPanel = useCallback(
+    (id: PanelId) => {
+      const route = PANEL_ROUTES[id];
+      setOpenPanels([]);
+      if (route) {
+        router.push(route);
+      }
+    },
+    [router],
+  );
 
   const handleSidebarExpand = useCallback(() => {
-    setSidebarExpanded(prev => {
+    setSidebarExpanded((prev) => {
       if (!prev) {
-        setOpenPanels(curr => {
-          if (curr.length >= 2) return [curr[0]]
-          return curr
-        })
+        setOpenPanels((curr) => {
+          if (curr.length >= 2) return [curr[0]];
+          return curr;
+        });
       }
-      return !prev
-    })
-  }, [])
+      return !prev;
+    });
+  }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    localStorage.removeItem('lynks_user')
-    router.push('/')
-  }
+    await supabase.auth.signOut();
+    localStorage.removeItem("lynks_user");
+    router.push("/");
+  };
 
-  const { left: leftPanels, right: rightPanels } = sortPanelsBySide(openPanels)
+  const { left: leftPanels, right: rightPanels } = sortPanelsBySide(openPanels);
 
-  if (authState === 'loading') return (
-    <div className="flex h-screen bg-[#F7F3FE] items-center justify-center">
-      <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
-    </div>
-  )
+  if (authState === "loading")
+    return (
+      <div className="flex h-screen bg-[#F7F3FE] items-center justify-center">
+        <Loader2 size={24} className="text-[#6B26EA] animate-spin" />
+      </div>
+    );
 
   return (
     <div className="flex h-screen bg-[#F7F3FE] overflow-hidden">
-
       {/* Icon sidebar (collapsed) */}
       {!sidebarExpanded && (
         <div className="hidden md:flex flex-col items-center w-[75px] shrink-0 bg-[#F9F5FF] border-r border-[#EDE3FF] py-4 h-screen sticky top-0 z-20">
@@ -210,44 +265,61 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onClick={handleSidebarExpand}
             className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
           >
-            <img src="/lynks-chain-link.png" className="h-full w-full object-contain p-0" />
+            <img
+              src="/lynks-chain-link.png"
+              className="h-full w-full object-contain p-0"
+            />
           </button>
 
           <div className="flex flex-col items-center gap-0.5 flex-1 mt-2">
             <button
-              onClick={() => { router.push('/dashboard'); setSidebarExpanded(false) }}
+              onClick={() => {
+                router.push("/dashboard");
+                setSidebarExpanded(false);
+              }}
               className={cn(
-                'flex items-center justify-center w-[48px] h-[48px] rounded-xl transition-all',
-                pathname === '/dashboard'
-                  ? 'bg-[#EADFFF] text-[#6B26EA]'
-                  : 'text-[rgba(0,0,0,0.40)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]'
+                "flex items-center justify-center w-[48px] h-[48px] rounded-xl transition-all",
+                pathname === "/dashboard"
+                  ? "bg-[#EADFFF] text-[#6B26EA]"
+                  : "text-[rgba(0,0,0,0.40)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]",
               )}
             >
-              <Home size={18} strokeWidth={pathname === '/dashboard' ? 2.5 : 1.5} />
+              <Home
+                size={18}
+                strokeWidth={pathname === "/dashboard" ? 2.5 : 1.5}
+              />
             </button>
             <button
-              onClick={() => { router.push('/opportunities'); setSidebarExpanded(false) }}
+              onClick={() => {
+                router.push("/opportunities");
+                setSidebarExpanded(false);
+              }}
               className={cn(
-                'flex items-center justify-center w-[48px] h-[48px] rounded-xl transition-all',
-                pathname === '/opportunities'
-                  ? 'bg-[#EADFFF] text-[#6B26EA]'
-                  : 'text-[rgba(0,0,0,0.40)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]'
+                "flex items-center justify-center w-[48px] h-[48px] rounded-xl transition-all",
+                pathname === "/opportunities"
+                  ? "bg-[#EADFFF] text-[#6B26EA]"
+                  : "text-[rgba(0,0,0,0.40)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]",
               )}
             >
-              <Briefcase size={18} strokeWidth={pathname === '/opportunities' ? 2.5 : 1.5} />
+              <Briefcase
+                size={18}
+                strokeWidth={pathname === "/opportunities" ? 2.5 : 1.5}
+              />
             </button>
           </div>
 
           <div className="flex flex-col items-center gap-2 mt-auto">
             <button
-              onClick={() => { router.push('/settings'); setSidebarExpanded(false) }}
-              className="flex items-center justify-center w-[48px] h-[48px] rounded-xl text-[rgba(0,0,0,0.40)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA] transition-colors"
+              onClick={() => {
+                router.push("/settings");
+                setSidebarExpanded(false);
+              }}
+              className="w-[48px] h-[48px] rounded-full bg-[#EADFFF] flex items-center justify-center hover:bg-[#D4C4F7] transition-colors cursor-pointer"
             >
-              <User size={18} strokeWidth={1.5} />
+              <span className="text-[#6B26EA] text-sm font-semibold">
+                {initials}
+              </span>
             </button>
-            <div className="w-[48px] h-[48px] rounded-full bg-[#EADFFF] flex items-center justify-center">
-              <span className="text-[#6B26EA] text-sm font-semibold">{initials}</span>
-            </div>
           </div>
         </div>
       )}
@@ -257,7 +329,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="hidden md:flex flex-col w-[305px] shrink-0 bg-[#F9F5FF] border-r border-[#EDE3FF] py-2.5 px-[11px] h-screen sticky top-0 z-20">
           <div className="flex items-center justify-between w-full h-10 mb-2.5 shrink-0">
             <Link href="/dashboard" onClick={() => setSidebarExpanded(false)}>
-              <img src="/lynks-full-logo.png" alt="LYNKS logo in the expanded left navigation panel" className="h-24 w-auto object-contain" />
+              <img
+                src="/lynks-full-logo.png"
+                alt="LYNKS logo in the expanded left navigation panel"
+                className="h-24 w-auto object-contain"
+              />
             </Link>
             <button
               onClick={handleSidebarExpand}
@@ -269,23 +345,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="flex flex-col gap-0.5 mt-1">
             <button
-              onClick={() => { router.push('/dashboard'); setSidebarExpanded(false) }}
+              onClick={() => {
+                router.push("/dashboard");
+                setSidebarExpanded(false);
+              }}
               className={cn(
-                'flex items-center gap-[5px] rounded-2xl p-2.5 w-full transition-all',
-                pathname === '/dashboard' ? 'text-[#6B26EA] font-medium' : 'text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)]'
+                "flex items-center gap-[5px] rounded-2xl p-2.5 w-full transition-all",
+                pathname === "/dashboard"
+                  ? "text-[#6B26EA] font-medium"
+                  : "text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)]",
               )}
             >
-              <Home size={14} strokeWidth={pathname === '/dashboard' ? 2.5 : 1.5} />
+              <Home
+                size={14}
+                strokeWidth={pathname === "/dashboard" ? 2.5 : 1.5}
+              />
               <span className="text-[13px]">Home</span>
             </button>
             <button
-              onClick={() => { router.push('/opportunities'); setSidebarExpanded(false) }}
+              onClick={() => {
+                router.push("/opportunities");
+                setSidebarExpanded(false);
+              }}
               className={cn(
-                'flex items-center gap-[5px] rounded-2xl p-2.5 w-full transition-all',
-                pathname === '/opportunities' ? 'text-[#6B26EA] font-medium' : 'text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)]'
+                "flex items-center gap-[5px] rounded-2xl p-2.5 w-full transition-all",
+                pathname === "/opportunities"
+                  ? "text-[#6B26EA] font-medium"
+                  : "text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)]",
               )}
             >
-              <Briefcase size={14} strokeWidth={pathname === '/opportunities' ? 2.5 : 1.5} />
+              <Briefcase
+                size={14}
+                strokeWidth={pathname === "/opportunities" ? 2.5 : 1.5}
+              />
               <span className="text-[13px]">Opportunities</span>
             </button>
           </div>
@@ -294,11 +386,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {recentProjects.length > 0 && (
             <div className="mb-3">
-              <p className="text-[11px] text-[rgba(0,0,0,0.30)] font-semibold uppercase tracking-wider px-2.5 mb-1.5">Projects</p>
+              <p className="text-[11px] text-[rgba(0,0,0,0.30)] font-semibold uppercase tracking-wider px-2.5 mb-1.5">
+                Projects
+              </p>
               {recentProjects.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => { router.push('/chat'); setSidebarExpanded(false) }}
+                  onClick={() => {
+                    router.push("/chat");
+                    setSidebarExpanded(false);
+                  }}
                   className="flex items-center gap-2.5 p-2.5 w-full rounded-2xl text-[13px] text-[rgba(0,0,0,0.50)] hover:text-[#0D0026] hover:bg-[rgba(0,0,0,0.03)] transition-all"
                 >
                   <MessageSquare size={14} />
@@ -312,16 +409,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-3 border-t border-[#EDE3FF] p-3 shrink-0">
             <div className="flex justify-center items-center rounded-full bg-[#EADFFF] w-10 h-10 shrink-0">
-              <span className="text-[#6B26EA] text-sm font-semibold">{initials}</span>
+              <span className="text-[#6B26EA] text-sm font-semibold">
+                {initials}
+              </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-[#0D0026] truncate">{userName}</p>
+              <p className="text-[13px] font-semibold text-[#0D0026] truncate">
+                {userName}
+              </p>
             </div>
             <div className="flex items-center gap-1">
-              <Link href="/settings" className="relative group flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-[#6B26EA] hover:bg-[#F7F3FE] transition-colors">
+              <Link
+                href="/settings"
+                className="relative group flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-[#6B26EA] hover:bg-[#F7F3FE] transition-colors"
+              >
                 <Settings size={14} />
               </Link>
-              <button onClick={handleLogout} className="relative group flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-red-500 hover:bg-red-50 transition-colors">
+              <button
+                onClick={handleLogout}
+                className="relative group flex items-center justify-center w-7 h-7 rounded-lg text-[#A8A8A8] hover:text-red-500 hover:bg-red-50 transition-colors"
+              >
                 <LogOut size={14} />
               </button>
             </div>
@@ -331,29 +438,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main area: top icon bar + panels + page content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-
         {/* Top icon bar — 4 split-screen icons (hidden on dashboard) */}
-        {pathname !== '/dashboard' && (
-        <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0">
-          {PANEL_ICONS.map((item) => {
-            const isActive = openPanels.includes(item.id)
-            return (
-              <button
-                key={item.id}
-                onClick={() => togglePanel(item.id)}
-                className={cn(
-                  'flex items-center justify-center w-[36px] h-[36px] rounded-lg transition-all',
-                  isActive
-                    ? 'bg-[#EADFFF] text-[#6B26EA]'
-                    : 'text-[rgba(0,0,0,0.35)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]'
-                )}
-                title={item.label}
-              >
-                <item.icon size={16} strokeWidth={isActive ? 2 : 1.5} />
-              </button>
-            )
-          })}
-        </div>
+        {pathname !== "/dashboard" && (
+          <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0">
+            {PANEL_ICONS.map((item) => {
+              const isActive = openPanels.includes(item.id);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => togglePanel(item.id)}
+                  className={cn(
+                    "flex items-center justify-center w-[36px] h-[36px] rounded-lg transition-all",
+                    isActive
+                      ? "bg-[#EADFFF] text-[#6B26EA]"
+                      : "text-[rgba(0,0,0,0.35)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]",
+                  )}
+                  title={item.label}
+                >
+                  <item.icon size={16} strokeWidth={isActive ? 2 : 1.5} />
+                </button>
+              );
+            })}
+          </div>
         )}
 
         {/* Panels + page content row */}
@@ -361,41 +467,85 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {openPanels.length >= 2 ? (
             /* 2 panels open: fill full width, center them */
             <>
-              {leftPanels.map(id => (
-                <div key={id} className="hidden md:flex flex-col flex-1 border-r border-[#EDE3FF] bg-white h-full overflow-hidden min-w-0">
-                  <PanelHeader panelId={id} onClose={() => closePanel(id)} onExpand={() => expandPanel(id)} />
+              {leftPanels.map((id) => (
+                <div
+                  key={id}
+                  className="hidden md:flex flex-col flex-1 border-r border-[#EDE3FF] bg-white h-full overflow-hidden min-w-0"
+                >
+                  <PanelHeader
+                    panelId={id}
+                    onClose={() => closePanel(id)}
+                    onExpand={() => expandPanel(id)}
+                  />
                   <div className="flex-1 overflow-y-auto">
-                    {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
+                    {loadingPanels.has(id) ? (
+                      <LoadingPanel />
+                    ) : (
+                      <PanelContent panelId={id} openPanel={openPanel} />
+                    )}
                   </div>
                 </div>
               ))}
-              {rightPanels.map(id => (
-                <div key={id} className="hidden md:flex flex-col flex-1 border-l border-[#EDE3FF] bg-white h-full overflow-hidden min-w-0">
-                  <PanelHeader panelId={id} onClose={() => closePanel(id)} onExpand={() => expandPanel(id)} />
+              {rightPanels.map((id) => (
+                <div
+                  key={id}
+                  className="hidden md:flex flex-col flex-1 border-l border-[#EDE3FF] bg-white h-full overflow-hidden min-w-0"
+                >
+                  <PanelHeader
+                    panelId={id}
+                    onClose={() => closePanel(id)}
+                    onExpand={() => expandPanel(id)}
+                  />
                   <div className="flex-1 overflow-y-auto">
-                    {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
+                    {loadingPanels.has(id) ? (
+                      <LoadingPanel />
+                    ) : (
+                      <PanelContent panelId={id} openPanel={openPanel} />
+                    )}
                   </div>
                 </div>
               ))}
             </>
           ) : (
             <>
-              {leftPanels.map(id => (
-                <div key={id} className="hidden md:flex flex-col w-[420px] shrink-0 border-r border-[#EDE3FF] bg-white h-full overflow-hidden">
-                  <PanelHeader panelId={id} onClose={() => closePanel(id)} onExpand={() => expandPanel(id)} />
+              {leftPanels.map((id) => (
+                <div
+                  key={id}
+                  className="hidden md:flex flex-col w-[420px] shrink-0 border-r border-[#EDE3FF] bg-white h-full overflow-hidden"
+                >
+                  <PanelHeader
+                    panelId={id}
+                    onClose={() => closePanel(id)}
+                    onExpand={() => expandPanel(id)}
+                  />
                   <div className="flex-1 overflow-y-auto">
-                    {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
+                    {loadingPanels.has(id) ? (
+                      <LoadingPanel />
+                    ) : (
+                      <PanelContent panelId={id} openPanel={openPanel} />
+                    )}
                   </div>
                 </div>
               ))}
               <div className="flex-1 overflow-y-auto min-w-0 pb-16 md:pb-0">
                 {children}
               </div>
-              {rightPanels.map(id => (
-                <div key={id} className="hidden md:flex flex-col w-[420px] shrink-0 border-l border-[#EDE3FF] bg-white h-full overflow-hidden">
-                  <PanelHeader panelId={id} onClose={() => closePanel(id)} onExpand={() => expandPanel(id)} />
+              {rightPanels.map((id) => (
+                <div
+                  key={id}
+                  className="hidden md:flex flex-col w-[420px] shrink-0 border-l border-[#EDE3FF] bg-white h-full overflow-hidden"
+                >
+                  <PanelHeader
+                    panelId={id}
+                    onClose={() => closePanel(id)}
+                    onExpand={() => expandPanel(id)}
+                  />
                   <div className="flex-1 overflow-y-auto">
-                    {loadingPanels.has(id) ? <LoadingPanel /> : <PanelContent panelId={id} openPanel={openPanel} />}
+                    {loadingPanels.has(id) ? (
+                      <LoadingPanel />
+                    ) : (
+                      <PanelContent panelId={id} openPanel={openPanel} />
+                    )}
                   </div>
                 </div>
               ))}
@@ -407,47 +557,62 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around bg-white border-t border-[#EDE3FF] px-2 py-2">
         {PANEL_ICONS.map((item) => {
-          const isActive = openPanels.includes(item.id)
+          const isActive = openPanels.includes(item.id);
           return (
             <button
               key={item.id}
               onClick={() => togglePanel(item.id)}
               className={cn(
-                'flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors min-w-[48px]',
-                isActive ? 'text-[#6B26EA]' : 'text-[rgba(0,0,0,0.50)]'
+                "flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors min-w-[48px]",
+                isActive ? "text-[#6B26EA]" : "text-[rgba(0,0,0,0.50)]",
               )}
             >
               <item.icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
               <span className="text-[10px] font-medium">{item.label}</span>
             </button>
-          )
+          );
         })}
         <Link
           href="/settings"
           className={cn(
-            'flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors min-w-[48px]',
-            pathname === '/settings' ? 'text-[#6B26EA]' : 'text-[rgba(0,0,0,0.50)]'
+            "flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors min-w-[48px]",
+            pathname === "/settings"
+              ? "text-[#6B26EA]"
+              : "text-[rgba(0,0,0,0.50)]",
           )}
         >
-          <Settings size={18} strokeWidth={pathname === '/settings' ? 2.5 : 1.5} />
+          <Settings
+            size={18}
+            strokeWidth={pathname === "/settings" ? 2.5 : 1.5}
+          />
           <span className="text-[10px] font-medium">Profile</span>
         </Link>
       </nav>
     </div>
-  )
+  );
 }
 
-function PanelHeader({ panelId, onClose, onExpand }: { panelId: PanelId; onClose: () => void; onExpand: () => void }) {
+function PanelHeader({
+  panelId,
+  onClose,
+  onExpand,
+}: {
+  panelId: PanelId;
+  onClose: () => void;
+  onExpand: () => void;
+}) {
   const titles: Record<PanelId, string> = {
-    chat: 'Chat with LYNKS',
-    steps: 'Steps',
-    resume: 'Resume',
-    roadmap: 'Roadmap',
-  }
-  const route = PANEL_ROUTES[panelId]
+    chat: "Chat with LYNKS",
+    steps: "Steps",
+    resume: "Resume",
+    roadmap: "Roadmap",
+  };
+  const route = PANEL_ROUTES[panelId];
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-[#EDE3FF] shrink-0">
-      <p className="text-[13px] font-semibold text-[#0D0026]">{titles[panelId]}</p>
+      <p className="text-[13px] font-semibold text-[#0D0026]">
+        {titles[panelId]}
+      </p>
       <div className="flex items-center gap-1">
         {route && (
           <button
@@ -466,21 +631,27 @@ function PanelHeader({ panelId, onClose, onExpand }: { panelId: PanelId; onClose
         </button>
       </div>
     </div>
-  )
+  );
 }
 
-function PanelContent({ panelId, openPanel }: { panelId: PanelId; openPanel?: (id: PanelId) => void }) {
+function PanelContent({
+  panelId,
+  openPanel,
+}: {
+  panelId: PanelId;
+  openPanel?: (id: PanelId) => void;
+}) {
   switch (panelId) {
-    case 'chat':
-      return <ChatPanel />
-    case 'steps':
-      return <StepsPanel />
-    case 'resume':
-      return <ResumePanel openPanel={openPanel} />
-    case 'roadmap':
-      return <RoadmapPanel />
+    case "chat":
+      return <ChatPanel />;
+    case "steps":
+      return <StepsPanel />;
+    case "resume":
+      return <ResumePanel openPanel={openPanel} />;
+    case "roadmap":
+      return <RoadmapPanel />;
     default:
-      return null
+      return null;
   }
 }
 
@@ -490,114 +661,131 @@ function LoadingPanel() {
       <Loader2 size={24} className="text-[#6B26EA] animate-spin mb-3" />
       <p className="text-[13px] text-[#8B898E]">Generating content...</p>
     </div>
-  )
+  );
 }
 
 function ChatPanel() {
-  const [message, setMessage] = useState('')
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [conversations, setConversations] = useState<ConversationItem[]>([])
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
-  const [sending, setSending] = useState(false)
-  const [loadingConversations, setLoadingConversations] = useState(true)
-  const [loadingMessages, setLoadingMessages] = useState(false)
-  const [error, setError] = useState('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
+  const [sending, setSending] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [error, setError] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
-
-  useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
-    loadConversations()
-  }, [])
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    loadConversations();
+  }, []);
 
   const loadConversations = async () => {
-    setLoadingConversations(true)
+    setLoadingConversations(true);
     try {
-      const result = await listConversations()
-      setConversations(result.conversations || [])
-    } catch { /* ignore */ }
-    finally { setLoadingConversations(false) }
-  }
+      const result = await listConversations();
+      setConversations(result.conversations || []);
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingConversations(false);
+    }
+  };
 
   const loadMessages = async (conversationId: string) => {
-    setLoadingMessages(true)
-    setError('')
+    setLoadingMessages(true);
+    setError("");
     try {
-      const result = await getConversationMessages(conversationId)
-      setMessages(result.messages || [])
+      const result = await getConversationMessages(conversationId);
+      setMessages(result.messages || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load messages')
-    } finally { setLoadingMessages(false) }
-  }
+      setError(err instanceof Error ? err.message : "Failed to load messages");
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
 
   const handleSelectConversation = (conversationId: string) => {
-    setActiveConversationId(conversationId)
-    loadMessages(conversationId)
-  }
+    setActiveConversationId(conversationId);
+    loadMessages(conversationId);
+  };
 
   const handleNewChat = () => {
-    setActiveConversationId(null)
-    setMessages([])
-    setError('')
-  }
+    setActiveConversationId(null);
+    setMessages([]);
+    setError("");
+  };
 
   const handleClearHistory = async () => {
     try {
-      await deleteChatHistory()
-      setConversations([])
-      setMessages([])
-      setActiveConversationId(null)
+      await deleteChatHistory();
+      setConversations([]);
+      setMessages([]);
+      setActiveConversationId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to clear history')
+      setError(err instanceof Error ? err.message : "Failed to clear history");
     }
-  }
+  };
 
   const handleSend = async () => {
-    if (!message.trim() || sending) return
+    if (!message.trim() || sending) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: message.trim() }
-    setMessages(prev => [...prev, userMessage])
-    const currentMessage = message.trim()
-    setMessage('')
-    setSending(true)
-    setError('')
+    const userMessage: ChatMessage = { role: "user", content: message.trim() };
+    setMessages((prev) => [...prev, userMessage]);
+    const currentMessage = message.trim();
+    setMessage("");
+    setSending(true);
+    setError("");
 
     try {
-      const result = await sendMessage(currentMessage, activeConversationId || undefined)
+      const result = await sendMessage(
+        currentMessage,
+        activeConversationId || undefined,
+      );
 
       if (!activeConversationId && result.conversation_id) {
-        setActiveConversationId(result.conversation_id)
-        loadConversations()
+        setActiveConversationId(result.conversation_id);
+        loadConversations();
       }
 
       const aiMessage: ChatMessage = {
-        role: 'assistant',
+        role: "assistant",
         content: result.response,
-        tool_calls: result.tool_calls ? result.tool_calls.map(tc => tc.name) : null,
-      }
-      setMessages(prev => [...prev, aiMessage])
+        tool_calls: result.tool_calls
+          ? result.tool_calls.map((tc) => tc.name)
+          : null,
+      };
+      setMessages((prev) => [...prev, aiMessage]);
 
-      if (result.summary_updated) loadConversations()
+      if (result.summary_updated) loadConversations();
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to send message'
-      if (errorMsg === 'Not authenticated') {
-        setError('Session expired. Please refresh the page.')
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to send message";
+      if (errorMsg === "Not authenticated") {
+        setError("Session expired. Please refresh the page.");
       } else {
-        setError(errorMsg || 'Something went wrong.')
+        setError(errorMsg || "Something went wrong.");
       }
-    } finally { setSending(false) }
-  }
+    } finally {
+      setSending(false);
+    }
+  };
 
   const TOOL_LABELS: Record<string, string> = {
-    generate_roadmap: 'Generating your roadmap...',
-    get_portfolio: 'Looking up your portfolio...',
-    find_opportunities: 'Searching for opportunities...',
-    complete_task: 'Updating your task...',
-  }
+    generate_roadmap: "Generating your roadmap...",
+    get_portfolio: "Looking up your portfolio...",
+    find_opportunities: "Searching for opportunities...",
+    complete_task: "Updating your task...",
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -630,7 +818,9 @@ function ChatPanel() {
           )}
           {!loadingConversations && conversations.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center px-4">
-              <p className="text-[13px] text-[#8B898E]">Ask LYNKS anything about your career journey.</p>
+              <p className="text-[13px] text-[#8B898E]">
+                Ask LYNKS anything about your career journey.
+              </p>
             </div>
           )}
           {conversations.map((conv) => (
@@ -641,7 +831,9 @@ function ChatPanel() {
             >
               <div className="flex items-center gap-1.5 truncate">
                 <MessageSquare size={10} className="shrink-0 opacity-50" />
-                <span className="truncate">{conv.title || 'New conversation'}</span>
+                <span className="truncate">
+                  {conv.title || "New conversation"}
+                </span>
               </div>
             </button>
           ))}
@@ -660,52 +852,80 @@ function ChatPanel() {
               <div className="space-y-2.5">
                 {messages.map((msg, i) => (
                   <div key={i} className="flex gap-2">
-                    {msg.role === 'assistant' && (
+                    {msg.role === "assistant" && (
                       <div className="w-6 h-6 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
-                        <span className="text-[#6B26EA] text-[9px] font-bold">L</span>
+                        <span className="text-[#6B26EA] text-[9px] font-bold">
+                          L
+                        </span>
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       {msg.tool_calls && msg.tool_calls.length > 0 && (
                         <div className="flex items-center gap-1.5 mb-0.5 px-0.5">
-                          <Loader2 size={10} className="text-[#6B26EA] animate-spin" />
+                          <Loader2
+                            size={10}
+                            className="text-[#6B26EA] animate-spin"
+                          />
                           <span className="text-[10px] text-[#6B26EA]">
-                            {TOOL_LABELS[msg.tool_calls[0]] || 'Working on it...'}
+                            {TOOL_LABELS[msg.tool_calls[0]] ||
+                              "Working on it..."}
                           </span>
                         </div>
                       )}
-                      <div className={cn(
-                        'rounded-2xl px-3 py-2 text-[12px] max-w-[90%]',
-                        msg.role === 'user'
-                          ? 'bg-[#6B26EA] text-white ml-auto'
-                          : 'bg-[#F7F3FE] text-[#1E1E1E]'
-                      )}>
-                        <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</p>
+                      <div
+                        className={cn(
+                          "rounded-2xl px-3 py-2 text-[12px] max-w-[90%]",
+                          msg.role === "user"
+                            ? "bg-[#6B26EA] text-white ml-auto"
+                            : "bg-[#F7F3FE] text-[#1E1E1E]",
+                        )}
+                      >
+                        <p style={{ whiteSpace: "pre-wrap" }}>{msg.content}</p>
                       </div>
                       {msg.created_at && (
                         <p className="text-[9px] text-[rgba(30,30,30,0.4)] mt-0.5 px-0.5">
-                          {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                          {new Date(msg.created_at).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            },
+                          )}
                         </p>
                       )}
                     </div>
-                    {msg.role === 'user' && (
+                    {msg.role === "user" && (
                       <div className="w-6 h-6 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
-                        <span className="text-[#6B26EA] text-[9px] font-bold">U</span>
+                        <span className="text-[#6B26EA] text-[9px] font-bold">
+                          U
+                        </span>
                       </div>
                     )}
                   </div>
                 ))}
 
-                {sending && messages[messages.length - 1]?.role === 'user' && (
+                {sending && messages[messages.length - 1]?.role === "user" && (
                   <div className="flex gap-2">
                     <div className="w-6 h-6 rounded-full bg-[#EADFFF] flex items-center justify-center shrink-0">
-                      <span className="text-[#6B26EA] text-[9px] font-bold">L</span>
+                      <span className="text-[#6B26EA] text-[9px] font-bold">
+                        L
+                      </span>
                     </div>
                     <div className="bg-[#F7F3FE] rounded-2xl px-3 py-2">
                       <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div
+                          className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <div
+                          className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <div
+                          className="w-1.5 h-1.5 rounded-full bg-[#6B26EA] animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -745,7 +965,7 @@ function ChatPanel() {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !sending && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && !sending && handleSend()}
             placeholder="Ask anything..."
             disabled={sending}
             className="flex-1 bg-transparent text-[12px] text-[#0D0026] placeholder:text-[rgba(0,0,0,0.31)] focus:outline-none disabled:opacity-50"
@@ -755,42 +975,61 @@ function ChatPanel() {
             disabled={!message.trim() || sending}
             className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#6B26EA] text-white hover:bg-[#5A1FD0] transition-colors disabled:opacity-40 shrink-0"
           >
-            {sending ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />}
+            {sending ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <MessageSquare size={12} />
+            )}
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function StepsPanel() {
-  const [roadmap, setRoadmap] = useState<Roadmap | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [activeStep, setActiveStep] = useState<string | null>(null)
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [activeStep, setActiveStep] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
+    let cancelled = false;
+    setLoading(true);
     getRoadmap()
-      .then((data) => { if (!cancelled) setRoadmap(data) })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load steps') })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [])
+      .then((data) => {
+        if (!cancelled) setRoadmap(data);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load steps");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (roadmap?.steps && roadmap.steps.length > 0 && !activeStep) {
-      const sorted = [...roadmap.steps].sort((a, b) => a.order - b.order)
-      const inProgress = sorted.find(s => s.status === 'pending' && s.tasks?.some(t => t.status === 'pending'))
-      setActiveStep(inProgress?.step_id || sorted[0].step_id)
+      const sorted = [...roadmap.steps].sort((a, b) => a.order - b.order);
+      const inProgress = sorted.find(
+        (s) =>
+          s.status === "pending" &&
+          s.tasks?.some((t) => t.status === "pending"),
+      );
+      setActiveStep(inProgress?.step_id || sorted[0].step_id);
     }
-  }, [roadmap, activeStep])
+  }, [roadmap, activeStep]);
 
-  const sortedSteps = roadmap?.steps ? [...roadmap.steps].sort((a, b) => a.order - b.order) : []
-  const allTasks = sortedSteps.flatMap(s => s.tasks || [])
-  const completedTasks = allTasks.filter(t => t.status === 'complete').length
-  const totalTasks = allTasks.length
+  const sortedSteps = roadmap?.steps
+    ? [...roadmap.steps].sort((a, b) => a.order - b.order)
+    : [];
+  const allTasks = sortedSteps.flatMap((s) => s.tasks || []);
+  const completedTasks = allTasks.filter((t) => t.status === "complete").length;
+  const totalTasks = allTasks.length;
 
   if (loading) {
     return (
@@ -798,15 +1037,17 @@ function StepsPanel() {
         <Loader2 size={20} className="text-[#6B26EA] animate-spin mb-2" />
         <p className="text-[12px] text-[#8B898E]">Loading steps...</p>
       </div>
-    )
+    );
   }
 
   if (error) {
     return (
       <div className="p-4">
-        <p className="text-[12px] text-[#D14444] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">{error}</p>
+        <p className="text-[12px] text-[#D14444] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">
+          {error}
+        </p>
       </div>
-    )
+    );
   }
 
   if (!roadmap || sortedSteps.length === 0) {
@@ -816,10 +1057,12 @@ function StepsPanel() {
           <div className="w-12 h-12 rounded-full bg-[#F7F3FE] flex items-center justify-center mb-3">
             <ListChecks size={18} className="text-[#D1D5DB]" />
           </div>
-          <p className="text-[13px] text-[#8B898E]">No steps yet. Generate a roadmap first.</p>
+          <p className="text-[13px] text-[#8B898E]">
+            No steps yet. Generate a roadmap first.
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -835,7 +1078,9 @@ function StepsPanel() {
         <div className="w-full h-1.5 rounded-full bg-[#EDE3FF] overflow-hidden">
           <div
             className="h-full rounded-full bg-[#6B26EA] transition-all duration-500"
-            style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+            style={{
+              width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%`,
+            }}
           />
         </div>
       </div>
@@ -843,31 +1088,40 @@ function StepsPanel() {
       {/* Step list */}
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
         {sortedSteps.map((step, index) => {
-          const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
-          const totalCount = step.tasks?.length || 0
-          const allComplete = totalCount > 0 && completedCount === totalCount
-          const isActive = activeStep === step.step_id
+          const completedCount =
+            step.tasks?.filter((t) => t.status === "complete").length || 0;
+          const totalCount = step.tasks?.length || 0;
+          const allComplete = totalCount > 0 && completedCount === totalCount;
+          const isActive = activeStep === step.step_id;
 
           return (
             <div key={step.step_id}>
               <button
                 onClick={() => setActiveStep(isActive ? null : step.step_id)}
                 className={cn(
-                  'w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all',
-                  isActive ? 'bg-[#F7F3FE]' : 'hover:bg-[#FAFAFA]'
+                  "w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all",
+                  isActive ? "bg-[#F7F3FE]" : "hover:bg-[#FAFAFA]",
                 )}
               >
-                <span className={cn(
-                  'text-[12px] font-semibold w-5 shrink-0',
-                  allComplete ? 'text-[#22C55E]' : isActive ? 'text-[#6B26EA]' : 'text-[#8B898E]'
-                )}>
+                <span
+                  className={cn(
+                    "text-[12px] font-semibold w-5 shrink-0",
+                    allComplete
+                      ? "text-[#22C55E]"
+                      : isActive
+                        ? "text-[#6B26EA]"
+                        : "text-[#8B898E]",
+                  )}
+                >
                   {index + 1}.
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className={cn(
-                    'text-[12px] font-semibold',
-                    allComplete ? 'text-[#22C55E]' : 'text-[#0D0026]'
-                  )}>
+                  <p
+                    className={cn(
+                      "text-[12px] font-semibold",
+                      allComplete ? "text-[#22C55E]" : "text-[#0D0026]",
+                    )}
+                  >
                     {step.title}
                   </p>
                 </div>
@@ -884,20 +1138,32 @@ function StepsPanel() {
                       <div
                         key={task.task_id}
                         className={cn(
-                          'flex items-start gap-2 p-2 rounded-lg',
-                          task.status === 'complete' ? 'bg-[#F0FDF4]' : 'bg-[#FAFAFA]'
+                          "flex items-start gap-2 p-2 rounded-lg",
+                          task.status === "complete"
+                            ? "bg-[#F0FDF4]"
+                            : "bg-[#FAFAFA]",
                         )}
                       >
-                        {task.status === 'complete' ? (
-                          <CheckCircle2 size={12} className="text-[#22C55E] shrink-0 mt-0.5" />
+                        {task.status === "complete" ? (
+                          <CheckCircle2
+                            size={12}
+                            className="text-[#22C55E] shrink-0 mt-0.5"
+                          />
                         ) : (
-                          <Circle size={12} className="text-[#D1D5DB] shrink-0 mt-0.5" />
+                          <Circle
+                            size={12}
+                            className="text-[#D1D5DB] shrink-0 mt-0.5"
+                          />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className={cn(
-                            'text-[11px] font-medium leading-snug',
-                            task.status === 'complete' ? 'text-[#8B898E] line-through' : 'text-[#0D0026]'
-                          )}>
+                          <p
+                            className={cn(
+                              "text-[11px] font-medium leading-snug",
+                              task.status === "complete"
+                                ? "text-[#8B898E] line-through"
+                                : "text-[#0D0026]",
+                            )}
+                          >
                             {task.title}
                           </p>
                           <p className="text-[10px] text-[#8B898E] mt-0.5 leading-snug">
@@ -905,19 +1171,20 @@ function StepsPanel() {
                           </p>
                         </div>
                       </div>
-                    ))
-                  }
+                    ))}
                   {(!step.tasks || step.tasks.length === 0) && (
-                    <p className="text-[11px] text-[#8B898E] py-1.5">No tasks yet.</p>
+                    <p className="text-[11px] text-[#8B898E] py-1.5">
+                      No tasks yet.
+                    </p>
                   )}
                 </div>
               )}
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
 
 function ResumePanel({ openPanel }: { openPanel?: (id: PanelId) => void }) {
@@ -929,22 +1196,34 @@ function ResumePanel({ openPanel }: { openPanel?: (id: PanelId) => void }) {
             <User size={16} className="text-[#6B26EA]" />
           </div>
           <div>
-            <p className="text-[13px] font-semibold text-[#0D0026]">Your Resume</p>
+            <p className="text-[13px] font-semibold text-[#0D0026]">
+              Your Resume
+            </p>
             <p className="text-[11px] text-[#8B898E]">AI-generated resume</p>
           </div>
         </div>
         <div className="space-y-3">
           <div>
-            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">EXPERIENCE</h4>
-            <p className="text-[11px] text-[#A8A8A8]">Complete tasks on your roadmap to build your resume.</p>
+            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">
+              EXPERIENCE
+            </h4>
+            <p className="text-[11px] text-[#A8A8A8]">
+              Complete tasks on your roadmap to build your resume.
+            </p>
           </div>
           <div>
-            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">EDUCATION</h4>
+            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">
+              EDUCATION
+            </h4>
             <p className="text-[11px] text-[#A8A8A8]">Add during onboarding.</p>
           </div>
           <div>
-            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">SKILLS</h4>
-            <p className="text-[11px] text-[#A8A8A8]">AI will suggest skills based on your career journey.</p>
+            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">
+              SKILLS
+            </h4>
+            <p className="text-[11px] text-[#A8A8A8]">
+              AI will suggest skills based on your career journey.
+            </p>
           </div>
         </div>
       </div>
@@ -958,7 +1237,7 @@ function ResumePanel({ openPanel }: { openPanel?: (id: PanelId) => void }) {
         <button
           onClick={() => {
             if (openPanel) {
-              openPanel('chat')
+              openPanel("chat");
             }
           }}
           className="w-full py-2.5 rounded-xl border border-[rgba(0,0,0,0.43)] bg-[#EADFFF] text-[12px] font-medium text-[#000] hover:bg-[#D4C4F7] transition-colors"
@@ -967,29 +1246,42 @@ function ResumePanel({ openPanel }: { openPanel?: (id: PanelId) => void }) {
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 function RoadmapPanel() {
-  const [roadmap, setRoadmap] = useState<Roadmap | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [expandedStep, setExpandedStep] = useState<string | null>(null)
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [expandedStep, setExpandedStep] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
+    let cancelled = false;
+    setLoading(true);
     getRoadmap()
-      .then((data) => { if (!cancelled) setRoadmap(data) })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load roadmap') })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [])
+      .then((data) => {
+        if (!cancelled) setRoadmap(data);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(
+            err instanceof Error ? err.message : "Failed to load roadmap",
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const sortedSteps = roadmap?.steps ? [...roadmap.steps].sort((a, b) => a.order - b.order) : []
-  const allTasks = sortedSteps.flatMap(s => s.tasks || [])
-  const completedTasks = allTasks.filter(t => t.status === 'complete').length
-  const totalTasks = allTasks.length
+  const sortedSteps = roadmap?.steps
+    ? [...roadmap.steps].sort((a, b) => a.order - b.order)
+    : [];
+  const allTasks = sortedSteps.flatMap((s) => s.tasks || []);
+  const completedTasks = allTasks.filter((t) => t.status === "complete").length;
+  const totalTasks = allTasks.length;
 
   if (loading) {
     return (
@@ -997,15 +1289,17 @@ function RoadmapPanel() {
         <Loader2 size={20} className="text-[#6B26EA] animate-spin mb-2" />
         <p className="text-[12px] text-[#8B898E]">Loading roadmap...</p>
       </div>
-    )
+    );
   }
 
   if (error) {
     return (
       <div className="p-4">
-        <p className="text-[12px] text-[#D14444] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">{error}</p>
+        <p className="text-[12px] text-[#D14444] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3 py-2">
+          {error}
+        </p>
       </div>
-    )
+    );
   }
 
   if (!roadmap || sortedSteps.length === 0) {
@@ -1015,10 +1309,12 @@ function RoadmapPanel() {
           <div className="w-12 h-12 rounded-full bg-[#F7F3FE] flex items-center justify-center mb-3">
             <Map size={18} className="text-[#D1D5DB]" />
           </div>
-          <p className="text-[13px] text-[#8B898E]">No roadmap yet. Ask LYNKS to generate one.</p>
+          <p className="text-[13px] text-[#8B898E]">
+            No roadmap yet. Ask LYNKS to generate one.
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -1034,7 +1330,9 @@ function RoadmapPanel() {
         <div className="w-full h-1.5 rounded-full bg-[#EDE3FF] overflow-hidden">
           <div
             className="h-full rounded-full bg-[#6B26EA] transition-all duration-500"
-            style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+            style={{
+              width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%`,
+            }}
           />
         </div>
       </div>
@@ -1042,31 +1340,42 @@ function RoadmapPanel() {
       {/* Step list */}
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
         {sortedSteps.map((step, index) => {
-          const completedCount = step.tasks?.filter((t) => t.status === 'complete').length || 0
-          const totalCount = step.tasks?.length || 0
-          const allComplete = totalCount > 0 && completedCount === totalCount
-          const isExpanded = expandedStep === step.step_id
+          const completedCount =
+            step.tasks?.filter((t) => t.status === "complete").length || 0;
+          const totalCount = step.tasks?.length || 0;
+          const allComplete = totalCount > 0 && completedCount === totalCount;
+          const isExpanded = expandedStep === step.step_id;
 
           return (
             <div key={step.step_id}>
               <button
-                onClick={() => setExpandedStep(isExpanded ? null : step.step_id)}
+                onClick={() =>
+                  setExpandedStep(isExpanded ? null : step.step_id)
+                }
                 className={cn(
-                  'w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all',
-                  isExpanded ? 'bg-[#F7F3FE]' : 'hover:bg-[#FAFAFA]'
+                  "w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all",
+                  isExpanded ? "bg-[#F7F3FE]" : "hover:bg-[#FAFAFA]",
                 )}
               >
-                <span className={cn(
-                  'text-[12px] font-semibold w-5 shrink-0',
-                  allComplete ? 'text-[#22C55E]' : isExpanded ? 'text-[#6B26EA]' : 'text-[#8B898E]'
-                )}>
+                <span
+                  className={cn(
+                    "text-[12px] font-semibold w-5 shrink-0",
+                    allComplete
+                      ? "text-[#22C55E]"
+                      : isExpanded
+                        ? "text-[#6B26EA]"
+                        : "text-[#8B898E]",
+                  )}
+                >
                   {index + 1}.
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className={cn(
-                    'text-[12px] font-semibold truncate',
-                    allComplete ? 'text-[#22C55E]' : 'text-[#0D0026]'
-                  )}>
+                  <p
+                    className={cn(
+                      "text-[12px] font-semibold truncate",
+                      allComplete ? "text-[#22C55E]" : "text-[#0D0026]",
+                    )}
+                  >
                     {step.title}
                   </p>
                   {!isExpanded && totalCount > 0 && (
@@ -1088,35 +1397,48 @@ function RoadmapPanel() {
                       <div
                         key={task.task_id}
                         className={cn(
-                          'flex items-start gap-2 p-2 rounded-lg',
-                          task.status === 'complete' ? 'bg-[#F0FDF4]' : 'bg-[#FAFAFA]'
+                          "flex items-start gap-2 p-2 rounded-lg",
+                          task.status === "complete"
+                            ? "bg-[#F0FDF4]"
+                            : "bg-[#FAFAFA]",
                         )}
                       >
-                        {task.status === 'complete' ? (
-                          <CheckCircle2 size={12} className="text-[#22C55E] shrink-0 mt-0.5" />
+                        {task.status === "complete" ? (
+                          <CheckCircle2
+                            size={12}
+                            className="text-[#22C55E] shrink-0 mt-0.5"
+                          />
                         ) : (
-                          <Circle size={12} className="text-[#D1D5DB] shrink-0 mt-0.5" />
+                          <Circle
+                            size={12}
+                            className="text-[#D1D5DB] shrink-0 mt-0.5"
+                          />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className={cn(
-                            'text-[11px] font-medium leading-snug',
-                            task.status === 'complete' ? 'text-[#8B898E] line-through' : 'text-[#0D0026]'
-                          )}>
+                          <p
+                            className={cn(
+                              "text-[11px] font-medium leading-snug",
+                              task.status === "complete"
+                                ? "text-[#8B898E] line-through"
+                                : "text-[#0D0026]",
+                            )}
+                          >
                             {task.title}
                           </p>
                         </div>
                       </div>
-                    ))
-                  }
+                    ))}
                   {(!step.tasks || step.tasks.length === 0) && (
-                    <p className="text-[11px] text-[#8B898E] py-1.5">No tasks yet.</p>
+                    <p className="text-[11px] text-[#8B898E] py-1.5">
+                      No tasks yet.
+                    </p>
                   )}
                 </div>
               )}
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
