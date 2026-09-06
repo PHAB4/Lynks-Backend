@@ -8,17 +8,6 @@ import { cn } from '@/lib/cn'
 import { fetchAPI } from '@/lib/api'
 import SecurityTab from '@/components/SecurityTab'
 
-const CAREER_INTERESTS = [
-  'Frontend Engineering',
-  'Backend Engineering',
-  'AI & Machine Learning',
-  'Data Analytics',
-  'Career Strategy',
-  'UX Design',
-  'Product Management',
-  'DevOps',
-]
-
 export default function SettingsPage() {
   const router = useRouter()
   const [profile, setProfile] = useState({
@@ -30,6 +19,7 @@ export default function SettingsPage() {
     avatarUrl: '',
   })
   const [interests, setInterests] = useState<string[]>([])
+  const [suggestedInterests, setSuggestedInterests] = useState<string[]>([])
   const [newInterest, setNewInterest] = useState('')
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -53,6 +43,13 @@ export default function SettingsPage() {
         }
       } catch {
         // Profile not yet created — user may need to complete onboarding
+      }
+
+      try {
+        const sug = await fetchAPI<{ suggestions?: string[] }>('/profile/suggested-interests')
+        if (sug?.suggestions) setSuggestedInterests(sug.suggestions)
+      } catch {
+        // Fallback suggestions handled server-side
       }
     }
     load()
@@ -426,7 +423,7 @@ export default function SettingsPage() {
                           Suggested interests
                         </p>
                         <div className="flex flex-wrap gap-2.5">
-                          {CAREER_INTERESTS.map((interest) => {
+                          {suggestedInterests.map((interest) => {
                             const isActive = interests.includes(interest)
                             return (
                               <button

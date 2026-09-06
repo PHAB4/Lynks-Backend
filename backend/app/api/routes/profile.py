@@ -105,6 +105,67 @@ async def update_career_path(
     return {"career_path": user.career_path}
 
 
+CAREER_INTEREST_MAP: dict[str, list[str]] = {
+    "software engineering": ["Frontend Engineering", "Backend Engineering", "DevOps", "API Design", "System Design", "Cloud Computing", "Mobile Development", "Testing & QA"],
+    "frontend engineering": ["React", "TypeScript", "UI/UX Design", "Web Accessibility", "Performance Optimization", "Design Systems", "Mobile Development"],
+    "backend engineering": ["API Design", "Database Design", "System Design", "Cloud Computing", "DevOps", "Security", "Microservices"],
+    "data science": ["Machine Learning", "Statistics", "Data Visualization", "Python", "SQL", "Deep Learning", "NLP", "Data Engineering"],
+    "ai & machine learning": ["Deep Learning", "NLP", "Computer Vision", "MLOps", "Data Engineering", "Python", "Research"],
+    "ux design": ["User Research", "Wireframing", "Prototyping", "Figma", "Usability Testing", "Design Systems", "Interaction Design"],
+    "product management": ["Agile & Scrum", "User Research", "Data Analysis", "Roadmapping", "Stakeholder Management", "A/B Testing", "Go-to-Market"],
+    "devops": ["Cloud Computing", "CI/CD", "Containerization", "Kubernetes", "Infrastructure as Code", "Monitoring", "Security"],
+    "cybersecurity": ["Network Security", "Penetration Testing", "Incident Response", "Cryptography", "Compliance", "Cloud Security"],
+    "digital marketing": ["SEO", "Content Marketing", "Social Media", "Analytics", "Email Marketing", "PPC Advertising", "Brand Strategy"],
+    "data analytics": ["SQL", "Data Visualization", "Business Intelligence", "Python", "Excel", "Statistical Analysis", "Reporting"],
+    "career strategy": ["Networking", "Personal Branding", "Interview Prep", "Resume Writing", "Leadership", "Negotiation"],
+    "finance": ["Financial Modeling", "Valuation", "Accounting", "Excel", "Risk Management", "Investment Analysis"],
+    "project management": ["Agile & Scrum", "Risk Management", "Stakeholder Management", "Budgeting", "Leadership", "Scheduling"],
+}
+
+
+def _get_suggested_interests(career_path: str) -> list[str]:
+    if not career_path:
+        return ["Frontend Engineering", "Backend Engineering", "AI & Machine Learning", "Data Analytics",
+                "UX Design", "Product Management", "DevOps", "Career Strategy"]
+
+    lower = career_path.lower()
+    for key, interests in CAREER_INTEREST_MAP.items():
+        if key in lower or lower in key:
+            return interests
+
+    matched: list[str] = []
+    for key, interests in CAREER_INTEREST_MAP.items():
+        for word in lower.split():
+            if word in key or key in word:
+                matched.extend(interests)
+                break
+    if matched:
+        seen = set()
+        unique = []
+        for i in matched:
+            if i not in seen:
+                seen.add(i)
+                unique.append(i)
+        return unique[:8]
+
+    return ["Frontend Engineering", "Backend Engineering", "AI & Machine Learning", "Data Analytics",
+            "UX Design", "Product Management", "DevOps", "Career Strategy"]
+
+
+@router.get("/suggested-interests")
+async def get_suggested_interests(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    suggestions = _get_suggested_interests(user.career_path or "")
+    return {"suggestions": suggestions}
+
+
 @router.post("/avatar")
 async def upload_avatar(
     file: UploadFile = File(...),
