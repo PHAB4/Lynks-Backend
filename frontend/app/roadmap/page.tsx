@@ -97,6 +97,8 @@ export default function RoadmapPage() {
       const msg = err instanceof Error ? err.message : 'Failed to generate roadmap'
       if (msg.includes('profile_incomplete') || msg.includes('Not authenticated')) {
         setError('Your profile is missing required fields (career path, education level, and/or country). Please complete your onboarding or update your profile in Settings.')
+      } else if (msg.includes('rate_limited') || msg.includes('429')) {
+        setError('The AI is temporarily busy. Please wait a minute and try again.')
       } else {
         setError(msg)
       }

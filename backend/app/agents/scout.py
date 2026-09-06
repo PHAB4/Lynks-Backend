@@ -713,7 +713,8 @@ async def discover_opportunities(
     else:
         # relevance — use rule-based scoring first, then LLM for top results
         pool = score_all_opportunities(pool, profile)
-        matched = match_opportunities_with_llm(profile, pool)
+        import asyncio
+        matched = await asyncio.to_thread(match_opportunities_with_llm, profile, pool)
         # Preserve scores from rule-based scoring
         score_map = {o["title"]: o.get("relevance_score", 0) for o in pool}
         for m in matched:

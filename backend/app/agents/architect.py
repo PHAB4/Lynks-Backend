@@ -165,17 +165,12 @@ Rules for the JSON:
 """
 
 
-def call_llm(profile: ProfileData) -> GeneratedRoadmap:
-    """
-    Call the OpenAI-compatible compute gateway and parse the response
-    into a GeneratedRoadmap.
-
-    Uses the OpenAI Python SDK — the compute gateway (Highrise/Impala AI)
-    exposes an OpenAI-compatible API, so we point the SDK at their base URL.
-    """
+def _call_llm_sync(profile: ProfileData) -> str:
+    """Synchronous LLM call — runs in a thread pool via asyncio.to_thread."""
     client = OpenAI(
         api_key=settings.LLM_API_KEY,
         base_url=settings.LLM_API_BASE_URL,
+        timeout=30.0,
     )
 
     user_message = build_user_message(profile) + "\n\n" + RESPONSE_FORMAT_INSTRUCTIONS
@@ -190,8 +185,11 @@ def call_llm(profile: ProfileData) -> GeneratedRoadmap:
         max_tokens=4096,
     )
 
-    raw_content = response.choices[0].message.content.strip()
+    return response.choices[0].message.content.strip()
 
+
+def _parse_llm_response(raw_content: str) -> GeneratedRoadmap:
+    """Parse raw LLM output into a GeneratedRoadmap."""
     # Strip markdown fences if the model wraps them anyway
     if raw_content.startswith("```"):
         lines = raw_content.split("\n")
@@ -207,6 +205,31 @@ def call_llm(profile: ProfileData) -> GeneratedRoadmap:
         raise RuntimeError(f"llm_parse_error: {e}") from e
 
     return _parse_roadmap(data)
+
+
+async def call_llm(profile: ProfileData) -> GeneratedRoadmap:
+    """
+    Call the LLM asynchronously (runs the sync OpenAI call in a thread pool
+    so it doesn't block the FastAPI event loop).
+
+    Raises RuntimeError on LLM errors.
+    """
+    import asyncio
+    from openai import APIStatusError
+
+    try:
+        raw_content = await asyncio.to_thread(_call_llm_sync, profile)
+    except APIStatusError as e:
+        if e.status_code == 429:
+            logger.warning("Rate limited on roadmap generation")
+            raise RuntimeError("rate_limited: LLM rate limit exceeded. Please try again in a minute.") from e
+        raise RuntimeError(f"llm_api_error: {e}") from e
+    except Exception as e:
+        if "rate" in str(e).lower() or "429" in str(e):
+            raise RuntimeError("rate_limited: LLM rate limit exceeded. Please try again in a minute.") from e
+        raise RuntimeError(f"llm_error: {e}") from e
+
+    return _parse_llm_response(raw_content)
 
 
 def _parse_roadmap(data: dict) -> GeneratedRoadmap:
@@ -329,7 +352,7 @@ async def generate_roadmap(
     profile = user_to_profile(user)
 
     # 4. Call the LLM
-    generated = call_llm(profile)
+    generated = await call_llm(profile)
 
     # 5. Save to DB
     roadmap = await save_roadmap(db, user_id, profile, generated)

@@ -35,6 +35,7 @@ const PANEL_ROUTES: Partial<Record<PanelId, string>> = {
   roadmap: '/roadmap',
   chat: '/chat',
   resume: '/resume',
+  steps: '/roadmap',
 }
 
 type PanelSide = 'left' | 'right'
