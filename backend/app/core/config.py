@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""  # Google AI Studio key — get from https://aistudio.google.com/apikey
     VISION_MODEL: str = "gemini-3.5-flash"  # Free tier: 10 RPM, 1,500 RPD
 
+    # Model Router — auto-fallback across Groq + Gemini
+    MODEL_ROUTER_ENABLED: bool = True
+
     # Test config (optional)
     JWT_TOKEN: str = ""
 

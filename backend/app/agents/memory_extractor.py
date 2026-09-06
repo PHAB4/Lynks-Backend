@@ -13,10 +13,11 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from openai import APIError as OpenAIError, OpenAI
+from openai import APIError as OpenAIError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.model_router import call_llm
 from app.core.config import settings
 from app.models.db_models import Message, UserMemory
 
@@ -100,17 +101,12 @@ async def extract_and_save_memories(
     )
 
     try:
-        client = OpenAI(
-            api_key=settings.LLM_API_KEY,
-            base_url=settings.LLM_API_BASE_URL,
-        )
-        response = client.chat.completions.create(
-            model=settings.LLM_MODEL,
+        raw, _, _ = call_llm(
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=500,
         )
-        raw = response.choices[0].message.content or "[]"
+        raw = raw or "[]"
 
         # Parse the JSON response
         raw = raw.strip()
@@ -125,7 +121,7 @@ async def extract_and_save_memories(
     except json.JSONDecodeError as e:
         logger.error("Failed to parse extraction JSON: %s", e)
         return []
-    except (OpenAIError, OSError) as e:
+    except (OpenAIError, RuntimeError, OSError) as e:
         logger.error("Memory extraction failed: %s", e)
         return []
 
