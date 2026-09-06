@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""  # Google AI Studio key — get from https://aistudio.google.com/apikey
     VISION_MODEL: str = "gemini-3.1-flash-lite"  # Cheapest available: $0.25/$1.50 per 1M tokens
 
+    # MiniMax — OpenAI-compatible (https://platform.minimax.io)
+    MINIMAX_API_KEY: str = ""
+
     # Model Router — auto-fallback across Groq + Gemini
     MODEL_ROUTER_ENABLED: bool = True
 

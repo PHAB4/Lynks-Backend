@@ -14,6 +14,7 @@ os.environ.setdefault("SUPABASE_ANON_KEY", "test-key")
 os.environ.setdefault("LLM_API_KEY", "test-groq-key")
 os.environ.setdefault("LLM_API_BASE_URL", "https://api.groq.com/openai/v1")
 os.environ.setdefault("GEMINI_API_KEY", "test-gemini-key")
+os.environ.setdefault("MINIMAX_API_KEY", "test-minimax-key")
 
 import time
 from unittest.mock import MagicMock, patch, PropertyMock
@@ -93,6 +94,8 @@ class TestModelList:
         assert "gemini-3.1-flash-lite" in names
         assert "gemini-3.5-flash-lite" in names
         assert "gemini-3-flash" in names
+        assert "minimax-m2.7" in names
+        assert "minimax-m3" in names
 
     def test_sorted_by_priority(self):
         models = _build_model_list()
@@ -153,8 +156,10 @@ class TestSelectModel:
     def test_require_tools_skips_gemini(self):
         _tracker.record_rate_limit("groq-120b")
         _tracker.record_rate_limit("groq-20b")
+        _tracker.record_rate_limit("minimax-m2.7")
+        _tracker.record_rate_limit("minimax-m3")
         model = select_model(require_tools=True)
-        assert model is None  # Gemini doesn't support tools
+        assert model is None  # Gemini doesn't support tools, MiniMax is limited
 
     def test_require_tools_picks_groq(self):
         model = select_model(require_tools=True)
@@ -162,7 +167,7 @@ class TestSelectModel:
         assert model.supports_tools is True
 
     def test_returns_none_when_all_limited(self):
-        for name in ["groq-120b", "groq-20b", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash"]:
+        for name in ["groq-120b", "groq-20b", "minimax-m2.7", "minimax-m3", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash"]:
             _tracker.record_rate_limit(name)
         model = select_model()
         assert model is None
@@ -304,6 +309,8 @@ class TestGetStatus:
         assert "gemini-3.5-flash-lite" in status
         assert "gemini-3-flash" in status
 
+        assert "minimax-m2.7" in status
+        assert "minimax-m3" in status
     def test_status_shape(self):
         status = get_status()
         for name, info in status.items():
