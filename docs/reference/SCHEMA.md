@@ -33,6 +33,7 @@ opportunities (standalone)
 | country | text | YES | null | Set by user |
 | education_level | text | YES | null | Set by user |
 | employment_status | text | YES | null | Set by user — "student", "employed", "unemployed", "freelancer", "looking for first job" |
+| phone | text | YES | null | User's phone number (e.g. "+1-876-555-1234") |
 | career_path | text | YES | null | Set by user |
 | interests | ARRAY | YES | null | text[] — array of strings |
 | created_at | timestamptz | NO | now() | Set by signup trigger |
@@ -261,3 +262,4 @@ opportunities (standalone)
 - **2026-09-05:** Added `GET /dashboard/summary` aggregation endpoint. No schema changes — data is sourced from existing tables (`users`, `roadmaps`, `steps`, `tasks`, `notifications`, `conversations`).
 - **2026-09-05:** Added `PATCH /roadmap/tasks/{task_id}` endpoint for general task updates (title, description, status). No schema changes — uses existing `tasks.status` and `tasks.completed_at` columns. Task status now supports three values: `pending`, `in_progress`, `complete`.
 - **2026-09-05:** Added `is_pinned` (boolean) and `sort_order` (integer) columns to `conversations` table for manual reordering. New endpoints: `PATCH /chat/conversations/{id}` (toggle pin), `POST /chat/conversations/reorder`, `DELETE /chat/conversations/{id}`.
+- **2026-09-05:** Added `phone` (text, nullable) column to `users` table. Updated `GET /profile` and `PATCH /profile` to include phone field.

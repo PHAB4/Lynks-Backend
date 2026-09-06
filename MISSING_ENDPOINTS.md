@@ -50,6 +50,7 @@
 
 | Priority | Gap | Effort |
 |---|---|---|
+| 🟡 Medium | Profile pictures — UI has upload buttons but no backend endpoint or storage bucket | Build `POST /profile/avatar` + storage bucket |
 | 🟡 Medium | Onboarding bypasses backend — writes to Supabase directly | Should call `PATCH /profile` instead |
 | 🟢 Low | Dashboard could use `/dashboard/summary` | Currently 5 API calls — could be 1 |
 | 🟢 Low | No scheduled opportunity scraping | Manual trigger only — add cron for auto-refresh |

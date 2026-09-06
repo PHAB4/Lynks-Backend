@@ -35,12 +35,12 @@ export default function SettingsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fetchAPI<{ name?: string; email?: string; employment_status?: string; career_path?: string; interests?: string[] }>('/profile')
+        const data = await fetchAPI<{ name?: string; email?: string; phone?: string; employment_status?: string; career_path?: string; interests?: string[] }>('/profile')
         if (data) {
           setProfile({
             name: data.name || '',
             email: data.email || '',
-            phone: '',
+            phone: data.phone || '',
             role: data.employment_status || '',
             careerPath: data.career_path || '',
           })
@@ -59,6 +59,7 @@ export default function SettingsPage() {
         method: 'PATCH',
         body: JSON.stringify({
           name: profile.name,
+          phone: profile.phone || null,
           employment_status: profile.role,
           interests: interests,
         }),

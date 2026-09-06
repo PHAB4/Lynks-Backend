@@ -34,6 +34,7 @@ class User(Base):
     country: Mapped[str | None] = mapped_column(Text, nullable=True)
     education_level: Mapped[str | None] = mapped_column(Text, nullable=True)
     employment_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phone: Mapped[str | None] = mapped_column(Text, nullable=True)
     career_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     interests: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
