@@ -1,6 +1,6 @@
 # Backend vs Frontend Audit — Current State
 
-**Date:** September 5, 2026 (updated — phone field added to profile)
+**Date:** September 6, 2026 (updated — dynamic interests, signup flow, sidebar fix)
 **Frontend URL:** https://lynks-gen-ai.web.app
 **Backend URL:** https://lynks-backend-production.up.railway.app
 **Backend:** FastAPI + Supabase (Postgres + Auth + Storage)
@@ -130,6 +130,7 @@ All major frontend pages are now connected to the backend API. The chat feature 
 | Fetch profile | `GET /profile` | ✅ Working (includes phone) |
 | Update profile | `PATCH /profile` | ✅ Working (phone field supported) |
 | Update career path | `PATCH /profile/career-path` | ✅ Working |
+| Suggested interests | `GET /profile/suggested-interests` | ✅ Working (career-path-aware) |
 
 ---
 
@@ -148,6 +149,10 @@ All major frontend pages are now connected to the backend API. The chat feature 
 ### 8. Login/Signup — Auth (Supabase) ✅ No Change Needed
 
 Auth operations correctly stay with Supabase. No backend involvement.
+
+**Signup flow:** "Get started" / "Sign up" → `/signup` (email + password only, no name field) → `/onboarding` (7 steps including name) → `/dashboard`.
+
+Both password fields on signup have eye toggle (peek button) for visibility.
 
 ---
 
@@ -199,6 +204,10 @@ Backend has `POST /profile/avatar` and `DELETE /profile/avatar` endpoints. Stora
 | 🟢 Low | Onboarding → `PATCH /profile` instead of Supabase direct | Small |
 | 🟢 Low | Dashboard → `GET /dashboard/summary` instead of 5 calls | Small |
 | 🟢 Low | Notification UI (bell, list, mark-read) | Medium |
-| 🟡 Medium | Profile picture upload (endpoint + storage + UI) | ✅ Done |
-| ✅ Done | Opportunity personal matching scoring | ✅ Done — `GET /opportunities/matches` with rule-based scoring (23 unit tests) |
 | 🟡 Medium | Scheduled opportunity scraping (cron) | Medium |
+| ✅ Done | Profile picture upload | ✅ Done |
+| ✅ Done | Opportunity personal matching scoring | ✅ Done — `GET /opportunities/matches` |
+| ✅ Done | Dynamic suggested interests | ✅ Done — `GET /profile/suggested-interests` |
+| ✅ Done | Signup flow (email + password, no name) | ✅ Done |
+| ✅ Done | Sidebar icons always visible, top bar filters | ✅ Done |
+| ✅ Done | Chat redesign (no conversation list, sidebar management) | ✅ Done |
