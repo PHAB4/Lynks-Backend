@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import { opportunities } from '@/lib/api'
 import type { Opportunity } from '@/lib/types'
-import DashboardLayout from '@/components/DashboardLayout'
+import AppLayout from '@/components/AppLayout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search, RefreshCw, Bookmark, BookmarkCheck, ExternalLink, Loader2, Briefcase, MapPin, DollarSign } from 'lucide-react'
@@ -86,7 +86,7 @@ export default function OpportunitiesPage() {
   })
 
   return (
-    <DashboardLayout>
+    <AppLayout>
       <div className="max-w-5xl mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -172,6 +172,6 @@ export default function OpportunitiesPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </AppLayout>
   )
 }
