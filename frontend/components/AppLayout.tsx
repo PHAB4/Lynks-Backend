@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Home, Briefcase, MessageSquare, Map, FileText,
   ChevronLeft, LogOut, Settings,
-  Loader2, Plus, Trash2,
+  Loader2, Plus, Trash2, ListChecks,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
@@ -267,6 +267,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {sidebarExpanded && expandedSidebar}
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {pathname !== '/dashboard' && pathname !== '/settings' && pathname !== '/onboarding' && (
+          <div className="hidden md:flex items-center justify-end gap-1 px-4 py-2 border-b border-[#EDE3FF] bg-white shrink-0">
+            {[
+              { icon: ListChecks, label: 'Steps', href: '/roadmap' },
+              { icon: Map, label: 'Roadmap', href: '/roadmap' },
+              { icon: MessageSquare, label: 'Chat', href: '/chat' },
+              { icon: FileText, label: 'Resume', href: '/resume' },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={() => router.push(item.href)}
+                className={cn(
+                  'flex items-center justify-center w-[36px] h-[36px] rounded-lg transition-all',
+                  isActive(item.href)
+                    ? 'bg-[#EADFFF] text-[#6B26EA]'
+                    : 'text-[rgba(0,0,0,0.35)] hover:bg-[rgba(107,38,234,0.06)] hover:text-[#6B26EA]'
+                )}
+                title={item.label}
+              >
+                <item.icon size={16} strokeWidth={isActive(item.href) ? 2 : 1.5} />
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto min-w-0 pb-16 md:pb-0">
           {children}
         </div>
