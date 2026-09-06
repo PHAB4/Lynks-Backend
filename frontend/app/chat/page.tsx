@@ -282,9 +282,22 @@ function ChatContent() {
 
               {!loadingConversations && conversations.length === 0 && (
                 <div className="flex flex-col items-center justify-center max-w-[600px] mx-auto">
-                  <p className="text-2xl md:text-[32px] font-semibold leading-tight text-center text-[#0D0026]" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                    Welcome {userName}<br />How can LYNKS help you today?
+                  <div className="w-14 h-14 rounded-full bg-[#EADFFF] flex items-center justify-center mb-5">
+                    <MessageSquare size={24} className="text-[#6B26EA]" />
+                  </div>
+                  <p className="text-2xl md:text-[32px] font-semibold leading-tight text-center text-[#0D0026] mb-3" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                    Welcome {userName}
                   </p>
+                  <p className="text-[14px] text-[#8B898E] text-center mb-8">
+                    Ask me anything about your career, opportunities, or roadmap.
+                  </p>
+                  <button
+                    onClick={handleNewChat}
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#6B26EA] text-white text-[13px] font-medium hover:bg-[#5A1FD0] transition-colors shadow-[0_4px_12px_rgba(107,38,234,0.25)]"
+                  >
+                    <Plus size={16} />
+                    Start a new chat
+                  </button>
                 </div>
               )}
 
@@ -482,8 +495,7 @@ function ChatContent() {
             </>
           )}
 
-          {/* Chat input — only show when in active conversation */}
-          {(activeConversationId || messages.length > 0) && (
+          {/* Chat input — always visible */}
           <div className="px-4 md:px-6 pb-4 md:pb-6 shrink-0">
             <div className="flex items-center gap-3 bg-white border border-[#B1AEAE] rounded-xl px-4 py-3 max-w-[600px] mx-auto shadow-[0_0_5px_rgba(0,0,0,0.05)]">
               <input
@@ -505,7 +517,6 @@ function ChatContent() {
               </button>
             </div>
           </div>
-          )}
         </div>
       </div>
     </AppLayout>

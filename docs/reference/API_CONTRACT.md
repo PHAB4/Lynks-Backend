@@ -1,6 +1,6 @@
 # Lynks API Contract
 
-> **Last updated:** September 5, 2026
+> **Last updated:** September 5, 2026 (end of day — added pin, reorder, delete conversation endpoints)
 > **Base URL:** `http://localhost:8000` (local) / `https://lynks-backend-production.up.railway.app` (production)
 > **Auth:** Bearer token in `Authorization` header (Supabase JWT)
 > **Content-Type:** `application/json` (except evidence upload: `multipart/form-data`)
@@ -527,7 +527,7 @@ Response 200: { "success": true }
 ---
 
 ### GET /chat/conversations
-Lists all conversations for the user (for sidebar). Returns titles, summaries, timestamps, and message counts.
+Lists all conversations for the user (for sidebar). Returns titles, summaries, timestamps, message counts, and pin/sort status.
 ```json
 Response 200: {
   "conversations": [
@@ -536,6 +536,7 @@ Response 200: {
       "title": "string | null",
       "summary": "string | null",
       "message_count": 5,
+      "is_pinned": false,
       "created_at": "datetime"
     }
   ]
@@ -545,7 +546,7 @@ Response 200: {
 **Notes:**
 - `title` is derived from the first user message (truncated to 60 chars) if no summary exists
 - `summary` is the LLM-generated conversation summary (set after 15+ messages)
-- Returns up to 50 conversations, newest first
+- Returns up to 50 conversations, sorted by: pinned first, then by sort_order, then by created_at (newest first)
 - Messages are NOT loaded — only metadata for the sidebar
 
 ---
@@ -565,6 +566,60 @@ Response 200: {
     }
   ]
 }
+```
+
+Errors:
+- 404: `not_found` — conversation doesn't exist or doesn't belong to user
+
+---
+
+### PATCH /chat/conversations/{conversation_id}
+Toggles pin/unpin status for a conversation. Pinned conversations appear at the top of the list.
+```json
+Response 200: {
+  "conversation_id": "uuid",
+  "is_pinned": true
+}
+```
+
+Errors:
+- 404: `not_found` — conversation doesn't exist or doesn't belong to user
+
+---
+
+### POST /chat/conversations/reorder
+Reorders a conversation within its group (pinned or unpinned). Supports moving to top, bottom, up one position, or down one position.
+```json
+Request: {
+  "conversation_id": "uuid (required)",
+  "action": "top | bottom | up | down (required)"
+}
+
+Response 200: {
+  "conversations": [
+    {
+      "conversation_id": "uuid",
+      "sort_order": 0,
+      "is_pinned": false
+    }
+  ]
+}
+```
+
+**Notes:**
+- Reorder only affects conversations within the same pin group (pinned or unpinned)
+- `top` moves to first position, `bottom` moves to last, `up`/`down` shift by one
+- Returns the full updated sort order for all conversations
+
+Errors:
+- 404: `not_found` — conversation doesn't exist or doesn't belong to user
+
+---
+
+### DELETE /chat/conversations/{conversation_id}
+Deletes a single conversation and all its messages.
+```json
+Response 200: { "success": true }
 ```
 
 Errors:

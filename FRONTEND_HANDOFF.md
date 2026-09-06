@@ -1,8 +1,24 @@
 # Lynks Frontend Handoff — Opportunities Upgrade
 
-**Date:** August 27, 2026
-**Branch:** `feature/opportunities-scraper-upgrade`
+**Date:** August 27, 2026 (updated September 5, 2026)
+**Branch:** `feature/opportunities-scraper-upgrade` (now on `main`)
 **Backend URL:** `https://lynks-backend-production.up.railway.app`
+
+---
+
+## Integration Status (as of Sept 5, 2026)
+
+All frontend pages are now connected to the backend API:
+
+| Page | Status | Notes |
+|---|---|---|
+| `/dashboard` | ✅ Connected | Uses `dashboard-api.ts` |
+| `/roadmap` | ✅ Connected | Uses `roadmap-api.ts` |
+| `/opportunities` | ✅ Connected | Full backend integration (filtering, save/unsave, refresh) |
+| `/resume` | ✅ Connected | Uses backend `GET /resume`, `POST /resume/generate` |
+| `/settings` | ✅ Connected | Uses `GET /profile`, `PATCH /profile` |
+| `/chat` | ✅ Connected | Full backend integration (conversations, pin, reorder, delete) |
+| `/onboarding` | ⚠️ Partial | Writes to Supabase directly — should use `PATCH /profile` |
 
 ---
 
