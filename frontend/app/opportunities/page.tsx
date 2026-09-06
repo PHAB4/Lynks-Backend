@@ -179,16 +179,16 @@ export default function OpportunitiesPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-center gap-2 ml-2 shrink-0">
+                      <div className="flex items-center gap-2 ml-2 shrink-0 self-start">
+                        <button onClick={() => handleSave(opp.id)} disabled={saving === opp.id} className="text-[#8B898E] hover:text-[#6B26EA] transition-colors p-2 rounded-xl hover:bg-[#F5F0FF]" title={isSaved(opp.id) ? 'Remove from saved' : 'Save opportunity'}>
+                          {saving === opp.id ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved(opp.id) ? <BookmarkCheck className="w-5 h-5 text-[#6B26EA]" /> : <Bookmark className="w-5 h-5" />}
+                        </button>
                         {opp.url && (
-                          <a href={opp.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-medium text-[#6B26EA] hover:text-[#5A1FD0] bg-[#F5F0FF] hover:bg-[#EDE3FF] px-3 py-2 rounded-xl transition-colors">
+                          <a href={opp.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-medium text-[#6B26EA] hover:text-[#5A1FD0] bg-[#F5F0FF] hover:bg-[#EDE3FF] px-3 py-2 rounded-xl transition-colors whitespace-nowrap">
                             <ExternalLink className="w-4 h-4" />
                             Visit
                           </a>
                         )}
-                        <button onClick={() => handleSave(opp.id)} disabled={saving === opp.id} className="text-[#8B898E] hover:text-[#6B26EA] transition-colors p-2">
-                          {saving === opp.id ? <Loader2 className="w-4 h-4 animate-spin" /> : isSaved(opp.id) ? <BookmarkCheck className="w-5 h-5 text-[#6B26EA]" /> : <Bookmark className="w-5 h-5" />}
-                        </button>
                       </div>
                     </div>
                   </div>
