@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # Vision — Google Gemini Flash (evidence verification + model router fallback)
     GEMINI_API_KEY: str = ""  # Google AI Studio key — get from https://aistudio.google.com/apikey
-    VISION_MODEL: str = "gemini-2.5-flash"  # Pay-as-you-go: 150 RPM, 50K RPD
+    VISION_MODEL: str = "gemini-2.5-flash-lite"  # Pay-as-you-go: 200 RPM, 50K RPD ($0.10/$0.40 per 1M tokens)
 
     # Model Router — auto-fallback across Groq + Gemini
     MODEL_ROUTER_ENABLED: bool = True
