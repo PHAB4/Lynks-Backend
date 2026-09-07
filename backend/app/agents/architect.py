@@ -27,7 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.db_models import Roadmap, Step, Task, User
+from app.models.db_models import Roadmap, Resume, Step, Task, User, UserMemory
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,11 @@ class ProfileData:
     country: str
     employment_status: str
     interests: list[str]
+    skills: list[str]
+    experience: list[dict]
+    projects: list[dict]
+    certifications: list[str]
+    memories: list[str]
 
 
 @dataclass
@@ -81,7 +86,21 @@ def validate_profile(user: User) -> None:
         raise ValueError(f"profile_incomplete: missing {', '.join(missing)}")
 
 
-def user_to_profile(user: User) -> ProfileData:
+def user_to_profile(
+    user: User,
+    resume_content: dict | None = None,
+    memories: list[str] | None = None,
+) -> ProfileData:
+    skills = []
+    experience = []
+    projects = []
+    certifications = []
+    if resume_content:
+        skills = resume_content.get("skills", [])
+        experience = resume_content.get("experience", [])
+        projects = resume_content.get("projects", [])
+        certifications = resume_content.get("certifications", [])
+
     return ProfileData(
         career_path=user.career_path,
         education_level=user.education_level or "unknown",
@@ -89,6 +108,11 @@ def user_to_profile(user: User) -> ProfileData:
         country=user.country or "unknown",
         employment_status="unknown",
         interests=user.interests or [],
+        skills=skills,
+        experience=experience,
+        projects=projects,
+        certifications=certifications,
+        memories=memories or [],
     )
 
 
@@ -112,29 +136,46 @@ Tasks are what get marked "complete" and can have evidence (certificates, photos
 the user's country, education level, and local opportunities. A task like "enroll in \
 Coursera's Google IT Support Certificate" is good. A task like "get experience" is not.
 
-4. Use **snake_case** for all field names in the JSON.
+4. **Tailor the roadmap to what the user already knows and has done.** \
+If they already have skills, skip introductory steps for those. \
+If they have experience or projects, build on them instead of starting from scratch. \
+If they have certifications, don't suggest getting ones they already have. \
+Use the "known skills", "experience", and "certifications" sections to avoid redundant tasks.
 
-5. Every task needs a clear `title` (short label) and `description` (2-3 sentences \
+5. If the user has memories or notes about their goals, preferences, or constraints, \
+use them to further personalize the roadmap.
+
+6. Use **snake_case** for all field names in the JSON.
+
+7. Every task needs a clear `title` (short label) and `description` (2-3 sentences \
 explaining what to do and why it matters).
 
-6. `order` on both steps and tasks is a 1-based integer indicating position.
+8. `order` on both steps and tasks is a 1-based integer indicating position.
 
-7. Return ONLY valid JSON — no markdown fences, no commentary outside the JSON.
+9. Return ONLY valid JSON — no markdown fences, no commentary outside the JSON.
 """
 
 
 def build_user_message(profile: ProfileData) -> str:
-    return json.dumps(
-        {
-            "career_path": profile.career_path,
-            "education_level": profile.education_level,
-            "age": profile.age,
-            "country": profile.country,
-            "employment_status": profile.employment_status,
-            "interests": profile.interests,
-        },
-        indent=2,
-    )
+    data = {
+        "career_path": profile.career_path,
+        "education_level": profile.education_level,
+        "age": profile.age,
+        "country": profile.country,
+        "employment_status": profile.employment_status,
+        "interests": profile.interests,
+    }
+    if profile.skills:
+        data["known_skills"] = profile.skills
+    if profile.experience:
+        data["experience"] = profile.experience
+    if profile.projects:
+        data["projects"] = profile.projects
+    if profile.certifications:
+        data["certifications"] = profile.certifications
+    if profile.memories:
+        data["notes_about_user"] = profile.memories
+    return json.dumps(data, indent=2)
 
 
 RESPONSE_FORMAT_INSTRUCTIONS = """\
@@ -343,7 +384,20 @@ async def generate_roadmap(
     validate_profile(user)
 
     # 3. Build profile data
-    profile = user_to_profile(user)
+    resume_content = None
+    result = await db.execute(
+        select(Resume).where(Resume.user_id == user_id).order_by(Resume.created_at.desc())
+    )
+    latest_resume = result.scalar_one_or_none()
+    if latest_resume and isinstance(latest_resume.content, dict):
+        resume_content = latest_resume.content
+
+    memory_result = await db.execute(
+        select(UserMemory).where(UserMemory.user_id == user_id)
+    )
+    memories = [m.fact for m in memory_result.scalars().all()]
+
+    profile = user_to_profile(user, resume_content=resume_content, memories=memories)
 
     # 4. Call the LLM
     generated = await call_llm(profile)
