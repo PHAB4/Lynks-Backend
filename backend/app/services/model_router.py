@@ -33,8 +33,8 @@ class ModelConfig:
     supports_vision: bool = False
 
 
-# Priority order: Groq 120B → Groq 20B → Gemini 2.5 Flash-Lite → Gemini 3 Flash → Gemini 2.5 Flash
-# Cheapest Gemini first. All pay-as-you-go limits.
+# Priority order: Groq (free) → MiniMax (cheap, OpenAI-compat) → Gemini (vision fallback)
+# Cheapest first. All pay-as-you-go limits.
 DEFAULT_MODELS: list[dict] = [
     {
         "name": "groq-120b",
@@ -59,13 +59,48 @@ DEFAULT_MODELS: list[dict] = [
         "supports_tools": True,
     },
     {
-        "name": "gemini-2.5-flash-lite",
+        "name": "minimax-m2.7",
+        "provider": "minimax",
+        "model": "MiniMax-M2.7",
+        "base_url": "https://api.minimax.io/v1",
+        "env_key": "MINIMAX_API_KEY",
+        "priority": 3,
+        "max_rpm": 60,
+        "max_rpd": 10000,
+        "supports_tools": True,
+    },
+    {
+        "name": "minimax-m3",
+        "provider": "minimax",
+        "model": "MiniMax-M3",
+        "base_url": "https://api.minimax.io/v1",
+        "env_key": "MINIMAX_API_KEY",
+        "priority": 4,
+        "max_rpm": 60,
+        "max_rpd": 10000,
+        "supports_tools": True,
+        "supports_vision": True,
+    },
+    {
+        "name": "gemini-3.1-flash-lite",
         "provider": "google",
-        "model": "gemini-2.5-flash-lite",
+        "model": "gemini-3.1-flash-lite",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/",
         "env_key": "GEMINI_API_KEY",
-        "priority": 3,
+        "priority": 5,
         "max_rpm": 200,
+        "max_rpd": 50000,
+        "supports_tools": False,
+        "supports_vision": True,
+    },
+    {
+        "name": "gemini-3.5-flash-lite",
+        "provider": "google",
+        "model": "gemini-3.5-flash-lite",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/",
+        "env_key": "GEMINI_API_KEY",
+        "priority": 6,
+        "max_rpm": 150,
         "max_rpd": 50000,
         "supports_tools": False,
         "supports_vision": True,
@@ -76,19 +111,7 @@ DEFAULT_MODELS: list[dict] = [
         "model": "gemini-3-flash",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/",
         "env_key": "GEMINI_API_KEY",
-        "priority": 4,
-        "max_rpm": 150,
-        "max_rpd": 50000,
-        "supports_tools": False,
-        "supports_vision": True,
-    },
-    {
-        "name": "gemini-2.5-flash",
-        "provider": "google",
-        "model": "gemini-2.5-flash",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/",
-        "env_key": "GEMINI_API_KEY",
-        "priority": 5,
+        "priority": 7,
         "max_rpm": 150,
         "max_rpd": 50000,
         "supports_tools": False,
