@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Map, Loader2, Sparkles, Check, Lock } from 'lucide-react'
+import { Map, Loader2, Sparkles, Check } from 'lucide-react'
 import AppLayout from '@/components/AppLayout'
 import { cn } from '@/lib/cn'
 import { getRoadmap, generateRoadmap, completeTask, uncompleteTask, type Roadmap, type RoadmapStep } from '@/lib/roadmap-api'
@@ -293,10 +293,9 @@ export default function RoadmapPage() {
                           <div style={{ transform: `translateX(${stepOffsetX}px)` }} className="flex flex-col items-center mb-4">
                             <button
                               onClick={() => {
-                                if (isFuture) return
                                 setActiveStep(isActive ? null : step.step_id)
                               }}
-                              className={cn('relative flex items-center justify-center transition-all duration-300', isFuture ? 'cursor-not-allowed opacity-50' : 'cursor-pointer')}
+                              className="relative flex items-center justify-center transition-all duration-300 cursor-pointer"
                               style={{
                                 width: '100px',
                                 height: '38px',
@@ -304,22 +303,20 @@ export default function RoadmapPage() {
                                 background: isPast
                                   ? 'linear-gradient(180deg, #34D673 0%, #1BA84E 100%)'
                                   : isFuture
-                                    ? 'linear-gradient(180deg, #E5E7EB 0%, #D1D5DB 100%)'
+                                    ? 'linear-gradient(180deg, #C8B0FF 0%, #9B7AD8 100%)'
                                     : 'linear-gradient(180deg, #9B5CFF 0%, #6B26EA 50%, #4A10B8 100%)',
                                 boxShadow: isPast
                                   ? '0 4px 0 #148A3D, 0 6px 12px rgba(34,197,94,0.35), inset 0 1px 1px rgba(255,255,255,0.25)'
                                   : isFuture
-                                    ? '0 4px 0 #B8BCC4, inset 0 1px 1px rgba(255,255,255,0.5)'
+                                    ? '0 4px 0 #7A5AB0, 0 6px 12px rgba(155,122,216,0.25), inset 0 1px 1px rgba(255,255,255,0.3)'
                                     : '0 4px 0 #3A0E8C, 0 6px 12px rgba(107,38,234,0.4), inset 0 1px 1px rgba(255,255,255,0.3)',
-                                transform: isActive && !isFuture ? 'scale(1.1) translateY(-2px)' : 'none',
+                                transform: isActive ? 'scale(1.1) translateY(-2px)' : 'none',
                               }}
                             >
                               {isPast ? (
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                   <polyline points="20 6 9 17 4 12" />
                                 </svg>
-                              ) : isFuture ? (
-                                <Lock size={14} className="text-white/70" />
                               ) : (
                                 <span className="text-white text-[14px] font-bold drop-shadow-sm" style={{ fontFamily: "'Inter', sans-serif", textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                                   {stepIndex + 1}
@@ -341,8 +338,8 @@ export default function RoadmapPage() {
                             )}
                           </div>
 
-                          {/* Task nodes — only shown for non-future steps when active */}
-                          {!isFuture && isActive && sortedTasks.length > 0 && (
+                          {/* Task nodes — shown for all expanded steps */}
+                          {isActive && sortedTasks.length > 0 && (
                             <div className="flex flex-col" style={{ gap: '16px' }}>
                               {sortedTasks.map((task, taskIndex) => {
                                 const taskDone = task.status === 'complete'
@@ -360,8 +357,8 @@ export default function RoadmapPage() {
                                       )}
                                       <button
                                         onClick={() => handleToggleTask(task.task_id, task.status)}
-                                        disabled={isToggling}
-                                        className="shrink-0 flex items-center justify-center rounded-full cursor-pointer transition-all duration-200 hover:scale-110 disabled:opacity-60"
+                                        disabled={isToggling || isFuture}
+                                        className={cn("shrink-0 flex items-center justify-center rounded-full transition-all duration-200", isFuture ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:scale-110 disabled:opacity-60")}
                                         style={{
                                           width: '46px',
                                           height: '26px',
@@ -453,30 +450,29 @@ export default function RoadmapPage() {
                     <div key={step.step_id} data-step-id={step.step_id}>
                       <button
                         onClick={() => {
-                          if (isFuture) return
                           setActiveStep(isActive ? null : step.step_id)
                         }}
                         className={cn(
-                          'w-full px-5 py-3.5 flex items-center gap-3 transition-colors text-left border-b border-[#F3EFFC]',
-                          isFuture ? 'opacity-50 cursor-not-allowed' : isActive ? 'bg-[#F7F3FE]' : 'hover:bg-[#FAFAFE] cursor-pointer'
+                          'w-full px-5 py-3.5 flex items-center gap-3 transition-colors text-left border-b border-[#F3EFFC] cursor-pointer',
+                          isActive ? 'bg-[#F7F3FE]' : 'hover:bg-[#FAFAFE]'
                         )}
                       >
                         <span className={cn(
                           'text-[13px] font-medium w-6 text-center shrink-0',
-                          isPast ? 'text-[#22C55E]' : isFuture ? 'text-[#D1D5DB]' : isActive ? 'text-[#6B26EA]' : 'text-[#8B898E]'
+                          isPast ? 'text-[#22C55E]' : isFuture ? 'text-[#9B7AD8]' : isActive ? 'text-[#6B26EA]' : 'text-[#8B898E]'
                         )}>
                           {stepIndex + 1}.
                         </span>
                         <span className={cn(
                           'text-[14px] font-medium flex-1 leading-tight',
-                          isPast ? 'text-[#22C55E]' : isFuture ? 'text-[#D1D5DB]' : isActive ? 'text-[#6B26EA]' : 'text-[#4A3572]'
+                          isPast ? 'text-[#22C55E]' : isFuture ? 'text-[#4A3572]' : isActive ? 'text-[#6B26EA]' : 'text-[#4A3572]'
                         )} style={{ fontFamily: "'Inter', sans-serif" }}>
                           {step.title}
                         </span>
                         {isPast ? (
                           <Check size={16} className="text-[#22C55E] shrink-0" />
                         ) : isFuture ? (
-                          <Lock size={13} className="text-[#D1D5DB] shrink-0" />
+                          <div className="w-2 h-2 rounded-full bg-[#9B7AD8] shrink-0" />
                         ) : isActive ? (
                           <div className="w-2 h-2 rounded-full bg-[#6B26EA] shrink-0" />
                         ) : null}
@@ -493,8 +489,8 @@ export default function RoadmapPage() {
                                 <button
                                   key={task.task_id}
                                   onClick={() => handleToggleTask(task.task_id, task.status)}
-                                  disabled={isToggling}
-                                  className="flex items-center gap-2.5 py-1.5 w-full text-left hover:bg-white/60 rounded px-1 transition-colors cursor-pointer disabled:opacity-60"
+                                  disabled={isToggling || isFuture}
+                                  className={cn("flex items-center gap-2.5 py-1.5 w-full text-left rounded px-1 transition-colors", isFuture ? "opacity-40 cursor-not-allowed" : "hover:bg-white/60 cursor-pointer disabled:opacity-60")}
                                 >
                                   <div className={cn(
                                     'w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-colors',
