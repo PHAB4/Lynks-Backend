@@ -155,30 +155,44 @@ export default function ResumePage() {
               {/* Education */}
               <EditorSection title="Education">
                 {resumeData.education.map((edu, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-2 items-start">
+                  <div key={i} className="space-y-2 mb-3 pb-3 border-b border-[rgba(0,0,0,0.05)] last:border-0">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        value={edu.institution}
+                        onChange={e => {
+                          const updated = [...resumeData.education]
+                          updated[i] = { ...updated[i], institution: e.target.value }
+                          update('education', updated)
+                        }}
+                        placeholder="Institution"
+                        className="py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          value={edu.level}
+                          onChange={e => {
+                            const updated = [...resumeData.education]
+                            updated[i] = { ...updated[i], level: e.target.value }
+                            update('education', updated)
+                          }}
+                          placeholder="Degree / Level (e.g. BSc Computer Science)"
+                          className="flex-1 py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                        />
+                        <button onClick={() => update('education', resumeData.education.filter((_, j) => j !== i))} className="p-2 text-[#D14444] hover:bg-red-50 rounded-lg shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
                     <input
-                      value={edu.institution}
+                      value={edu.details}
                       onChange={e => {
                         const updated = [...resumeData.education]
-                        updated[i] = { ...updated[i], institution: e.target.value }
+                        updated[i] = { ...updated[i], details: e.target.value }
                         update('education', updated)
                       }}
-                      placeholder="Institution"
-                      className="py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
+                      placeholder="Dates / GPA (e.g. Sep 2023 – Jun 2027, 3.8 GPA)"
+                      className="w-full py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
                     />
-                    <input
-                      value={edu.level}
-                      onChange={e => {
-                        const updated = [...resumeData.education]
-                        updated[i] = { ...updated[i], level: e.target.value }
-                        update('education', updated)
-                      }}
-                      placeholder="Degree / Level"
-                      className="py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[13px] focus:outline-none focus:border-[#6B26EA]"
-                    />
-                    <button onClick={() => update('education', resumeData.education.filter((_, j) => j !== i))} className="p-2 text-[#D14444] hover:bg-red-50 rounded-lg">
-                      <Trash2 size={14} />
-                    </button>
                   </div>
                 ))}
                 <button
@@ -220,6 +234,16 @@ export default function ResumePage() {
                         </button>
                       </div>
                     </div>
+                    <input
+                      value={exp.dates || ''}
+                      onChange={e => {
+                        const updated = [...resumeData.experience]
+                        updated[i] = { ...updated[i], dates: e.target.value }
+                        update('experience', updated)
+                      }}
+                      placeholder="Dates (e.g. Jun 2024 – Aug 2024)"
+                      className="w-full py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[12px] focus:outline-none focus:border-[#6B26EA]"
+                    />
                     <textarea
                       value={exp.description}
                       onChange={e => {
@@ -233,7 +257,7 @@ export default function ResumePage() {
                   </div>
                 ))}
                 <button
-                  onClick={() => update('experience', [...resumeData.experience, { title: '', organization: '', description: '' }])}
+                  onClick={() => update('experience', [...resumeData.experience, { title: '', organization: '', dates: '', description: '' }])}
                   className="flex items-center gap-1 text-[12px] text-[#6B26EA] font-semibold hover:underline"
                 >
                   <Plus size={12} /> Add experience
@@ -268,6 +292,16 @@ export default function ResumePage() {
                       }}
                       placeholder="Describe the project..."
                       className="w-full py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[12px] focus:outline-none focus:border-[#6B26EA] resize-none h-16"
+                    />
+                    <input
+                      value={proj.skills_used?.join(', ') || ''}
+                      onChange={e => {
+                        const updated = [...resumeData.projects]
+                        updated[i] = { ...updated[i], skills_used: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }
+                        update('projects', updated)
+                      }}
+                      placeholder="Technologies (comma-separated, e.g. React, Python, PostgreSQL)"
+                      className="w-full py-2 px-3 rounded-lg border border-[rgba(0,0,0,0.15)] bg-white text-[12px] focus:outline-none focus:border-[#6B26EA]"
                     />
                   </div>
                 ))}

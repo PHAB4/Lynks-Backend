@@ -86,7 +86,7 @@ export interface ResumeData {
   objective: string
   education: { institution: string; level: string; details: string }[]
   skills: string[]
-  experience: { title: string; organization: string; description: string }[]
+  experience: { title: string; organization: string; dates?: string; description: string }[]
   projects: { title: string; description: string; skills_used: string[] }[]
   certifications: string[]
   interests: string[]
