@@ -58,11 +58,11 @@ class TestRateLimitTracker:
         tracker.record_rate_limit("test-model")
         assert tracker.can_use("test-model", max_rpm=1000, max_rpd=10000) is False
 
-    def test_permanent_limit_expires_after_1_hour(self):
+    def test_permanent_limit_expires_after_30_seconds(self):
         tracker = RateLimitTracker()
         tracker.record_rate_limit("test-model")
-        # Simulate 1 hour passing
-        tracker._permanently_limited["test-model"] = time.time() - 3601
+        # Simulate 31 seconds passing
+        tracker._permanently_limited["test-model"] = time.time() - 31
         assert tracker.can_use("test-model", max_rpm=1000, max_rpd=10000) is True
 
     def test_per_model_isolation(self):
@@ -91,8 +91,8 @@ class TestModelList:
         assert "groq-120b" in names
         assert "groq-20b" in names
         assert "gemini-2.5-flash" in names
+        assert "gemini-3-flash" in names
         assert "gemini-2.5-flash-lite" in names
-        assert "gemini-1.5-flash" in names
 
     def test_sorted_by_priority(self):
         models = _build_model_list()
@@ -162,7 +162,7 @@ class TestSelectModel:
         assert model.supports_tools is True
 
     def test_returns_none_when_all_limited(self):
-        for name in ["groq-120b", "groq-20b", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"]:
+        for name in ["groq-120b", "groq-20b", "gemini-2.5-flash", "gemini-3-flash", "gemini-2.5-flash-lite"]:
             _tracker.record_rate_limit(name)
         model = select_model()
         assert model is None
@@ -301,8 +301,8 @@ class TestGetStatus:
         assert "groq-120b" in status
         assert "groq-20b" in status
         assert "gemini-2.5-flash" in status
+        assert "gemini-3-flash" in status
         assert "gemini-2.5-flash-lite" in status
-        assert "gemini-1.5-flash" in status
 
     def test_status_shape(self):
         status = get_status()

@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "openai/gpt-oss-120b"  # Groq model — override in .env if needed
 
-    # Vision — Google Gemini Flash (evidence verification, free tier)
+    # Vision — Google Gemini Flash (evidence verification + model router fallback)
     GEMINI_API_KEY: str = ""  # Google AI Studio key — get from https://aistudio.google.com/apikey
-    VISION_MODEL: str = "gemini-3.5-flash"  # Free tier: 10 RPM, 1,500 RPD
+    VISION_MODEL: str = "gemini-2.5-flash-lite"  # Pay-as-you-go: 200 RPM, 50K RPD ($0.10/$0.40 per 1M tokens)
 
     # Model Router — auto-fallback across Groq + Gemini
     MODEL_ROUTER_ENABLED: bool = True
