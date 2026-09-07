@@ -35,20 +35,22 @@ export default function DashboardLayout({
     {
       id: string;
       title: string;
-      message: string;
-      read: boolean;
+      body: string;
+      type: string;
+      link?: string;
+      is_read: boolean;
       created_at: string;
     }[]
   >([]);
   const [notifLoading, setNotifLoading] = useState(false);
 
-  const unreadCount = notifList.filter((n) => !n.read).length;
+  const unreadCount = notifList.filter((n) => !n.is_read).length;
 
   useEffect(() => {
     setNotifLoading(true);
     notifications
       .list()
-      .then((data) => setNotifList(Array.isArray(data) ? data : []))
+      .then((data) => setNotifList(data?.notifications ?? []))
       .catch(() => setNotifList([]))
       .finally(() => setNotifLoading(false));
   }, []);
@@ -57,7 +59,7 @@ export default function DashboardLayout({
     try {
       await notifications.markRead(id);
       setNotifList((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
       );
     } catch {
       /* silent */
@@ -67,7 +69,7 @@ export default function DashboardLayout({
   const markAllRead = async () => {
     try {
       await notifications.markAllRead();
-      setNotifList((prev) => prev.map((n) => ({ ...n, read: true })));
+      setNotifList((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch {
       /* silent */
     }
@@ -196,12 +198,12 @@ export default function DashboardLayout({
                           <button
                             key={n.id}
                             onClick={() => {
-                              if (!n.read) markRead(n.id);
+                              if (!n.is_read) markRead(n.id);
                             }}
-                            className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${!n.read ? "bg-purple-50/50" : ""}`}
+                            className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${!n.is_read ? "bg-purple-50/50" : ""}`}
                           >
                             <div className="flex items-start gap-2">
-                              {!n.read && (
+                              {!n.is_read && (
                                 <span className="w-2 h-2 bg-purple-600 rounded-full mt-1.5 shrink-0" />
                               )}
                               <div>
@@ -209,7 +211,7 @@ export default function DashboardLayout({
                                   {n.title}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                  {n.message}
+                                  {n.body}
                                 </p>
                               </div>
                             </div>

@@ -7,6 +7,7 @@ GET  /resume           → get the user's latest resume
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -127,18 +128,44 @@ async def generate_resume(
 
     user_prompt = _build_resume_prompt(user, portfolio, roadmap)
 
-    client = OpenAI(api_key=settings.LLM_API_KEY, base_url=settings.LLM_API_BASE_URL)
-    response = client.chat.completions.create(
-        model=settings.LLM_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.5,
-        max_tokens=4096,
-    )
+    def _call_llm_sync() -> str:
+        client = OpenAI(
+            api_key=settings.LLM_API_KEY,
+            base_url=settings.LLM_API_BASE_URL,
+            timeout=30.0,
+            max_retries=1,
+        )
+        response = client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.5,
+            max_tokens=4096,
+        )
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("LLM returned empty response — possibly rate limited")
+        return content.strip()
 
-    raw_content = response.choices[0].message.content.strip()
+    try:
+        raw_content = await asyncio.to_thread(_call_llm_sync)
+    except ValueError as e:
+        logger.error("Resume LLM returned empty response: %s", e)
+        raise HTTPException(status_code=429, detail={
+            "error": {"code": "rate_limited", "message": "LLM rate limit exceeded. Please try again in a minute."}
+        })
+    except Exception as e:
+        if "rate" in str(e).lower() or "429" in str(e):
+            raise HTTPException(status_code=429, detail={
+                "error": {"code": "rate_limited", "message": "LLM rate limit exceeded. Please try again in a minute."}
+            })
+        logger.error("Resume LLM call failed: %s", e)
+        raise HTTPException(status_code=500, detail={
+            "error": {"code": "llm_error", "message": "Failed to generate resume. Please try again."}
+        })
+
     if raw_content.startswith("```"):
         lines = raw_content.split("\n")
         lines = lines[1:]
@@ -149,11 +176,10 @@ async def generate_resume(
     try:
         resume_data = json.loads(raw_content)
     except json.JSONDecodeError as e:
-        logger.error("LLM returned invalid JSON for resume: %s", e)
-        raise HTTPException(
-            status_code=500,
-            detail={"error": {"code": "resume_parse_error", "message": str(e)}},
-        )
+        logger.error("LLM returned invalid JSON for resume: %s | Raw: %s", e, raw_content[:500])
+        raise HTTPException(status_code=500, detail={
+            "error": {"code": "resume_parse_error", "message": "The AI returned an invalid response. Please try again."}
+        })
 
     resume = Resume(
         id=str(uuid.uuid4()),
