@@ -12,7 +12,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { supabase } from '@/lib/supabase'
-import { profile } from '@/lib/api'
+import { profile, resume } from '@/lib/api'
+import type { ResumeData } from '@/lib/types'
 import { useAuthGate } from '@/lib/use-auth'
 import {
   listConversations,
@@ -605,7 +606,7 @@ function PanelContent({ panelId, openPanel }: { panelId: PanelId; openPanel?: (i
     case 'steps':
       return <StepsPanel />
     case 'resume':
-      return <ResumePanel openPanel={openPanel} />
+      return <ResumePanel />
     case 'roadmap':
       return <RoadmapPanel />
     default:
@@ -838,7 +839,23 @@ function StepsPanel() {
   )
 }
 
-function ResumePanel({ openPanel }: { openPanel?: (id: PanelId) => void }) {
+function ResumePanel() {
+  const [resumeData, setResumeData] = useState<ResumeData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    resume.get()
+      .then(data => {
+        if (data?.content) setResumeData(data.content as ResumeData)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const hasContent = resumeData && (
+    resumeData.name || resumeData.education?.length || resumeData.experience?.length || resumeData.skills?.length
+  )
+
   return (
     <div className="p-4">
       <div className="bg-[#F9F5FF] rounded-2xl border border-[#EDE3FF] p-4 mb-4">
@@ -851,37 +868,43 @@ function ResumePanel({ openPanel }: { openPanel?: (id: PanelId) => void }) {
             <p className="text-[11px] text-[#8B898E]">AI-generated resume</p>
           </div>
         </div>
-        <div className="space-y-3">
-          <div>
-            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">EXPERIENCE</h4>
-            <p className="text-[11px] text-[#A8A8A8]">Complete tasks on your roadmap to build your resume.</p>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 size={14} className="text-[#6B26EA] animate-spin" />
           </div>
-          <div>
-            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">EDUCATION</h4>
-            <p className="text-[11px] text-[#A8A8A8]">Add during onboarding.</p>
+        ) : hasContent ? (
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">EXPERIENCE</h4>
+              <p className="text-[11px] text-[#4A3572]">
+                {resumeData.experience?.length || 0} position{(resumeData.experience?.length || 0) !== 1 ? 's' : ''} listed
+              </p>
+            </div>
+            <div>
+              <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">EDUCATION</h4>
+              <p className="text-[11px] text-[#4A3572]">
+                {resumeData.education?.length || 0} institution{(resumeData.education?.length || 0) !== 1 ? 's' : ''} listed
+              </p>
+            </div>
+            <div>
+              <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">SKILLS</h4>
+              <p className="text-[11px] text-[#4A3572]">
+                {resumeData.skills?.length || 0} skill{(resumeData.skills?.length || 0) !== 1 ? 's' : ''} listed
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-[10px] font-bold text-[rgba(0,0,0,0.50)] tracking-widest mb-1">SKILLS</h4>
-            <p className="text-[11px] text-[#A8A8A8]">AI will suggest skills based on your career journey.</p>
-          </div>
-        </div>
+        ) : (
+          <p className="text-[11px] text-[#A8A8A8]">No resume yet. Complete your profile and generate one.</p>
+        )}
       </div>
-      <div className="space-y-2">
-        <button className="w-full py-2.5 rounded-xl border border-[rgba(0,0,0,0.43)] bg-[#EADFFF] text-[12px] font-medium text-[#000] hover:bg-[#D4C4F7] transition-colors">
-          Word
-        </button>
-        <button className="w-full py-2.5 rounded-xl bg-[#6B26EA] text-[12px] font-semibold text-white hover:bg-[#5A1FD0] transition-colors">
-          PDF
-        </button>
-        <button
-          onClick={() => {
-            if (openPanel) openPanel('chat')
-          }}
-          className="w-full py-2.5 rounded-xl border border-[rgba(0,0,0,0.43)] bg-[#EADFFF] text-[12px] font-medium text-[#000] hover:bg-[#D4C4F7] transition-colors"
-        >
-          Edit resume
-        </button>
-      </div>
+
+      <Link
+        href="/resume"
+        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#6B26EA] text-[12px] font-semibold text-white hover:bg-[#5A1FD0] transition-colors"
+      >
+        View & Edit Resume
+      </Link>
     </div>
   )
 }
