@@ -736,13 +736,15 @@ async def upsert_opportunities_to_db(
     """Upsert a list of opportunities into the DB.
 
     Uses title-based dedup (md5 hash as id). Returns count of upserted rows.
+    Per-row error handling — one bad row doesn't abort the whole batch.
     """
     from sqlalchemy import text as sql_text
 
     upserted = 0
-    try:
-        for opp in opportunities:
-            opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
+    failed = 0
+    for opp in opportunities:
+        opp_id = hashlib.md5(opp["title"].encode()).hexdigest()[:16]
+        try:
             await db.execute(
                 sql_text("""
                     INSERT INTO opportunities
@@ -793,15 +795,24 @@ async def upsert_opportunities_to_db(
                 },
             )
             upserted += 1
+        except Exception as e:
+            failed += 1
+            logger.warning("Failed to upsert opportunity '%s': %s", opp.get("title", "?"), e)
+            try:
+                await db.rollback()
+            except Exception:
+                pass
 
-        await db.commit()
-        logger.info("Upserted %d opportunities to DB", upserted)
-        return upserted
+    if upserted > 0:
+        try:
+            await db.commit()
+        except Exception as e:
+            logger.warning("Failed to commit upserted opportunities: %s", e)
+            await db.rollback()
+            return 0
 
-    except (SQLAlchemyError, AttributeError) as e:
-        logger.warning("Failed to upsert opportunities: %s", e)
-        await db.rollback()
-        return 0
+    logger.info("Upsert result: %d upserted, %d failed out of %d total", upserted, failed, len(opportunities))
+    return upserted
 
 
 def _now_iso() -> str:

@@ -122,6 +122,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [sidebarExpanded])
 
+  useEffect(() => {
+    conversationsFetched.current = false
+    if (sidebarExpanded) {
+      loadConversations()
+    }
+  }, [pathname])
+
   const loadConversations = async () => {
     setLoadingConversations(true)
     try {
